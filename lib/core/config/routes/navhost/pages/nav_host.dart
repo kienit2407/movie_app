@@ -5,6 +5,11 @@ class NavHost extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold();
+    return Scaffold(
+      body: Padding(
+        padding: const EdgeInsets.all(100.0),
+        child: Checkbox(value: true, onChanged:(value){}),
+      )
+    );
   }
 }
