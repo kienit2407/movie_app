@@ -16,20 +16,19 @@ class AppOption extends StatelessWidget {
           child: InkWell(
             onTap: () {},
             borderRadius: BorderRadius.circular(15),
-            child: ClipRect(
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(15),
               child: BackdropFilter(
                 filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
-                child: InkWell(
-                  child: Container(
-                    padding: EdgeInsets.symmetric(horizontal: 33, vertical: 18),
-                    decoration: BoxDecoration(
-                      border: Border.all(
-                        color: Color(0xffA0A0A0).withOpacity(.3),
-                      ),
-                      borderRadius: BorderRadius.circular(15),
+                child: Container(
+                  padding: EdgeInsets.symmetric(horizontal: 33, vertical: 18),
+                  decoration: BoxDecoration(
+                    border: Border.all(
+                      color: Color(0xffA0A0A0).withOpacity(.3),
                     ),
-                    child: Image.asset('assets/icons/gg.png', height: 28),
+                    borderRadius: BorderRadius.circular(15),
                   ),
+                  child: Image.asset('assets/icons/gg.png', height: 28),
                 ),
               ),
             ),
@@ -40,7 +39,8 @@ class AppOption extends StatelessWidget {
           child: InkWell(
             onTap: () {},
             borderRadius: BorderRadius.circular(15),
-            child: ClipRect(
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(15),
               child: BackdropFilter(
                 filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
                 child: InkWell(

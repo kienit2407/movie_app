@@ -28,7 +28,7 @@ class AppTheme {
       hintStyle: TextStyle(color: Colors.white),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(10),
-        borderSide: BorderSide(color: Color(0xffA0A0A0).withOpacity(.5)),
+        borderSide: BorderSide(color: Colors.white30.withOpacity(.3))
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(10),

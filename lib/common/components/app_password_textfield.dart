@@ -59,15 +59,25 @@ class _AppPasswordTextfieldState extends State<AppPasswordTextfield> {
           cursorRadius: Radius.circular(10),
           decoration: InputDecoration(
             prefixIcon: Icon(Iconsax.lock),
-            suffixIcon: IconButton(
-              onPressed: (){
-                setState(() {
-                  _isHidePassword = !_isHidePassword;
-                });
-              }, 
-              icon: _isHidePassword ? 
-              Icon(Iconsax.eye_slash)
-              : Icon(Iconsax.eye)
+            suffixIcon: AnimatedSwitcher(
+              duration: Duration(milliseconds: 300),
+              switchInCurve: Curves.elasticInOut,
+              transitionBuilder: (Widget child, Animation<double> animation) {
+                return ScaleTransition(scale: animation, child: child); // Hiệu ứng scale
+              },
+              child: IconButton(
+                key: ValueKey<bool>(_isHidePassword),// <- khi animation bắt buộc phải có key vì khi setstate nó không phân biệt được cái nào cũ và mới. cái này sẽ giúp mỗi làn widget thayd đổi tạo ra 1 key để thực hineje chuyển đổi widget con. nếu k có thì nó sẽ sử dụng lại 
+                // key của widget cũ và animation k hoạt động
+                //khi nào cần sử dụng value key: khi muốn chuyển đổi các widget khác nhau, khi animate có nội dung thay đổi, khi cần reset state của widget con
+                onPressed: (){
+                  setState(() {
+                    _isHidePassword = !_isHidePassword;
+                  });
+                }, 
+                icon: _isHidePassword ? 
+                Icon(Iconsax.eye_slash)
+                : Icon(Iconsax.eye)
+              ),
             ),
             filled: true,
             fillColor: _isFocused
@@ -81,3 +91,27 @@ class _AppPasswordTextfieldState extends State<AppPasswordTextfield> {
     );
   }
 }
+
+// Curve	Hiệu ứng	Ứng dụng phổ biến
+// Curves.linear	Tốc độ không đổi	Progress bar
+// Curves.easeIn	Chậm → Nhanh	Fade in
+// Curves.easeOut	Nhanh → Chậm	Fade out
+// Curves.easeInOut	Chậm → Nhanh → Chậm (tự nhiên nhất)	Button animations
+// Curves.elasticOut	Hiệu ứng lò xo	Bounce effects
+// Curves.fastOutSlowIn	Nhanh → Chậm hơn easeInOut	Transition màn hình
+// Chọn curve phù hợp:
+
+// Dùng Curves.easeInOut cho các UI thông thường
+// Mở/đóng menu
+
+// Chuyển trang
+
+// Fade in/out
+
+// Hầu hết animation thông thường
+// Dùng Curves.elasticOut khi cần hiệu ứng "bật lại":
+// Nút bấm vui nhộn
+
+// Thông báo xuất hiện
+
+// Hiệu ứng "nhấn mạnh"
