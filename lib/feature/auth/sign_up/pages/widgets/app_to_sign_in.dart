@@ -1,28 +1,25 @@
 import 'package:flutter/material.dart';
 import 'package:movie_app/common/helpers/navigation/app_navigation.dart';
 import 'package:movie_app/core/config/themes/app_color.dart';
-import 'package:movie_app/feature/auth/sign_up/pages/sign_up.dart';
+import 'package:movie_app/feature/auth/sign_in/pages/sign_in.dart';
 
-class AppToSignUp extends StatelessWidget {
-  const AppToSignUp({super.key});
+class AppToSignIn extends StatelessWidget {
+  const AppToSignIn({super.key});
   @override
   Widget build(BuildContext context) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         Text(
-          'Don\'t have an account?',
+          'Already have an account?',
           style: TextStyle(fontWeight: FontWeight.w700),
         ),
         TextButton(
           onPressed:() {
-            AppNavigator.push(
-              context,
-              SignUpPage()
-            );
+            AppNavigator.pop(context);
           },
           child: Text(
-            'Sign up',
+            'Sign in',
             style: TextStyle(
               color: AppColor.secondColor,
               fontWeight: FontWeight.w600,

@@ -10,22 +10,24 @@ import 'package:movie_app/feature/auth/sign_in/widgets/app_check_box.dart';
 import 'package:movie_app/feature/auth/sign_in/widgets/app_divide.dart';
 import 'package:movie_app/feature/auth/sign_in/widgets/app_option.dart';
 import 'package:movie_app/feature/auth/sign_in/widgets/app_to_sign_up.dart';
+import 'package:movie_app/feature/auth/sign_up/pages/widgets/app_fullname_textfield.dart';
+import 'package:movie_app/feature/auth/sign_up/pages/widgets/app_to_sign_in.dart';
 
-class SignInPage extends StatefulWidget {
-  const SignInPage({super.key});
+class SignUpPage extends StatefulWidget {
+  const SignUpPage({super.key});
 
   @override
-  State<SignInPage> createState() => _SignInPageState();
+  State<SignUpPage> createState() => _SignUpPageState();
 }
 
-class _SignInPageState extends State<SignInPage> {
+class _SignUpPageState extends State<SignUpPage> {
+  final _controllorFullname = TextEditingController();
   final _controllorEmail = TextEditingController();
   final _controllorPassword = TextEditingController();
 
-  bool _isChecked = false;
-
   @override
   void dispose() {
+    _controllorFullname.dispose();
     _controllorEmail.dispose();
     _controllorPassword.dispose();
     super.dispose();
@@ -68,42 +70,43 @@ class _SignInPageState extends State<SignInPage> {
                     crossAxisAlignment: CrossAxisAlignment.center,
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Image.asset('assets/images/splash_logo.png', width: 150),
+                      Image.asset(
+                        'assets/images/splash_logo.png',
+                        width: 150,
+                      ),
                       //logo a
                       Text(
-                        'Login to Your Account',
+                        'Create Your Account',
                         style: TextStyle(
                           fontSize: 25,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
                       SizedBox(height: 30),
+                      AppFullnameTextfield(controller: _controllorFullname),
+                      SizedBox(height: 20),
                       AppEmailTextfield(controller: _controllorEmail),
                       SizedBox(height: 20),
                       AppPasswordTextfield(controller: _controllorPassword),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 10),
-                        child: AppCheckBox(
-                          onChanged: (value) {
-                            setState(() {
-                              _isChecked = value!;
-                            });
-                          },
-                          isChecked: _isChecked,
-                        ),
-                      ),
-                      AppButton(onPressed: () {}, title: 'Sign in'),
-                      AppButtonForgot(onPressed: () {}),
+                      SizedBox(height: 40),
+                      AppButton(onPressed: () {}, title: 'Sign up'),
+                      SizedBox(height: 30),
                       AppDivide(),
                       SizedBox(height: 30),
                       AppOption(),
                       SizedBox(height: 30),
-                      AppToSignUp(),
+                      AppToSignIn(),
                     ],
                   ),
                 ),
               ),
             ),
+            Positioned(
+              left: 10,
+              child: SafeArea(
+                child: AppBackButton(),
+                )
+              ),
           ],
         ),
       ),
