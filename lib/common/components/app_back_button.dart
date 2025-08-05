@@ -1,6 +1,7 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
+import 'package:liquid_glass_renderer/liquid_glass_renderer.dart';
 import 'package:movie_app/common/helpers/navigation/app_navigation.dart';
 
 class AppBackButton extends StatelessWidget {
@@ -15,20 +16,17 @@ class AppBackButton extends StatelessWidget {
           AppNavigator.pop(context);
         },
         borderRadius: BorderRadius.circular(15),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(15),
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
-            child: Container(
-              padding: EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                border: Border.all(
-                    color: Colors.white30,
-                  ),
-                borderRadius: BorderRadius.circular(15),
-              ),
-              child: Icon(Iconsax.arrow_left_2_copy),
-            ),
+        child: LiquidGlass(
+          settings: LiquidGlassSettings(
+            lightAngle: 120,
+            lightIntensity: 1,
+            
+          ),
+          shape: LiquidRoundedSuperellipse(borderRadius: Radius.circular(15)),
+          child: Container(
+            padding: const EdgeInsets.all(10),
+            color: Colors.white60.withOpacity(.2),
+            child: const Icon(Iconsax.arrow_left_2_copy),
           ),
         ),
       ),

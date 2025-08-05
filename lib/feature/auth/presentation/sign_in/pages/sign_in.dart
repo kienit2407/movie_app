@@ -1,15 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:liquid_glass_renderer/liquid_glass_renderer.dart';
 import 'package:movie_app/common/components/app_back_button.dart';
 import 'package:movie_app/common/components/app_button.dart';
 import 'package:movie_app/common/components/app_email_textfield.dart';
 import 'package:movie_app/common/components/app_password_textfield.dart';
 import 'package:movie_app/core/config/assets/app_image.dart';
 import 'package:movie_app/core/config/themes/app_color.dart';
-import 'package:movie_app/feature/auth/sign_in/widgets/app_button_forgot.dart';
-import 'package:movie_app/feature/auth/sign_in/widgets/app_check_box.dart';
-import 'package:movie_app/feature/auth/sign_in/widgets/app_divide.dart';
-import 'package:movie_app/feature/auth/sign_in/widgets/app_option.dart';
-import 'package:movie_app/feature/auth/sign_in/widgets/app_to_sign_up.dart';
+import 'package:movie_app/feature/auth/presentation/sign_in/widgets/app_button_forgot.dart';
+import 'package:movie_app/feature/auth/presentation/sign_in/widgets/app_check_box.dart';
+import 'package:movie_app/feature/auth/presentation/sign_in/widgets/app_divide.dart';
+import 'package:movie_app/common/components/app_option.dart';
+import 'package:movie_app/feature/auth/presentation/sign_in/widgets/app_to_sign_up.dart';
+import 'package:reactive_button/reactive_button.dart';
 
 class SignInPage extends StatefulWidget {
   const SignInPage({super.key});
@@ -68,19 +70,32 @@ class _SignInPageState extends State<SignInPage> {
                     crossAxisAlignment: CrossAxisAlignment.center,
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Image.asset('assets/images/splash_logo.png', width: 150),
+                      LiquidGlass(
+                        settings: LiquidGlassSettings(
+                          lightAngle: 120,
+                          lightIntensity: 1
+                        ),
+                        shape: LiquidRoundedSuperellipse(borderRadius: Radius.circular(15)),
+                        child: Image.asset(AppImage.splashLogo, width: 150),
+                      ),
                       //logo a
-                      Text(
-                        'Login to Your Account',
+                      const Text(
+                      'Login to Your Account',
                         style: TextStyle(
                           fontSize: 25,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
-                      SizedBox(height: 30),
-                      AppEmailTextfield(controller: _controllorEmail),
-                      SizedBox(height: 20),
-                      AppPasswordTextfield(controller: _controllorPassword),
+                      const SizedBox(height: 30),
+                      AppEmailTextfield(
+                        controller: _controllorEmail,
+      
+                      ),
+                      const SizedBox(height: 20),
+                      AppPasswordTextfield(
+                        controller: _controllorPassword,
+                        
+                      ),
                       Padding(
                         padding: const EdgeInsets.symmetric(vertical: 10),
                         child: AppCheckBox(
@@ -89,15 +104,15 @@ class _SignInPageState extends State<SignInPage> {
                               _isChecked = value!;
                             });
                           },
-                          isChecked: _isChecked,
+                          isChecked: _isChecked, 
                         ),
                       ),
                       AppButton(onPressed: () {}, title: 'Sign in'),
                       AppButtonForgot(onPressed: () {}),
                       AppDivide(),
-                      SizedBox(height: 30),
+                      const SizedBox(height: 30),
                       AppOption(),
-                      SizedBox(height: 30),
+                      const SizedBox(height: 30),
                       AppToSignUp(),
                     ],
                   ),
@@ -107,6 +122,13 @@ class _SignInPageState extends State<SignInPage> {
           ],
         ),
       ),
+    );
+  }
+  Widget _signinButton (){
+    return ReactiveButton(
+      onPressed:() async {}, 
+      onSuccess: (){}, 
+      onFailure: (String error){}
     );
   }
 }

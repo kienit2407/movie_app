@@ -4,23 +4,22 @@ import 'package:flutter/material.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
 import 'package:movie_app/core/config/themes/app_color.dart';
 
-class AppEmailTextfield extends StatefulWidget {
-  const AppEmailTextfield
+class AppFullnameTextfield extends StatefulWidget {
+  const AppFullnameTextfield
   ({
     super.key, 
-    required this.controller
+    required this.controller,
+ 
   });
 
-  final TextEditingController controller
-;
+  final TextEditingController controller;
   @override
-  State<AppEmailTextfield> createState() => _AppEmailTextfieldState();
+  State<AppFullnameTextfield> createState() => _AppFullnameTextfieldState();
 }
 
-class _AppEmailTextfieldState extends State<AppEmailTextfield> {
+class _AppFullnameTextfieldState extends State<AppFullnameTextfield> {
   final _focusedNode = FocusNode();
   bool _isFocused = false;
-
 @override
   void initState() {
     _focusedNode.addListener((){
@@ -52,6 +51,7 @@ class _AppEmailTextfieldState extends State<AppEmailTextfield> {
         ),
         child: Container(
           decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(10),
             gradient: LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
@@ -64,14 +64,9 @@ class _AppEmailTextfieldState extends State<AppEmailTextfield> {
               top: BorderSide(color: Colors.white60.withOpacity(0.7), width: 1),
               left: BorderSide(color: Colors.white60.withOpacity(0.7), width: 1)
             ),
-            borderRadius: BorderRadius.circular(10),
           ),
           child: TextField(
-            onSubmitted: (value){
-              if(value.isNotEmpty){
-                FocusScope.of(context).nextFocus();
-              }
-            },
+            onSubmitted: (value) => FocusScope.of(context).nextFocus(),
             textInputAction: TextInputAction.next,
             controller: widget.controller,
             focusNode: _focusedNode,
@@ -79,7 +74,12 @@ class _AppEmailTextfieldState extends State<AppEmailTextfield> {
             cursorWidth: 1,
             cursorRadius: Radius.circular(10),
             decoration: InputDecoration(
-              prefixIcon:const Icon(Icons.mail),
+              prefixIcon: const Icon(Iconsax.user),
+              filled: true,
+              fillColor: _isFocused
+                  ? AppColor.secondColor.withOpacity(.2)
+                  :  Colors.transparent,
+              prefixIconColor: _isFocused ? AppColor.secondColor : Colors.white,
               suffixIcon: AnimatedSwitcher(
                 duration: Duration(milliseconds: 300),
                 switchInCurve: Curves.elasticInOut,
@@ -95,12 +95,7 @@ class _AppEmailTextfieldState extends State<AppEmailTextfield> {
                   icon: Icon(Iconsax.tag_cross_copy) ,
                 ): null,
               ),
-              filled: true,
-              fillColor: _isFocused
-                  ? AppColor.secondColor.withOpacity(.2)
-                  :  Colors.transparent,
-              prefixIconColor: _isFocused ? AppColor.secondColor : Colors.white,
-              hintText: 'Email',
+              hintText: 'Full name',
             ).applyDefaults(Theme.of(context).inputDecorationTheme),
           ),
         ),

@@ -16,7 +16,7 @@ class AppDivide extends StatelessWidget {
         ),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 10),
-          child: Text(
+          child: const Text(
             'Or Continue with',
             style: TextStyle(
               color: Colors.white60,

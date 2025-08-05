@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:movie_app/common/helpers/navigation/app_navigation.dart';
 import 'package:movie_app/core/config/themes/app_color.dart';
-import 'package:movie_app/feature/auth/sign_in/pages/sign_in.dart';
+import 'package:movie_app/feature/auth/presentation/sign_in/pages/sign_in.dart';
 
 class AppToSignIn extends StatelessWidget {
   const AppToSignIn({super.key});
@@ -10,7 +10,7 @@ class AppToSignIn extends StatelessWidget {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        Text(
+       const Text(
           'Already have an account?',
           style: TextStyle(fontWeight: FontWeight.w700),
         ),
@@ -18,7 +18,7 @@ class AppToSignIn extends StatelessWidget {
           onPressed:() {
             AppNavigator.pop(context);
           },
-          child: Text(
+          child: const Text(
             'Sign in',
             style: TextStyle(
               color: AppColor.secondColor,

@@ -20,6 +20,7 @@ class _AppPasswordTextfieldState extends State<AppPasswordTextfield> {
   bool _isFocused = false;
   bool _isHidePassword = true;
 
+
 @override
   void initState() {
     _focusedNode.addListener((){
@@ -39,6 +40,7 @@ class _AppPasswordTextfieldState extends State<AppPasswordTextfield> {
   }
   @override
   Widget build(BuildContext context) {
+    final _foscusScrope = FocusScope.of(context);
     return ClipRect(
       clipBehavior: Clip.hardEdge,
       child: BackdropFilter(
@@ -49,43 +51,59 @@ class _AppPasswordTextfieldState extends State<AppPasswordTextfield> {
           sigmaY: _isFocused ? 5 : 3,
           tileMode: TileMode.mirror,
         ),
-        child: TextField(
-          controller: widget.controller,
-          obscureText: _isHidePassword,
-          obscuringCharacter: '*',
-          focusNode: _focusedNode,
-          style: TextStyle(color: Colors.white),
-          cursorWidth: 1,
-          cursorRadius: Radius.circular(10),
-          decoration: InputDecoration(
-            prefixIcon: Icon(Iconsax.lock),
-            suffixIcon: AnimatedSwitcher(
-              duration: Duration(milliseconds: 300),
-              switchInCurve: Curves.elasticInOut,
-              transitionBuilder: (Widget child, Animation<double> animation) {
-                return ScaleTransition(scale: animation, child: child); // Hiệu ứng scale
-              },
-              child: IconButton(
-                key: ValueKey<bool>(_isHidePassword),// <- khi animation bắt buộc phải có key vì khi setstate nó không phân biệt được cái nào cũ và mới. cái này sẽ giúp mỗi làn widget thayd đổi tạo ra 1 key để thực hineje chuyển đổi widget con. nếu k có thì nó sẽ sử dụng lại 
-                // key của widget cũ và animation k hoạt động
-                //khi nào cần sử dụng value key: khi muốn chuyển đổi các widget khác nhau, khi animate có nội dung thay đổi, khi cần reset state của widget con
-                onPressed: (){
-                  setState(() {
-                    _isHidePassword = !_isHidePassword;
-                  });
-                }, 
-                icon: _isHidePassword ? 
-                Icon(Iconsax.eye_slash)
-                : Icon(Iconsax.eye)
-              ),
+        child: Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(10),
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+                colors: [
+                  Colors.white60.withOpacity(.3),
+                  Colors.white10.withOpacity(.1),
+              ]
             ),
-            filled: true,
-            fillColor: _isFocused
-                ? AppColor.secondColor.withOpacity(.1)
-                : Color(0xff353841).withOpacity(.3),
-            prefixIconColor: _isFocused ? AppColor.secondColor : Colors.white,
-            hintText: 'Password',
-          ).applyDefaults(Theme.of(context).inputDecorationTheme),
+            border: Border(
+              top: BorderSide(color: Colors.white60.withOpacity(0.7), width: 1),
+              left: BorderSide(color: Colors.white60.withOpacity(0.7), width: 1)
+            ),
+          ),
+          child: TextField(
+            onSubmitted: (value) => _foscusScrope.unfocus(),
+            controller: widget.controller,
+            obscureText: _isHidePassword,
+            obscuringCharacter: '*',
+            focusNode: _focusedNode,
+            style: const TextStyle(color: Colors.white),
+            cursorWidth: 1,
+            cursorRadius: Radius.circular(10),
+            decoration: InputDecoration(
+              prefixIcon: const Icon(Iconsax.lock),
+              suffixIcon: AnimatedSwitcher(
+                duration: Duration(milliseconds: 300),
+                switchInCurve: Curves.elasticInOut,
+                transitionBuilder: (Widget child, Animation<double> animation) {
+                  return ScaleTransition(scale: animation, child: child); // Hiệu ứng scale
+                },
+                child: _isFocused ? IconButton(
+                  key: ValueKey<bool>(_isHidePassword),
+                  onPressed: (){
+                    setState(() {
+                      _isHidePassword = !_isHidePassword;
+                    });
+                  }, 
+                  icon: _isHidePassword ? 
+                  const Icon(Iconsax.eye_slash)
+                  : const Icon(Iconsax.eye)
+                ) : null,
+              ),
+              filled: true,
+              fillColor: _isFocused
+                  ? AppColor.secondColor.withOpacity(.2)
+                  :  Colors.transparent,
+              prefixIconColor: _isFocused ? AppColor.secondColor : Colors.white,
+              hintText: 'Password',
+            ).applyDefaults(Theme.of(context).inputDecorationTheme),
+          ),
         ),
       ),
     );
@@ -115,3 +133,5 @@ class _AppPasswordTextfieldState extends State<AppPasswordTextfield> {
 // Thông báo xuất hiện
 
 // Hiệu ứng "nhấn mạnh"
+
+//Khi nào càn value key ? : khi mà chueyern đổi giữa 2 widget còn nếu chuyền đổi màu thì không cần vi fnos cùng widget
