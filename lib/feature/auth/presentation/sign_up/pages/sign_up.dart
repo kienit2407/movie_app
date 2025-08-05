@@ -1,17 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:liquid_glass_renderer/liquid_glass_renderer.dart';
 import 'package:movie_app/common/components/app_back_button.dart';
 import 'package:movie_app/common/components/app_button.dart';
 import 'package:movie_app/common/components/app_email_textfield.dart';
 import 'package:movie_app/common/components/app_password_textfield.dart';
 import 'package:movie_app/core/config/assets/app_image.dart';
 import 'package:movie_app/core/config/themes/app_color.dart';
-import 'package:movie_app/feature/auth/sign_in/widgets/app_button_forgot.dart';
-import 'package:movie_app/feature/auth/sign_in/widgets/app_check_box.dart';
-import 'package:movie_app/feature/auth/sign_in/widgets/app_divide.dart';
-import 'package:movie_app/feature/auth/sign_in/widgets/app_option.dart';
-import 'package:movie_app/feature/auth/sign_in/widgets/app_to_sign_up.dart';
-import 'package:movie_app/feature/auth/sign_up/pages/widgets/app_fullname_textfield.dart';
-import 'package:movie_app/feature/auth/sign_up/pages/widgets/app_to_sign_in.dart';
+import 'package:movie_app/feature/auth/presentation/sign_in/widgets/app_button_forgot.dart';
+import 'package:movie_app/feature/auth/presentation/sign_in/widgets/app_check_box.dart';
+import 'package:movie_app/feature/auth/presentation/sign_in/widgets/app_divide.dart';
+import 'package:movie_app/common/components/app_option.dart';
+import 'package:movie_app/feature/auth/presentation/sign_in/widgets/app_to_sign_up.dart';
+import 'package:movie_app/feature/auth/presentation/sign_up/pages/widgets/app_fullname_textfield.dart';
+import 'package:movie_app/feature/auth/presentation/sign_up/pages/widgets/app_to_sign_in.dart';
 
 class SignUpPage extends StatefulWidget {
   const SignUpPage({super.key});
@@ -24,7 +25,7 @@ class _SignUpPageState extends State<SignUpPage> {
   final _controllorFullname = TextEditingController();
   final _controllorEmail = TextEditingController();
   final _controllorPassword = TextEditingController();
-
+  final _focusNode  = FocusNode();
   @override
   void dispose() {
     _controllorFullname.dispose();
@@ -70,31 +71,36 @@ class _SignUpPageState extends State<SignUpPage> {
                     crossAxisAlignment: CrossAxisAlignment.center,
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Image.asset(
-                        'assets/images/splash_logo.png',
-                        width: 150,
+                      LiquidGlass(
+                        settings: LiquidGlassSettings(
+                          lightAngle: 120,
+                          lightIntensity: 1
+                        ),
+                        shape: LiquidRoundedSuperellipse(borderRadius: Radius.circular(15)),
+                        child: Image.asset(AppImage.splashLogo, width: 150),
                       ),
                       //logo a
-                      Text(
+                      const Text(
                         'Create Your Account',
                         style: TextStyle(
                           fontSize: 25,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
-                      SizedBox(height: 30),
-                      AppFullnameTextfield(controller: _controllorFullname),
-                      SizedBox(height: 20),
+                      const SizedBox(height: 30),
+                      AppFullnameTextfield(
+                        controller: _controllorFullname),
+                      const SizedBox(height: 20),
                       AppEmailTextfield(controller: _controllorEmail),
-                      SizedBox(height: 20),
+                      const SizedBox(height: 20),
                       AppPasswordTextfield(controller: _controllorPassword),
                       SizedBox(height: 40),
                       AppButton(onPressed: () {}, title: 'Sign up'),
-                      SizedBox(height: 30),
+                      const SizedBox(height: 30),
                       AppDivide(),
-                      SizedBox(height: 30),
+                      const SizedBox(height: 30),
                       AppOption(),
-                      SizedBox(height: 30),
+                      const SizedBox(height: 30),
                       AppToSignIn(),
                     ],
                   ),

@@ -10,7 +10,7 @@ class AppButtonForgot extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 20),
       child: TextButton(
         onPressed: onPressed,
-        child: Text(
+        child: const Text(
           'Forgot Password?',
           style: TextStyle(
             color: AppColor.secondColor,

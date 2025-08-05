@@ -5,7 +5,7 @@ import 'package:movie_app/common/helpers/navigation/app_navigation.dart';
 import 'package:movie_app/core/config/assets/app_image.dart';
 import 'package:movie_app/core/config/routes/navhost/pages/nav_host.dart';
 import 'package:movie_app/core/config/themes/app_color.dart';
-import 'package:movie_app/feature/auth/sign_in/pages/sign_in.dart';
+import 'package:movie_app/feature/auth/presentation/sign_in/pages/sign_in.dart';
 import 'package:movie_app/feature/intro/presentation/splash/bloc/splash_cubit.dart';
 import 'package:movie_app/feature/intro/presentation/splash/bloc/splash_state.dart';
 
