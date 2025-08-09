@@ -1,18 +1,9 @@
 # movie_app
 
-A new Flutter project.
+This is the movie app that use api from kkPhim. Don't worry, because it's free and quality.
 
 ## Getting Started
-
-This project is a starting point for a Flutter application.
-
-A few resources to get you started if this is your first Flutter project:
-
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
-
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
- to right,
-    #B3FFAB,#12FFF7
+💻 If you wanna be interesting when cloning that project in yourlocal
+ #❓You only clone this project folowing link, after clone you have to run like below:
+## 🐳flutter pub get
+## 🏃🏼flutter run
