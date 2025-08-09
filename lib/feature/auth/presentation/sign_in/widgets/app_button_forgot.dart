@@ -7,7 +7,7 @@ class AppButtonForgot extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 20),
+      padding: const EdgeInsets.symmetric(vertical: 25),
       child: TextButton(
         onPressed: onPressed,
         child: const Text(
@@ -15,7 +15,7 @@ class AppButtonForgot extends StatelessWidget {
           style: TextStyle(
             color: AppColor.secondColor,
             fontWeight: FontWeight.w700,
-            fontSize: 14,
+            fontSize: 16,
           ),
         ),
       ),
