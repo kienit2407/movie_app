@@ -28,6 +28,27 @@
 	<string>LaunchScreen</string>
 	<key>UIMainStoryboardFile</key>
 	<string>Main</string>
+	<!-- thêm client id từ gg -->
+	<key>GIDClientID</key>
+	<string>971420422696-galiiu2hhdovp4qacnc6oj25u3lblqcg.apps.googleusercontent.com</string>
+		<!-- for app when use web sever -->
+	<key>GIDServerClientID</key>
+	<string>971420422696-o2fd05sdo51ui0edspo31j4qk9mmk00t.apps.googleusercontent.com</string>
+
+	<!-- thêm client id reverse -->
+    <key>CFBundleURLTypes</key>
+		<array>
+			<dict>
+				<key>CFBundleTypeRole</key>
+				<string>Editor</string>
+				<key>CFBundleURLSchemes</key>
+				<array>
+					<string>com.googleusercontent.apps.971420422696-galiiu2hhdovp4qacnc6oj25u3lblqcg</string>
+				</array>
+			</dict>
+		</array>
+
+
 	<key>UISupportedInterfaceOrientations</key>
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>

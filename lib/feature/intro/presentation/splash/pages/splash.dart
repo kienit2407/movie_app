@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:movie_app/common/components/custom_loading.dart';
+import 'package:movie_app/common/components/loading/custom_loading.dart';
 import 'package:movie_app/common/helpers/navigation/app_navigation.dart';
 import 'package:movie_app/core/config/assets/app_image.dart';
 import 'package:movie_app/core/config/routes/navhost/pages/nav_host.dart';
@@ -59,7 +59,9 @@ class SplashPage extends StatelessWidget {
                       )
                     ),
                   ),
+                  const SizedBox(height: 50,),
                   CustomLoading(
+                  splash: true,
                   size: 70,
                 ),
                 ],
