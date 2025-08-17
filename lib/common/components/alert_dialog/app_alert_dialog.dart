@@ -5,11 +5,12 @@ import 'package:movie_app/common/helpers/navigation/app_navigation.dart';
 import 'package:movie_app/core/config/themes/app_color.dart';
 
 class AppAlertDialog extends StatefulWidget {
-  const AppAlertDialog({super.key, this.content, this.icon, this.title, this.buttonTitle,});
+  const AppAlertDialog({super.key, this.content, this.icon, this.title, this.buttonTitle, this.onPressed});
   final String? title;
   final String? content;
   final String? buttonTitle;
   final Icon? icon;
+  final VoidCallback? onPressed;
 
   @override
   State<AppAlertDialog> createState() => _AppAlertDialogState();
@@ -92,7 +93,7 @@ class _AppAlertDialogState extends State<AppAlertDialog> {
                         child: Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 20),
                           child: ElevatedButton(
-                            onPressed: () {
+                            onPressed: widget.onPressed ?? () {
                               AppNavigator.pop(context);
                             },
                             child: Text(

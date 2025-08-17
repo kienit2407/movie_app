@@ -22,14 +22,14 @@ class AppBackButton extends StatelessWidget {
         borderRadius: BorderRadius.circular(15),
         child: LiquidGlass(
           settings: LiquidGlassSettings(
+            blur: 3,
             lightAngle: 120,
             lightIntensity: 1,
-            
           ),
           shape: LiquidRoundedSuperellipse(borderRadius: Radius.circular(15)),
           child: Container(
             padding: const EdgeInsets.all(10),
-            color: Colors.white60.withOpacity(.2),
+            // color: Colors.white60.withOpacity(.2),
             child: const Icon(Iconsax.arrow_left_2_copy),
           ),
         ),

@@ -5,24 +5,25 @@ import 'package:liquid_glass_renderer/liquid_glass_renderer.dart';
 import 'package:movie_app/common/bloc/AuthWithSocial/auth_with_social_cubit.dart';
 import 'package:movie_app/common/bloc/AuthWithSocial/auth_with_social_state.dart';
 import 'package:movie_app/common/components/alert_dialog/app_alert_dialog.dart';
-import 'package:movie_app/common/components/button/app_back_button.dart';
+import 'package:movie_app/common/components/background/app_back_ground.dart';
+import 'package:movie_app/common/components/background/app_overlay.dart';
 import 'package:movie_app/common/components/button/app_button.dart';
 import 'package:movie_app/common/components/loading/custom_loading.dart';
 import 'package:movie_app/common/components/text_field/app_email_textfield.dart';
 import 'package:movie_app/common/components/text_field/app_password_textfield.dart';
 import 'package:movie_app/common/helpers/navigation/app_navigation.dart';
 import 'package:movie_app/core/config/assets/app_image.dart';
-import 'package:movie_app/core/config/routes/navhost/pages/nav_host.dart';
+import 'package:movie_app/core/config/routes/navhost/nav_host.dart';
 import 'package:movie_app/core/config/themes/app_color.dart';
 import 'package:movie_app/core/config/utils/animated_dialog.dart';
 import 'package:movie_app/feature/auth/data/models/sign_in_req.dart';
+import 'package:movie_app/feature/auth/presentation/reset_password/pages/reset_password_page.dart';
 import 'package:movie_app/feature/auth/presentation/sign_in/bloc/sign_in_cubit.dart';
 import 'package:movie_app/feature/auth/presentation/sign_in/bloc/sign_in_state.dart';
 import 'package:movie_app/feature/auth/presentation/sign_in/widgets/app_button_forgot.dart';
 import 'package:movie_app/feature/auth/presentation/sign_in/widgets/app_divide.dart';
 import 'package:movie_app/common/components/orther/app_option.dart';
 import 'package:movie_app/feature/auth/presentation/sign_in/widgets/app_to_sign_up.dart';
-import 'package:movie_app/feature/auth/presentation/sign_up/widgets/app_fullname_textfield.dart';
 
 class SignInPage extends StatefulWidget {
   const SignInPage({super.key});
@@ -49,10 +50,9 @@ class _SignInPageState extends State<SignInPage> {
       child: Scaffold(
         body: Stack(
           children: [
-            _buildBackground(),
+            AppBackGround(),
             _buildOverlay(),
             _buildMainContent(),
-            AppBackButton(),
             _buildLoading()
           ],
         ),
@@ -87,18 +87,18 @@ class _SignInPageState extends State<SignInPage> {
             crossAxisAlignment: CrossAxisAlignment.center,
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              RepaintBoundary(
-                child: LiquidGlass(
-                  settings: LiquidGlassSettings(
-                    lightAngle: 120,
-                    lightIntensity: 1,
-                  ),
-                  shape: LiquidRoundedSuperellipse(
-                    borderRadius: Radius.circular(15),
-                  ),
-                  child: Image.asset(AppImage.splashLogo, width: 150),
+              LiquidGlass(
+                settings: LiquidGlassSettings(
+                  blur: 3,
+                  lightAngle: 120,
+                  lightIntensity: 1,
                 ),
+                shape: LiquidRoundedSuperellipse(
+                  borderRadius: Radius.circular(15),
+                ),
+                child: Image.asset(AppImage.splashLogo, width: 150),
               ),
+              const SizedBox(height: 20),
               //logo a
               const Text(
                 'Login to Your Account',
@@ -112,14 +112,16 @@ class _SignInPageState extends State<SignInPage> {
               AppButton(
                 onPressed: () {
                   final signInReq = SignInReq(
-                    email: _controllorEmail.text,
-                    password: _controllorPassword.text,
+                    email: _controllorEmail.text.trim(),
+                    password: _controllorPassword.text.trim(),
                   );
                   context.read<SignInCubit>().signIn(signInReq);
                 },
                 title: 'Sign in',
               ),
-              AppButtonForgot(onPressed: () {}),
+              AppButtonForgot(onPressed: () {
+                AppNavigator.push(context, const ResetPasswordPage());
+              }),
               AppDivide(),
               const SizedBox(height: 30),
               AppOption(),
@@ -131,7 +133,15 @@ class _SignInPageState extends State<SignInPage> {
       ),
     );
   }
-
+Widget _buildOverlay() => Container(
+    decoration: BoxDecoration(
+      gradient: LinearGradient(
+        colors: [AppColor.bgApp, AppColor.buttonColor.withOpacity(0.3)],
+        begin: Alignment.bottomCenter,
+        end: Alignment.topCenter,
+      ),
+    ),
+  );
   void _handleSignUpState(BuildContext context, SignInState state) {
     if (state is SignInValidErrol) {
       final errols = state.errolSignIn;
@@ -187,23 +197,6 @@ class _SignInPageState extends State<SignInPage> {
     }
   }
 
-  Widget _buildBackground() => Container(
-    decoration: BoxDecoration(
-      image: DecorationImage(
-        image: AssetImage(AppImage.splashBackground),
-        fit: BoxFit.cover,
-      ),
-    ),
-  );
-  Widget _buildOverlay() => Container(
-    decoration: BoxDecoration(
-      gradient: LinearGradient(
-        colors: [AppColor.bgApp, AppColor.buttonColor.withOpacity(0.3)],
-        begin: Alignment.bottomCenter,
-        end: Alignment.topCenter,
-      ),
-    ),
-  );
   Widget _buildLoading() {
     return BlocBuilder<SignInCubit, SignInState>(
       builder: (context, signInState) {

@@ -75,3 +75,19 @@ class SignInValidator extends AuthValidator <SignInReq> {
   }
   
 }
+class ResetPasswordValidator extends AuthValidator <String> {
+  @override
+  Map<String, String> validate(String params) {
+    final errols = <String, String>{};
+    //email
+    if(params.isEmpty){
+      errols['email'] = 'Email can not be blank!';
+      return errols;
+    }
+    else if (!EmailValidator.validate(params)) {
+      errols['email'] = 'Email is incorrected format!';
+      return errols;
+    }
+    return errols;
+  }
+}

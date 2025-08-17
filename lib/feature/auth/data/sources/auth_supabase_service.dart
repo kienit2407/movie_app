@@ -1,19 +1,67 @@
 import 'package:dartz/dartz.dart';
-import 'package:flutter/services.dart';
+import 'package:firebase_auth/firebase_auth.dart' hide OAuthProvider;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:flutter_facebook_auth/flutter_facebook_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:movie_app/core/errol/failure.dart';
+import 'package:movie_app/feature/auth/data/models/confirm_token.dart';
 import 'package:movie_app/feature/auth/data/models/sign_in_req.dart';
 import 'package:movie_app/feature/auth/data/models/sign_up_req.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-abstract class AuthSupabaseService {
+abstract class AuthService {
   Future<Either> signUp(SignUpReq signUpReq);
   Future<Either> signIn(SignInReq signInReq);
   Future<Either> signInWithGoogle();
+  Future<Either> signInWithFaceBook();
+  Future<Either> sendReqResetPassword(String email);
+  Future<Either> signOut();
+  Future<Either> confirmTokenOtpEmail(ConfirmToken confirmToken);
 }
+// class AuthFirebaeServiceImpl extends AuthService{
+//   //init intance firebase
+//   final firebaseAuth = FirebaseAuth.instance;
+//   final firebaseFireStore = Fire;
 
-class AuthSupabaseServiceImpl extends AuthSupabaseService {
+//   @override
+//   Future<Either> sendReqResetPassword(Object email) {
+//     // TODO: implement sendReqResetPassword
+//     throw UnimplementedError();
+//   }
+
+//   @override
+//   Future<Either> signIn(SignInReq signInReq) {
+//     // TODO: implement signIn
+//     throw UnimplementedError();
+//   }
+
+//   @override
+//   Future<Either> signInWithFaceBook() {
+//     // TODO: implement signInWithFaceBook
+//     throw UnimplementedError();
+//   }
+
+//   @override
+//   Future<Either> signInWithGoogle() {
+//     // TODO: implement signInWithGoogle
+//     throw UnimplementedError();
+//   }
+
+//   @override
+//   Future<Either> signOut() {
+//     // TODO: implement signOut
+//     throw UnimplementedError();
+//   }
+
+//   @override
+//   Future<Either> signUp(SignUpReq signUpReq) {
+//     // TODO: implement signUp
+//     throw UnimplementedError();
+//   }
+// }
+
+class AuthSupabaseServiceImpl implements AuthService {
   final supaBaseAuth = Supabase.instance.client; // tạo instance
 
   @override
@@ -58,40 +106,113 @@ class AuthSupabaseServiceImpl extends AuthSupabaseService {
   Future<Either> signInWithGoogle() async {
     try {
       final webClientId = dotenv.env['WEB_CLIENT_ID'];
-      final iosClientId = dotenv.env['IOS_CLIENT_ID'];
+      final iosClientId =
+          dotenv.env['IOS_CLIENT_ID']; //<- mã định danh ứng dụng mobile
 
-      final googleSignin = GoogleSignIn.instance; //khởi tại instacne cho gg
+      final googleSignin = GoogleSignIn.instance; //khởi tại instacne cho gg (một singleton)
+
       await googleSignin.initialize(
         // bắt đầu khởi động gg
         clientId: iosClientId,
-        serverClientId: webClientId,
+        serverClientId: webClientId, //<- để lấy idtoken
       );
 
-      final googleAccount = await googleSignin.authenticate();
-      final idToken = googleAccount.authentication.idToken;
-
+      final googleAccount = await googleSignin.authenticate(); //<- mở trình đăng nhập, để cho người dùng uỷ quyền, và gửi đi để yêu cầu token
+      final idToken = googleAccount.authentication.idToken; //<- yêu càu token và trả về
       if (idToken == null) {
-        return Left('The token is failed!');
-      } else {
-        print('Retrive token successfully');
+        return Left('The user canceled login!');
       }
+
       final response = await supaBaseAuth.auth.signInWithIdToken(
+        //gửi token sang cho supabase để supa xác nhận chữ ký
         provider: OAuthProvider.google,
         idToken: idToken,
       );
       if (response.user == null) {
-        Left('Sign in was failded. Please try again!');
+        return Left('Sign in was failded. Please try again!');
       }
       return Right('Sign in successfull');
-    } on GoogleSignInException catch (e) {
+    } on GoogleSignInException {
+      return Left('The user canceled login!');
+    } catch (e) {
+      print('Lỗi không xác định: $e');
       return Left(
-        'Cancel',
+        'Have an errol occured. Please try again or contact with me:  0971161803',
+      );
+    }
+  }
+
+  @override
+  Future<Either> signInWithFaceBook() async {
+   final status = await Permission.appTrackingTransparency.request();
+  print('Permission Status: $status'); // Debug trạng thái quyền
+  
+    try {
+      final LoginResult result = await FacebookAuth.instance.login(permissions: ['public_profile'], ); // by default we 
+
+      final accessToken = result.accessToken;
+        print('Access Token: ${accessToken}');
+      if (accessToken == null) {
+        return Left('The user canceled login!');
+      }
+
+      final response = await supaBaseAuth.auth.signInWithIdToken(
+        //gửi token sang cho supabase để supa xác nhận chữ ký
+        provider: OAuthProvider.facebook,
+        idToken: accessToken.toString(),
+      );
+
+      if (response.user == null) {
+        return Left('Sign in was failded. Please try again!');
+      }
+      return Right('Sign in successfull');
+    } catch (e) {
+    print('Lỗi chi tiết: $e'); // Debug chi tiết hơn
+    return Left('An error occurred. Please try again or contact: 0971161803');
+  }
+  }
+
+  @override
+  Future<Either> signOut() async {
+    try {
+      await supaBaseAuth.auth.signOut();
+      return Right('Sign out successfull');
+    } catch (e) {
+      print('Lỗi không xác định: $e');
+      return Left(
+        'Have an errol occured. Please try again or contact with me:  0971161803',
+      );
+    }
+  }
+
+  @override
+  Future<Either> sendReqResetPassword(String email) async {
+    // reset password cần email để có thể gửi mail về
+    try {
+      await supaBaseAuth.auth.resetPasswordForEmail(email);
+      return Right(
+        'Password for reseting email sent to your email. Pls check now',
       );
     } catch (e) {
       print('Lỗi không xác định: $e');
       return Left(
         'Have an errol occured. Please try again or contact with me:  0971161803',
       );
+    }
+  }
+
+  @override
+  Future<Either> confirmTokenOtpEmail(ConfirmToken confirmToken) async {
+    try {
+      await supaBaseAuth.auth.verifyOTP(
+        token: confirmToken.token,
+        email: confirmToken.email,
+        type: OtpType.recovery,
+      );
+      return Right('Xác nhận đúng token');
+    } catch (e) {
+      print(e);
+      return Left('Token nhập sai');
     }
   }
 }
