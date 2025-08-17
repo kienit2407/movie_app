@@ -12,11 +12,10 @@ import 'package:movie_app/common/components/text_field/app_password_textfield.da
 import 'package:movie_app/common/components/loading/custom_loading.dart';
 import 'package:movie_app/common/helpers/navigation/app_navigation.dart';
 import 'package:movie_app/core/config/assets/app_image.dart';
-import 'package:movie_app/core/config/routes/navhost/pages/nav_host.dart';
+import 'package:movie_app/core/config/routes/navhost/nav_host.dart';
 import 'package:movie_app/core/config/themes/app_color.dart';
 import 'package:movie_app/core/config/utils/animated_dialog.dart';
 import 'package:movie_app/feature/auth/data/models/sign_up_req.dart';
-import 'package:movie_app/feature/auth/presentation/sign_in/bloc/sign_in_state.dart';
 import 'package:movie_app/feature/auth/presentation/sign_in/widgets/app_divide.dart';
 import 'package:movie_app/common/components/orther/app_option.dart';
 import 'package:movie_app/feature/auth/presentation/sign_up/bloc/sign_up_cubit.dart';
@@ -93,6 +92,7 @@ class _SignUpPageState extends State<SignUpPage> {
             children: [
               LiquidGlass(
                 settings: LiquidGlassSettings(
+                  blur: 3,
                   lightAngle: 120,
                   lightIntensity: 1,
                 ),
@@ -101,6 +101,7 @@ class _SignUpPageState extends State<SignUpPage> {
                 ),
                 child: Image.asset(AppImage.splashLogo, width: 150),
               ),
+              const SizedBox(height: 20),
               //logo a
               const Text(
                 'Create Your Account',

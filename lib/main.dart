@@ -1,3 +1,5 @@
+
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -8,10 +10,14 @@ import 'package:movie_app/core/config/di/service_locator.dart';
 import 'package:movie_app/core/config/network/init_supabase.dart';
 import 'package:movie_app/core/config/themes/app_color.dart';
 import 'package:movie_app/core/config/themes/app_theme.dart';
+import 'package:movie_app/feature/auth/presentation/reset_password/bloc/confirm_token_cubit.dart';
+import 'package:movie_app/feature/auth/presentation/reset_password/bloc/reset_password_cubit.dart';
+import 'package:movie_app/feature/auth/presentation/reset_password/pages/reset_password_page.dart';
 import 'package:movie_app/feature/auth/presentation/sign_in/bloc/sign_in_cubit.dart';
 import 'package:movie_app/feature/auth/presentation/sign_up/bloc/sign_up_cubit.dart';
 import 'package:movie_app/feature/intro/presentation/splash/bloc/splash_cubit.dart';
 import 'package:movie_app/feature/intro/presentation/splash/pages/splash.dart';
+import 'package:movie_app/firebase_options.dart';
 
 Future<void> main() async {
   // ensure flutter Initialized before of all
@@ -19,9 +25,11 @@ Future<void> main() async {
   //Init get it để tiêm phụ thuộc
   await initializeGetit(); //<- hàm thuần
   //Next one load môi trường
-  await dotenv.load(fileName: 'assets/.env');
-  //khởi động biến môi trường cho supabase
+  await dotenv.load(fileName:'assets/.env');
+  // //khởi động biến môi trường cho supabase
   await supaBaseInit.initSupabase();
+  //khởi động firebase
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
   runApp(const MovieApp());
 }
@@ -37,12 +45,12 @@ class MovieApp extends StatelessWidget {
     );
     return MultiBlocProvider(
       providers: [
-        BlocProvider(
-          create: (context) => SplashCubit()..appStarted(), //<- khởi động app, để xét xem có người dùng chưa
-        ),
+        BlocProvider(create: (context) => SplashCubit()..appStarted()), //<- khởi động app, để xét xem có người dùng chưa
         BlocProvider(create: (context) => SignUpCubit()),
         BlocProvider(create: (context) => SignInCubit()),
         BlocProvider(create: (context) => AuthWithSocialCubit()),
+        BlocProvider(create: (context) => ResetPasswordCubit()),
+        BlocProvider(create: (context) => ConfirmTokenCubit()),
       ],
       child: MaterialApp(
         theme: AppTheme.appTheme,

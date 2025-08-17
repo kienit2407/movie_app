@@ -2,8 +2,12 @@ import 'package:get_it/get_it.dart';
 import 'package:movie_app/feature/auth/data/repositoryImpl/auth_repository_Impl.dart';
 import 'package:movie_app/feature/auth/data/sources/auth_supabase_service.dart';
 import 'package:movie_app/feature/auth/domain/repositories/auth_repository.dart';
+import 'package:movie_app/feature/auth/domain/usecases/confirm_with_token.dart';
+import 'package:movie_app/feature/auth/domain/usecases/req_reset_password.dart';
+import 'package:movie_app/feature/auth/domain/usecases/sigin_with_facebook.dart';
 import 'package:movie_app/feature/auth/domain/usecases/sigin_with_google.dart';
 import 'package:movie_app/feature/auth/domain/usecases/sign_in.dart';
+import 'package:movie_app/feature/auth/domain/usecases/sign_out.dart';
 import 'package:movie_app/feature/auth/domain/usecases/sign_up.dart';
 //khởi tạo instance
 final sl = GetIt.instance;
@@ -17,9 +21,14 @@ Future<void> initializeGetit () async {
   //vd: những instance mà bạn không muốn giữ state cũ của nó hoặc là có vòng đời ngắn
   // sl.registerLazySingletonAsync <- giống đầu tiên cũng chỉ tạo khi gọi như nó sẽ đợi tránh load dữ liêu cùng lúc
   // sl.registerSingletonAsync<T>(() => T()); <- sẽ chờ khởi tạo hoàn tất. Dùng khi load dữ liệu từ db hay api
-  sl.registerLazySingleton<AuthSupabaseService>(() => AuthSupabaseServiceImpl());
+  sl.registerLazySingleton<AuthService>(() => AuthSupabaseServiceImpl());
   sl.registerLazySingleton<AuthRepository>(() => AuthRepositoryImpl());
   sl.registerLazySingleton<SignUpUsecase>(() => SignUpUsecase());
   sl.registerLazySingleton<SignInUsecase>(() => SignInUsecase());
   sl.registerLazySingleton<SiginWithGoogleUsecase>(() => SiginWithGoogleUsecase());
+  sl.registerLazySingleton<SiginWithFacebookUsecase>(() => SiginWithFacebookUsecase());
+  sl.registerLazySingleton<SignOutUsecase>(() => SignOutUsecase());
+  sl.registerLazySingleton<ReqResetPasswordUsecase>(() => ReqResetPasswordUsecase());
+  sl.registerLazySingleton<ConfirmWithTokenUsecase>(() => ConfirmWithTokenUsecase());
+  
 }

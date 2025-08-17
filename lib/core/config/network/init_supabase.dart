@@ -10,6 +10,7 @@ class InitSupabase {
     await Supabase.initialize(
     url: dotenv.env['SUPABASE_URL']!, //<- tránh trường hợp null và bị crash app
     anonKey: dotenv.env['SUPABASE_ANON_KEY']!,
+    
   );
     print('Khởi tạo thành công');
   } catch (e) {
