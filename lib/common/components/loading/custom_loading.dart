@@ -1,7 +1,5 @@
 import 'dart:ui';
-
 import 'package:flutter/material.dart';
-import 'package:liquid_glass_renderer/liquid_glass_renderer.dart';
 
 class CustomLoading extends StatefulWidget {
   const CustomLoading({super.key, this.size = 60, this.splash = false});
@@ -15,8 +13,7 @@ class CustomLoading extends StatefulWidget {
 
 class _CustomLoadingState extends State<CustomLoading>
     with SingleTickerProviderStateMixin {
-  late AnimationController
-  _controller; //<- khởi tạo trễ một controller để đièu khiển tốc độ và thời giàn xoay
+  late AnimationController _controller; //<- khởi tạo trễ một controller để đièu khiển tốc độ và thời giàn xoay
   late Animation<double> _animation;
 
   @override

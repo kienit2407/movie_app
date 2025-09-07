@@ -3,6 +3,7 @@ import 'package:movie_app/core/config/themes/app_color.dart';
 
 class AppTheme {
   static final appTheme = ThemeData(
+    useMaterial3: true,
     textTheme: TextTheme(bodyMedium: TextStyle(color: Colors.white)),
     scaffoldBackgroundColor: AppColor.bgApp, //<- đặt màu theme cho scaffold
     iconTheme: IconThemeData(color: Colors.white),

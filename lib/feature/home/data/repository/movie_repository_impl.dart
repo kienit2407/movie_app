@@ -1,0 +1,34 @@
+import 'package:dartz/dartz.dart';
+import 'package:movie_app/core/config/di/service_locator.dart';
+import 'package:movie_app/core/errol/app_exception.dart';
+import 'package:movie_app/feature/home/data/models/detail_movie_model.dart';
+import 'package:movie_app/feature/home/data/models/new_movie_model.dart';
+import 'package:movie_app/feature/home/data/source/movie_remote_datasource.dart';
+import 'package:movie_app/feature/home/domain/entities/new_movie_entity.dart';
+import 'package:movie_app/feature/home/domain/repository/movie_repository.dart';
+
+class MovieRepositoryImpl implements MovieRepository {
+  @override
+  Future<Either<String, List<ItemEntity>>> getLatestMovie(int page) async {
+    try {
+      final newMovieModel = await sl<MovieRemoteDatasource>().getLatestMovie(page);
+      final latestMovieList = newMovieModel.items.map((model) => model.toEntity()).toList();
+      return Right(latestMovieList);
+    } on NetworkException catch (e) {
+      return Left('$e');
+    }
+  }
+
+  @override
+  Future<Either<String, DetailMovieModel>> getDetailMovie(String slug) async {
+    try {
+      final newMovieModel = await sl<MovieRemoteDatasource>().getDetailMovie(slug);
+      return Right(newMovieModel);
+
+    } on NetworkException catch (e) {
+      return Left('$e');
+    }
+  }
+  
+
+} 

@@ -1,8 +1,8 @@
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 //tạo instance thay thế cách khai báo hàm static thông thường
-InitSupabase supaBaseInit = InitSupabase();
-
+InitSupabase supaBaseInit = InitSupabase(); //cách 2
+// InitSupabase get supaBaseInit => InitSupabase(); //cách 1
 class InitSupabase {
   Future<void> initSupabase () async {
     //dùng try catch tránh crash app khi api bị sai 

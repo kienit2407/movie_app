@@ -3,7 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:movie_app/common/components/loading/custom_loading.dart';
 import 'package:movie_app/common/helpers/navigation/app_navigation.dart';
 import 'package:movie_app/core/config/assets/app_image.dart';
-import 'package:movie_app/core/config/routes/navhost/nav_host.dart';
+import 'package:movie_app/core/config/routes/nav_host.dart';
 import 'package:movie_app/core/config/themes/app_color.dart';
 import 'package:movie_app/feature/auth/presentation/sign_in/pages/sign_in.dart';
 import 'package:movie_app/feature/intro/presentation/splash/bloc/splash_cubit.dart';
