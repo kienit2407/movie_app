@@ -1,0 +1,5 @@
+- Trong dự án thực tế hoàn toàn có thể sử dụng equatable cho phần generate cho phần copy with (nó giúp tạo bản sao của đối tượng thay đổi những trường cần thiết mà không thay đổi toàn bộ hoặc code thủ công từng trường của contructor, tất cả sẽ nhờ vào complie lo. Nhằm đảm bảo tính bất biến). Và equatable sẽ triển khai hashcode theo value dựa trên props (hashcode là gì? mỗi đối tượng sẽ có 1 hashCode khác nhau, dù cùng giá trị nhưng vẫn khác ô nhớ, Việc ghi đè hashCode là so sánh chúng có cùng giá trị và đối tượng không tránh ui rebuild vô tội vạ)
+- Riêng freezed nó sẽ giúp giúp chúng ta 3 việc:
+    + Định nghĩa contructor & props
+    + ghi đè hash code
+    + 

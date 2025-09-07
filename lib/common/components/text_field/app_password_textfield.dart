@@ -1,5 +1,4 @@
 import 'dart:ui';
-
 import 'package:flutter/material.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
 import 'package:movie_app/core/config/themes/app_color.dart';
@@ -19,8 +18,7 @@ class _AppPasswordTextfieldState extends State<AppPasswordTextfield> {
   final _focusedNode = FocusNode();
   bool _isFocused = false;
   bool _isHidePassword = true;
-
-
+  
 @override
   void initState() {
     _focusedNode.addListener((){
@@ -40,7 +38,7 @@ class _AppPasswordTextfieldState extends State<AppPasswordTextfield> {
   }
   @override
   Widget build(BuildContext context) {
-    final _foscusScrope = FocusScope.of(context);
+    final foscusScrope = FocusScope.of(context);
     return ClipRect(
       clipBehavior: Clip.hardEdge,
       child: BackdropFilter(
@@ -68,7 +66,7 @@ class _AppPasswordTextfieldState extends State<AppPasswordTextfield> {
             ),
           ),
           child: TextField(
-            onSubmitted: (value) => _foscusScrope.unfocus(),
+            onSubmitted: (value) => foscusScrope.unfocus(),
             controller: widget.controller,
             obscureText: _isHidePassword,
             obscuringCharacter: '*',

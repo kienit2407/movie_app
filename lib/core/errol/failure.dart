@@ -1,5 +1,3 @@
-
-
 class AuthFailure {
   static String mapErrol (String message){
     print(message);
