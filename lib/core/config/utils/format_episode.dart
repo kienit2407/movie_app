@@ -14,3 +14,32 @@ extension FormatEpisode on String {
 //     return "${minutes.toString()} phút/tập";
 //   }
 // }
+extension ConvertLang on String {
+  String toConvertLang () {
+    String lang = this;
+    switch (lang) {
+      case 'Vietsub' : 
+      return 'PĐ';
+      case 'Lồng Tiếng' : 
+      return 'LT';
+      case 'Vietsub + Lồng Tiếng' :
+      return 'PĐ.LT';
+      case 'Vietsub + Thuyết Minh' :
+      return 'PĐ.TM';
+    }
+    // if(lang == 'Vietsub') {
+    //   return 'PĐ';
+    // }
+    // if(lang == 'Lồng Tiếng') {
+    //   return 'LT';
+    // }
+    // if(lang == 'Vietsub + Lồng Tiếng') {
+    //   return 'PĐ.LT';
+    // }
+    // if(lang == 'Vietsub + Thuyết Minh') {
+    //   return 'PĐ.TM';
+    // }
+    
+    return 'unKnown';
+  }
+}

@@ -1,13 +1,16 @@
 import 'dart:math' as math;
 import 'dart:ui';
+import 'package:animate_do/animate_do.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:carousel_slider/carousel_slider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
+import 'package:liquid_glass_renderer/liquid_glass_renderer.dart';
 import 'package:movie_app/app_data.dart';
 import 'package:movie_app/common/helpers/contants/app_url.dart';
+import 'package:movie_app/common/helpers/fake_api.dart';
 import 'package:movie_app/core/config/assets/app_image.dart';
 import 'package:movie_app/core/config/themes/app_color.dart';
 import 'package:movie_app/core/config/utils/cached_image.dart';
@@ -15,9 +18,12 @@ import 'package:movie_app/core/config/utils/format_episode.dart';
 import 'package:movie_app/core/config/utils/list_gadient.dart';
 import 'package:movie_app/core/config/utils/sharder_text.dart';
 import 'package:movie_app/feature/home/domain/entities/new_movie_entity.dart';
+import 'package:movie_app/feature/home/presentation/bloc/genre_cubit.dart';
+import 'package:movie_app/feature/home/presentation/bloc/genre_state.dart';
 import 'package:movie_app/feature/home/presentation/bloc/latest_movie_cubit.dart';
 import 'package:movie_app/feature/home/presentation/bloc/latest_movie_state.dart';
 import 'package:movie_app/feature/home/presentation/widgets/blur_effect.dart';
+import 'package:movie_app/feature/home/presentation/widgets/genre_bottom_sheet.dart';
 import 'package:movie_app/feature/home/presentation/widgets/overlay_gadient.dart';
 import 'package:movie_app/feature/home/presentation/widgets/polk_effect.dart';
 
@@ -39,7 +45,8 @@ class _HomePageState extends State<HomePage>
   int itemCountStandart = 10;
   double _chipOpacity = 1.0;
   double _chipOffset = 0.0;
-
+  bool isSelectedGenre = false;
+  
   @override
   void initState() {
     indexCarouselController = CarouselSliderController();
@@ -55,6 +62,7 @@ class _HomePageState extends State<HomePage>
       });
     });
   }
+
   @override
   Widget build(BuildContext context) {
     //Take height size of device
@@ -64,45 +72,51 @@ class _HomePageState extends State<HomePage>
       extendBodyBehindAppBar: true, //-> dùng khi muốn làm appbar trong suốt
       extendBody:
           true, //-> cái này nó sẽ render full màn hình bottom nav trong suốt
-      //bottom nav
+      // bottom nav
       // bottomNavigationBar: Transform.translate(
-      //   offset: Offset(0, 15),
-      //   child: ClipRect(
-      //     child: BackdropFilter(
-      //       filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-      //       child: NavigationBar(
-      //         indicatorColor: Colors.transparent,
-      //         shadowColor: Colors.transparent,
-      //         elevation: 0,
-      //         surfaceTintColor: Colors.transparent,
-      //         overlayColor: WidgetStateProperty.all(Colors.transparent),
-      //         labelTextStyle: WidgetStateProperty.all(
-      //           TextStyle(color: Colors.white, fontSize: 12),
+      //   offset: Offset(0, -20),
+      //   child: Container(
+      //     margin: EdgeInsets.symmetric(horizontal: 20),
+      //     height: 70,
+      //     child: LiquidGlass(
+      //       shape: LiquidRoundedSuperellipse(borderRadius: Radius.circular(50)),
+      //       settings: LiquidGlassSettings(
+      //         blur: 2,
+      //         blend: 10
+      //       ),
+      //       child: Transform.translate(
+      //         offset: Offset(0, 18),
+      //         child: NavigationBar(
+      //           indicatorColor: Colors.transparent,
+      //           shadowColor: Colors.transparent,
+      //           elevation: 0,
+      //           surfaceTintColor: Colors.transparent,
+      //           overlayColor: WidgetStateProperty.all(Colors.transparent),
+      //           labelTextStyle: WidgetStateProperty.all(
+      //             TextStyle(color: Colors.white, fontSize: 12),
+      //           ),
+                
+      //           backgroundColor: Colors.transparent,
+      //           destinations: [
+      //             NavigationDestination(
+      //               icon: Icon(Iconsax.home_2_copy,),
+      //               selectedIcon: Icon(Iconsax.home_2),
+      //               label: 'Home',
+      //             ),
+      //             NavigationDestination(
+      //               icon: Icon(Iconsax.home_2_copy,),
+      //               selectedIcon: Icon(Iconsax.home_2),
+      //               label: 'Home',
+      //             ),
+      //             NavigationDestination(
+      //               icon: Icon(Iconsax.home_2_copy,),
+      //               selectedIcon: Icon(Iconsax.home_2),
+      //               label: 'Home',
+      //             ),
+                  
+                 
+      //           ],
       //         ),
-
-      //         backgroundColor: Colors.black.withOpacity(.4),
-      //         destinations: [
-      //           NavigationDestination(
-      //             icon: Icon(Iconsax.home_2_copy),
-      //             selectedIcon: Icon(Iconsax.home_2),
-      //             label: 'Home',
-      //           ),
-      //           NavigationDestination(
-      //             icon: Icon(Iconsax.home_2_copy),
-      //             selectedIcon: Icon(Iconsax.home_2),
-      //             label: 'Home',
-      //           ),
-      //           NavigationDestination(
-      //             icon: Icon(Iconsax.home_2_copy),
-      //             selectedIcon: Icon(Iconsax.home_2),
-      //             label: 'Home',
-      //           ),
-      //           NavigationDestination(
-      //             icon: Icon(Iconsax.home_2_copy),
-      //             selectedIcon: Icon(Iconsax.home_2),
-      //             label: 'Home',
-      //           ),
-      //         ],
       //       ),
       //     ),
       //   ),
@@ -113,12 +127,15 @@ class _HomePageState extends State<HomePage>
         foregroundColor: Colors.white,
         title: Column(
           spacing: 10,
-          children: [     
+          children: [
             Row(
               children: [
                 Image.asset(AppImage.splashLogo, scale: 1.5),
                 Spacer(),
-                IconButton.outlined(onPressed: () {}, icon: Icon(Iconsax.filter)),
+                IconButton.outlined(
+                  onPressed: () {},
+                  icon: Icon(Iconsax.filter),
+                ),
                 const SizedBox(width: 15),
                 Stack(
                   children: [
@@ -148,36 +165,40 @@ class _HomePageState extends State<HomePage>
               ],
             ),
             AnimatedBuilder(
-                animation: _scrollController,
-                builder: (context, child) {
-                  return AnimatedOpacity(
-                    duration: Duration(milliseconds: 200),
-                    curve: Curves.easeInOut,
-                    opacity: _chipOpacity,
-                    child: Transform.translate(
-                      offset: Offset(0, -_chipOffset),
-                      child: Row(
-                        spacing: 10,
-                        mainAxisAlignment: MainAxisAlignment.start,
-                        children: [
-                          _buildChipButton('Đề Xuất', isSelected: true),
-                          _buildChipButton(
-                            'Thể loại',
-                            icon: Iconsax.arrow_down_1_copy,
-                            showIcon: true,
-                            onPressed: () => _displayBottomSheetTypeOfMovie(context),
-                          ),
-                          _buildChipButton(
-                            'Quốc gia',
-                            icon: Iconsax.arrow_down_1_copy,
-                            showIcon: true,
-                          ),
-                        ],
-                      ),
+              animation: _scrollController,
+              builder: (context, child) {
+                return AnimatedOpacity(
+                  duration: Duration(milliseconds: 200),
+                  curve: Curves.easeInOut,
+                  opacity: _chipOpacity,
+                  child: Transform.translate(
+                    offset: Offset(0, -_chipOffset),
+                    child: Row(
+                      spacing: 10,
+                      mainAxisAlignment: MainAxisAlignment.start,
+                      children: [
+                        _buildChipButton('Đề Xuất', isSelected: true),
+                        _buildChipButton(
+                          'Thể loại',
+                          icon: Iconsax.arrow_down_1_copy,
+                          showIcon: true,
+                          onPressed: () {
+                            GenreBottomSheet.show(context);
+
+                          },
+                          isSelected: isSelectedGenre
+                        ),
+                        _buildChipButton(
+                          'Quốc gia',
+                          icon: Iconsax.arrow_down_1_copy,
+                          showIcon: true,
+                        ),
+                      ],
                     ),
-                  );
-                },
-              ),
+                  ),
+                );
+              },
+            ),
           ],
         ),
         backgroundColor: Colors.transparent,
@@ -198,7 +219,7 @@ class _HomePageState extends State<HomePage>
                 end: Alignment.bottomCenter,
               ),
             ),
-          ),    
+          ),
         ),
       ),
       body: SingleChildScrollView(
@@ -237,13 +258,19 @@ class _HomePageState extends State<HomePage>
       padding: const EdgeInsets.symmetric(vertical: 10),
       child: Column(
         children: List.generate(3, (index) {
-          return _itemLatestMovieCountry(content: 'Phim Hàn Quốc Mới Nhất', gadient: ListGadient.listGadient[index]);
-        })
+          return _itemLatestMovieCountry(
+            content: 'Phim Hàn Quốc Mới Nhất',
+            gadient: ListGadient.listGadient[index],
+          );
+        }),
       ),
     );
   }
 
-  Widget _itemLatestMovieCountry({required String? content,required Gradient gadient}) {
+  Widget _itemLatestMovieCountry({
+    required String? content,
+    required Gradient gadient,
+  }) {
     return Column(
       children: [
         Row(
@@ -269,42 +296,41 @@ class _HomePageState extends State<HomePage>
         SizedBox(
           height: MediaQuery.of(context).size.height * .3,
           child: AnimationLimiter(
-
             child: ListView.separated(
               scrollDirection: Axis.horizontal,
               // shrinkWrap: true, // sử dụng cái này thì nó sẽ đo chiều cao của list nếu 100 item thì nó sẽ nặng và lagy -> chậm
               //thay vì dùng nó để tránh lõi khi nhét list view vào colum thì dùng Expanded listview sẽ chiếm hết phần trống flutter chỉ việc render trong viewport
-              addAutomaticKeepAlives: true, // từ động giữ state của widget con khi cúng ra khở màn hình và rebuild khong cần thiết
+              addAutomaticKeepAlives:true, // từ động giữ state của widget con khi cúng ra khở màn hình và rebuild khong cần thiết
               // addRepaintBoundaries: false, // cái này nó giảm vẽ lại nhưng nêis widget con ít thày đôi khi không cầ sử dụng
               // addSemanticIndexes: true,
               // primary: true,
-              separatorBuilder: (context, index) => SizedBox(width: 10,),
+              separatorBuilder: (context, index) => SizedBox(width: 10),
               itemCount: AppData.posterList.length,
               cacheExtent: 500, //khởng pixel render trước khi thấy viewport
-              itemBuilder: (context, index){  
+              itemBuilder: (context, index) {
                 return AnimationConfiguration.staggeredList(
                   position: index,
                   duration: const Duration(milliseconds: 800),
                   child: SlideAnimation(
                     verticalOffset: 50,
-                      curve: Curves.easeInOut,
+                    curve: Curves.easeInOut,
                     child: FadeInAnimation(
                       curve: Curves.easeInOut,
-                      child: _itemLatestMovie(imgeUrl: AppData.posterList[index])
+                      child: _itemLatestMovie(
+                        imgeUrl: AppData.posterList[index],
+                      ),
                     ),
-                  )
-
+                  ),
                 );
-              }
+              },
             ),
           ),
         ),
-        
       ],
     );
   }
 
-  Widget _itemLatestMovie({String?  imgeUrl}) {
+  Widget _itemLatestMovie({String? imgeUrl}) {
     return SizedBox(
       width: 140,
       height: 200,
@@ -317,12 +343,13 @@ class _HomePageState extends State<HomePage>
             decoration: BoxDecoration(
               image: DecorationImage(
                 image: CachedNetworkImageProvider(
-                  imgeUrl ?? 'https://static.nutscdn.com/vimg/300-0/d0f979ab72160593e538fcc702b7e749.jp',
+                  imgeUrl ??
+                      'https://static.nutscdn.com/vimg/300-0/d0f979ab72160593e538fcc702b7e749.jp',
                 ),
                 fit: BoxFit.cover,
               ),
               borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: Colors.white, width: 2)
+              border: Border.all(color: Colors.white, width: 2),
             ),
             child: Stack(
               children: [
@@ -335,8 +362,8 @@ class _HomePageState extends State<HomePage>
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       _itemChip(content: 'Tập 20', isLeft: true),
-                      _itemChip(content: 'FHD', isGadient: true,),
-                    ]
+                      _itemChip(content: 'FHD', isGadient: true),
+                    ],
                   ),
                 ),
               ],
@@ -367,23 +394,37 @@ class _HomePageState extends State<HomePage>
     );
   }
 
-  Widget _itemChip({required String content, bool isGadient = false, double? size, bool isLeft = false}) {
+  Widget _itemChip({
+    required String content,
+    bool isGadient = false,
+    double? size,
+    bool isLeft = false,
+  }) {
     return Container(
       // foregroundDecoration: BoxDecoration(), s//-> cái này trang tí trên container
       padding: EdgeInsets.all(5),
-      decoration: BoxDecoration( //-> cái này thì bên dưới
+      decoration: BoxDecoration(
+        //-> cái này thì bên dưới
         color: isGadient ? null : Colors.white,
-        borderRadius: isLeft ? BorderRadius.only(topLeft: Radius.circular(5)) : BorderRadius.only(topRight: Radius.circular(5)),
-        gradient: isGadient ? LinearGradient(
-          colors: [Color(0xffFDF9EB), Color(0xffE8CF6F)],
-          begin: Alignment.bottomLeft,
-          end: Alignment.topRight,
-        ) : null ,
+        borderRadius: isLeft
+            ? BorderRadius.only(topLeft: Radius.circular(5))
+            : BorderRadius.only(topRight: Radius.circular(5)),
+        gradient: isGadient
+            ? LinearGradient(
+                colors: [Color(0xffFDF9EB), Color(0xffE8CF6F)],
+                begin: Alignment.bottomLeft,
+                end: Alignment.topRight,
+              )
+            : null,
       ),
       child: Center(
         child: Text(
           content,
-          style: TextStyle(fontSize: size ?? 10, fontWeight: FontWeight.w600, color: AppColor.bgApp),
+          style: TextStyle(
+            fontSize: size ?? 10,
+            fontWeight: FontWeight.w600,
+            color: AppColor.bgApp,
+          ),
         ),
       ),
     );
@@ -417,8 +458,10 @@ class _HomePageState extends State<HomePage>
           child: Row(
             spacing: 10,
             children: List.generate(6, (index) {
-              return _movieThemeItem(ListGadient.listGadient[index % ListGadient.listGadient.length]);
-            })
+              return _movieThemeItem(
+                ListGadient.listGadient[index % ListGadient.listGadient.length],
+              );
+            }),
           ),
         ),
       ],
@@ -433,13 +476,14 @@ class _HomePageState extends State<HomePage>
         children: [
           Positioned.fill(
             child: Container(
-              decoration: BoxDecoration( // lớp nền
+              decoration: BoxDecoration(
+                // lớp nền
                 borderRadius: BorderRadius.circular(10),
-                gradient: gadient
+                gradient: gadient,
               ),
             ),
           ),
-          
+
           Align(
             alignment: Alignment.bottomLeft,
             child: Container(
@@ -461,7 +505,10 @@ class _HomePageState extends State<HomePage>
                     children: [
                       Text(
                         'Watch More',
-                        style: TextStyle(fontWeight: FontWeight.w500, fontSize: 9),
+                        style: TextStyle(
+                          fontWeight: FontWeight.w500,
+                          fontSize: 9,
+                        ),
                       ),
                       Icon(Iconsax.arrow_right_3_copy, size: 14),
                     ],
@@ -508,9 +555,7 @@ class _HomePageState extends State<HomePage>
         }
         return SizedBox(
           height: screenHeight * .88,
-          child: Center(
-            child: Text(''),
-          ),
+          child: Center(child: Text('')),
         );
       },
     );
@@ -524,7 +569,6 @@ class _HomePageState extends State<HomePage>
       top: screenHeight * .20,
       child: Column(
         children: [
-          
           // const SizedBox(height: 20),
           _buildCarousel(screenHeight, latestMovie),
           SizedBox(height: 15),
@@ -638,8 +682,9 @@ class _HomePageState extends State<HomePage>
                   ),
                   _buildInforChip(
                     child: Text(
-                      (latestMovie[currentIndex].episodeCurrent == 'Full') ?
-                        latestMovie[currentIndex].time.toFormatEpisode() : latestMovie[currentIndex].time,
+                      (latestMovie[currentIndex].episodeCurrent == 'Full')
+                          ? latestMovie[currentIndex].time.toFormatEpisode()
+                          : latestMovie[currentIndex].time,
                       style: TextStyle(
                         fontSize: 10,
                         fontWeight: FontWeight.w600,
@@ -675,98 +720,24 @@ class _HomePageState extends State<HomePage>
                     ),
                   ),
                 ],
-              )
+              ),
             ],
           ),
         ),
       ],
     );
   }
-  Future _displayBottomSheetTypeOfMovie (BuildContext context) {
-    return showModalBottomSheet(
-      sheetAnimationStyle: AnimationStyle(curve: Curves.easeInOut, duration: Duration(milliseconds: 300)),
-      isScrollControlled: true, //mặc định chiếm 50% màn hình nhưng muón chiếm toàn bộ container thì set true 
-      context: context, 
-      builder: (context) => BackdropFilter(
-        filter: ImageFilter.blur(
-          sigmaX: 10,
-          sigmaY: 10
-        ),
-        child: Container(
-          height: MediaQuery.of(context).size.height * .8,
-          decoration: BoxDecoration(
-            color: Color(0xff2F3345),
-            borderRadius: BorderRadius.circular(10)
-          ),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                margin: EdgeInsets.symmetric(vertical: 5),
-                width: 100,
-                height: 5,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(10),
-                  color: Colors.grey,
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 10),
-                child: Row(
-                  spacing: 5,
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Icon(Iconsax.category),
-                    Text('Thể loại',
-                      style: TextStyle(
-                        fontWeight: FontWeight.w700,
-                      ),
-                    )
-                  ],
-                ),
-              ),
-              const SizedBox(
-                height: 10,
-              ),
-              SizedBox(
-                width: double.infinity,
-                child: Wrap(
-                  alignment: WrapAlignment.start, //CĂN CHỈNH CÁC ITEM TRONG 1 DÒNG HOẶC CỘT
-                  
-                  children: [
-                    _chipTypeOfMovie(),
-                    
-                  ]
-                )
-              )
-            ],
-          ),
-        ),
-      )
-    );
-  }
-  Widget _chipTypeOfMovie () {
-    return Container(
-      decoration: BoxDecoration(
 
-      ),
-      child: Text('Hành Động',
-        style: TextStyle(
-          fontSize: 10,
-        ),
-      ),
-    );
-  }
+
+  
+
   Widget _buildChipButton(
-    String content, 
-    {
+    String content, {
     IconData? icon,
     bool isSelected = false,
     bool showIcon = false,
     VoidCallback? onPressed,
-    }
-  ) {
+  }) {
     return Container(
       alignment: Alignment.center,
       height: 30,
@@ -792,9 +763,19 @@ class _HomePageState extends State<HomePage>
           children: [
             Text(
               content,
-              style: TextStyle(fontWeight: FontWeight.w600, fontSize: 10, color: isSelected ? Colors.black : Colors.white),
+              style: TextStyle(
+                fontWeight: FontWeight.w600,
+                fontSize: 10,
+                color: isSelected ? Colors.black : Colors.white,
+              ),
             ),
-            showIcon ? Icon(icon, size: 15, color: isSelected ? Colors.black : Colors.white,) : SizedBox.shrink(),
+            showIcon
+                ? Icon(
+                    icon,
+                    size: 15,
+                    color: isSelected ? Colors.black : Colors.white,
+                  )
+                : SizedBox.shrink(),
           ],
         ),
       ),
@@ -826,7 +807,10 @@ class _HomePageState extends State<HomePage>
             spacing: 5,
             children: [
               Icon(icon, size: 25),
-              Text(content, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12)),
+              Text(
+                content,
+                style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12),
+              ),
             ],
           ),
         ),
@@ -931,7 +915,7 @@ class _HomePageState extends State<HomePage>
             viewportFraction: .65,
             // autoPlayCurve: Curves.easeInOut,
             autoPlay: true,
-            
+
             initialPage: 0,
             enlargeCenterPage: true,
             onPageChanged: (index, reason) {
@@ -953,23 +937,22 @@ class _HomePageState extends State<HomePage>
           itemBuilder: (BuildContext context, int index, int realiindex) {
             final double itemCount = itemCountStandart.toDouble();
             double diff = index - _currentPage;
-            // Shortest circular diff
-            diff =
-                diff -
-                itemCount *
-                    (diff / itemCount)
-                        .round(); // Đưa về [-itemCount/2, itemCount/2]
+            diff = diff - itemCount * (diff / itemCount).round();
             // Clamp để max angle cho item liền kề (±1)
             diff = diff.clamp(-1.0, 1.0);
             // Angle: - để khớp chiều (bạn có thể đảo nếu sai)
             final double angle = diff * (math.pi * 0.1);
             return GestureDetector(
-              onTap: () => print(index),
+              onTap: () {
+                print(latestMovie[index].slug);
+              },
               child: Center(
                 child: Transform.rotate(
                   angle: angle,
                   child: CachedImageContainer(
-                    imageUrl: AppUrl.convertImageDirect(latestMovie[index].posterUrl),
+                    imageUrl: AppUrl.convertImageDirect(
+                      latestMovie[index].posterUrl,
+                    ),
                     boxFit: BoxFit.cover,
                     margin: EdgeInsets.symmetric(horizontal: 27),
                     border: Border.all(color: Colors.white, width: 3),

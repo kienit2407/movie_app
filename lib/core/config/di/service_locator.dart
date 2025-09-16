@@ -13,7 +13,10 @@ import 'package:movie_app/feature/auth/domain/usecases/sign_up.dart';
 import 'package:movie_app/feature/home/data/repository/movie_repository_impl.dart';
 import 'package:movie_app/feature/home/data/source/movie_remote_datasource.dart';
 import 'package:movie_app/feature/home/domain/repository/movie_repository.dart';
+import 'package:movie_app/feature/home/domain/usecase/get_country_movie.dart';
 import 'package:movie_app/feature/home/domain/usecase/get_detail_movie_usecase.dart';
+import 'package:movie_app/feature/home/domain/usecase/get_fillter_genre.dart';
+import 'package:movie_app/feature/home/domain/usecase/get_genre_movie.dart';
 import 'package:movie_app/feature/home/domain/usecase/get_latest_usecase.dart';
 //khởi tạo instance
 final sl = GetIt.instance;
@@ -45,5 +48,8 @@ Future<void> initializeGetit () async {
   sl.registerLazySingleton<MovieRepository>(() => MovieRepositoryImpl());
   sl.registerLazySingleton<GetLatestUsecase>(() => GetLatestUsecase());
   sl.registerLazySingleton<GetDetailMovieUsecase>(() => GetDetailMovieUsecase());
+  sl.registerLazySingleton<GetGenreMovieUsecase>(() => GetGenreMovieUsecase());
+  sl.registerLazySingleton<GetCountryMovieUsecase>(() => GetCountryMovieUsecase());
+  sl.registerLazySingleton<GetFillterGenreUsecase>(() => GetFillterGenreUsecase());
   
 }

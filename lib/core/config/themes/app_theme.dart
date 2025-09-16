@@ -3,6 +3,13 @@ import 'package:movie_app/core/config/themes/app_color.dart';
 
 class AppTheme {
   static final appTheme = ThemeData(
+    chipTheme: ChipThemeData(
+      backgroundColor: Colors.transparent,
+      selectedColor: Colors.transparent,
+      surfaceTintColor: Colors.transparent, // Đảm bảo loại bỏ tint
+      elevation: 0, // Loại bỏ độ
+      
+    ),
     useMaterial3: true,
     textTheme: TextTheme(bodyMedium: TextStyle(color: Colors.white)),
     scaffoldBackgroundColor: AppColor.bgApp, //<- đặt màu theme cho scaffold
