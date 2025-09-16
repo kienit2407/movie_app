@@ -6,7 +6,6 @@ import 'package:movie_app/common/bloc/AuthWithSocial/auth_with_social_cubit.dart
 import 'package:movie_app/common/bloc/AuthWithSocial/auth_with_social_state.dart';
 import 'package:movie_app/common/components/alert_dialog/app_alert_dialog.dart';
 import 'package:movie_app/common/components/background/app_back_ground.dart';
-import 'package:movie_app/common/components/background/app_overlay.dart';
 import 'package:movie_app/common/components/button/app_button.dart';
 import 'package:movie_app/common/components/loading/custom_loading.dart';
 import 'package:movie_app/common/components/text_field/app_email_textfield.dart';

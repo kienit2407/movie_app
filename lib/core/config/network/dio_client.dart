@@ -134,8 +134,8 @@ class DioClient {
   Dio get dio => _dio; // getter để có thể truy cập dio từ lớp bên ngoài (readOnly not set because we can not replace any data in this class) .. nếu các lớp bên ngoài truy cập tuỳ tiện từ bên ngoài có thể làm hỏng config
   // //triển khai phương thức get
   Future<Response> get (
-    String path, //bắt buộc truyền vào đường dẫn 
     {
+      required String path, //bắt buộc truyền vào đường dẫn 
       Map<String, dynamic>? queryParameters,
       Options? option,
     }
