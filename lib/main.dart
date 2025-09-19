@@ -58,9 +58,7 @@ class MovieApp extends StatelessWidget {
     );
     return MultiBlocProvider(
       providers: [
-        BlocProvider(
-          create: (context) => SplashCubit()..appStarted(),
-        ), //<- khởi động app, để xét xem có người dùng chưa
+        BlocProvider(create: (context) => SplashCubit()..appStarted()), //<- khởi động app, để xét xem có người dùng chưa
         BlocProvider(create: (context) => SignUpCubit()),
         BlocProvider(create: (context) => SignInCubit()),
         BlocProvider(create: (context) => AuthWithSocialCubit()),
@@ -69,7 +67,7 @@ class MovieApp extends StatelessWidget {
         BlocProvider(create: (context) => LatestMovieCubit()..getLatestMovie()),
         BlocProvider(create: (context) => DetailMovieCubit()),
         BlocProvider(create: (context) => GenreCubit()..getGenreMovie()),
-        BlocProvider(create: (context) => CountryMovieCubit()..getCountryMovie()),
+        BlocProvider(create: (context) => CountryMovieCubit()),
         BlocProvider(create: (context) => FetchFillterCubit()),
       ],
       child: MaterialApp(

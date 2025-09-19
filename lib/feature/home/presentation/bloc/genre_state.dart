@@ -8,6 +8,10 @@ class GenreMovieInitial extends GenreState {
   @override
   List<Object?> get props => throw UnimplementedError();
 }
+class GenreMovieLoading extends GenreState {
+  @override
+  List<Object?> get props => throw UnimplementedError();
+}
 
 class GenreMovieFalure extends GenreState {
   final String? message;

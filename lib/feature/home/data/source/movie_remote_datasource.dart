@@ -3,7 +3,7 @@ import 'package:movie_app/core/config/network/dio_client.dart';
 import 'package:movie_app/core/errol/app_exception.dart';
 import 'package:movie_app/feature/home/data/models/country_movie_model.dart';
 import 'package:movie_app/feature/home/data/models/detail_movie_model.dart';
-import 'package:movie_app/feature/home/data/models/fillter_genre_movie_req.dart';
+import 'package:movie_app/feature/home/domain/entities/fillter_genre_movie_req.dart';
 import 'package:movie_app/feature/home/data/models/fillter_genre_model.dart';
 import 'package:movie_app/feature/home/data/models/genre_movie_model.dart';
 import 'package:movie_app/feature/home/data/models/new_movie_model.dart';
@@ -13,7 +13,8 @@ abstract class MovieRemoteDatasource {
   Future<DetailMovieModel> getDetailMovie(String slug);
   Future<List<GenreMovieModel>> getGenrelMovie();
   Future<List<CountryMovieModel>> getMoiveCountry();
-  Future<FillterGenreModel> getFillterMovieGenre(FillterGenreMovieReq fillterGenreReg);
+  Future<FillterGenreModel> getFillterMovieGenre(FillterMovieReq fillterGenreReg);
+  Future<FillterGenreModel> getFillterMovieCountry(FillterMovieReq fillterGenreReg);
 }
 
 class MovieRemoteDatasourceImpl implements MovieRemoteDatasource {
@@ -83,17 +84,15 @@ class MovieRemoteDatasourceImpl implements MovieRemoteDatasource {
   }
   
   @override
-  Future<FillterGenreModel> getFillterMovieGenre(FillterGenreMovieReq fillterGenreReg) async {
+  Future<FillterGenreModel> getFillterMovieGenre(FillterMovieReq fillterGenreReg) async {
     try {
       final response = await dioClient.get(
         path: AppUrl.getFillterMovieGenre(fillterGenreReg.typeList),
         queryParameters: {
           'page' : fillterGenreReg.page,
           'sort_field' : fillterGenreReg.sortField,
-          'sort_type' : fillterGenreReg.sortType ?? '_id',
+          'sort_type' : fillterGenreReg.sortType,
           'sort_lang' : fillterGenreReg.sortLang,
-          'country' : fillterGenreReg.country,
-          'year' : fillterGenreReg.year,
           'limit' : fillterGenreReg.limit ?? '10',
         }
       );
@@ -113,6 +112,29 @@ class MovieRemoteDatasourceImpl implements MovieRemoteDatasource {
     try {
       final response = await dioClient.get(path: AppUrl.getCountryMovie);
       return (response.data as List<dynamic>).map((e) => CountryMovieModel.fromMap(e)).toList();
+    } catch (e) {
+      rethrow;
+    }
+  }
+  
+  @override
+  Future<FillterGenreModel> getFillterMovieCountry(FillterMovieReq fillterGenreReg) async {
+    try {
+      final response = await dioClient.get(
+        path: AppUrl.getFillterMovieCountry(fillterGenreReg.typeList),
+        queryParameters: {
+          'page' : fillterGenreReg.page,
+          'sort_field' : fillterGenreReg.sortField,
+          'sort_type' : fillterGenreReg.sortType,
+          'limit' : fillterGenreReg.limit,
+        }
+      );
+      if(response.data['status'] == 'success') {
+        print('Calling api succeed');
+        return FillterGenreModel.fromMap(response.data['data']);
+      } else {
+        throw ServerException('Failed when loading data');
+      }
     } catch (e) {
       rethrow;
     }

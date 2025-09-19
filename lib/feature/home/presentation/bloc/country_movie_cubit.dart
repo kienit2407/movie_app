@@ -7,6 +7,7 @@ class CountryMovieCubit extends Cubit <CountryMovieState>{
   CountryMovieCubit() : super (CountryMovieInitial());
 
   Future<void> getCountryMovie () async {
+    emit(CountryMovieLoading());
     final data = await sl<GetCountryMovieUsecase>().call();
 
     data.fold(
