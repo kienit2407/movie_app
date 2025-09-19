@@ -23,6 +23,7 @@ import 'package:movie_app/feature/home/presentation/bloc/genre_state.dart';
 import 'package:movie_app/feature/home/presentation/bloc/latest_movie_cubit.dart';
 import 'package:movie_app/feature/home/presentation/bloc/latest_movie_state.dart';
 import 'package:movie_app/feature/home/presentation/widgets/blur_effect.dart';
+import 'package:movie_app/feature/home/presentation/widgets/country_bottom_sheet.dart';
 import 'package:movie_app/feature/home/presentation/widgets/genre_bottom_sheet.dart';
 import 'package:movie_app/feature/home/presentation/widgets/overlay_gadient.dart';
 import 'package:movie_app/feature/home/presentation/widgets/polk_effect.dart';
@@ -95,7 +96,6 @@ class _HomePageState extends State<HomePage>
       //           labelTextStyle: WidgetStateProperty.all(
       //             TextStyle(color: Colors.white, fontSize: 12),
       //           ),
-                
       //           backgroundColor: Colors.transparent,
       //           destinations: [
       //             NavigationDestination(
@@ -113,8 +113,6 @@ class _HomePageState extends State<HomePage>
       //               selectedIcon: Icon(Iconsax.home_2),
       //               label: 'Home',
       //             ),
-                  
-                 
       //           ],
       //         ),
       //       ),
@@ -184,11 +182,11 @@ class _HomePageState extends State<HomePage>
                           showIcon: true,
                           onPressed: () {
                             GenreBottomSheet.show(context);
-
                           },
                           isSelected: isSelectedGenre
                         ),
                         _buildChipButton(
+                          onPressed: () => CountryBottomSheet.show(context),
                           'Quốc gia',
                           icon: Iconsax.arrow_down_1_copy,
                           showIcon: true,
@@ -533,7 +531,7 @@ class _HomePageState extends State<HomePage>
         }
         if (data is LatestMovieSuccess) {
           return SizedBox(
-            height: screenHeight * .88,
+            height: screenHeight * .89,
             width: screenWidth,
             child: Stack(
               children: [
@@ -545,8 +543,6 @@ class _HomePageState extends State<HomePage>
                 BlurEffect(),
                 //Polk Effect
                 _polkEffect(),
-                //carousel
-                // _buildCarousel(screenHeight),
                 //Movie Infora
                 _buildInforSection(screenHeight, data.latestMovie),
               ],
@@ -571,7 +567,9 @@ class _HomePageState extends State<HomePage>
         children: [
           // const SizedBox(height: 20),
           _buildCarousel(screenHeight, latestMovie),
-          SizedBox(height: 15),
+          const SizedBox(height: 10),
+          _buildCategory(latestMovie[currentIndex].category),
+          const SizedBox(height: 10),
           _buildInforMovie(latestMovie),
           const SizedBox(height: 15),
           _buildDotIndicator(latestMovie),
@@ -591,7 +589,28 @@ class _HomePageState extends State<HomePage>
       ),
     );
   }
+  Widget _buildCategory (List<CategoryEntity> category) {
+    return Wrap(
+      spacing: 5,
+      runSpacing: 5,
+      children: List.generate(category.length, (index){
+        return Container(
+          padding: EdgeInsets.symmetric(horizontal: 5, vertical: 5),
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(.1),
+            borderRadius: BorderRadius.circular(5),
+          
+          ),
+          child: Text(category[index].name,
+            style: TextStyle(
+              fontSize: 10,
 
+            ),
+          ),
+        );
+      })
+    );
+  }
   Widget _buildInforMovie(List<ItemEntity> latestMovie) {
     return Column(
       children: [

@@ -8,6 +8,10 @@ class CountryMovieInitial extends CountryMovieState {
   @override
   List<Object?> get props => throw UnimplementedError();
 }
+class CountryMovieLoading extends CountryMovieState {
+  @override
+  List<Object?> get props => throw UnimplementedError();
+}
 
 class CountryMovieFalure extends CountryMovieState {
   final String? message;
