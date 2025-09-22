@@ -22,7 +22,7 @@ flutter run
 ```
 ---
 ### ❓ If you have any the question that want to ask me. Don't scared anything. Contact to me through facebook or via email👇
-- 🔗 [https://www.facebook.com/kin240705?locale=vi_VN](link)
-- 📬 [trungkien24072005@gmail.com](link)
+- 🔗 https://www.facebook.com/kin240705?locale=vi_VN
+- 📬 trungkien24072005@gmail.com
 
 
