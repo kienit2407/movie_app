@@ -3,3 +3,4 @@
     + Định nghĩa contructor & props
     + ghi đè hash code
     + 
+Cmd + shift + V => open readme preview
