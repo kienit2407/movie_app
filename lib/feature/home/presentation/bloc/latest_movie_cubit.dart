@@ -7,9 +7,8 @@ class LatestMovieCubit extends Cubit <LatestMovieState>{
   LatestMovieCubit() : super (LatestMovieInitial());
 
   Future<void> getLatestMovie () async {
-    final data = await sl<GetLatestUsecase>().call(params: 1);
     emit(LatestMovieLoading());
-
+    final data = await sl<GetLatestUsecase>().call(params: 1);
     data.fold(
       (error){
         emit(LatestMovieFalure(message: error));

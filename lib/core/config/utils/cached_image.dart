@@ -2,6 +2,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
 import 'package:movie_app/common/components/loading/custom_loading.dart';
+import 'package:skeletonizer/skeletonizer.dart';
 
 class CachedImageContainer extends StatelessWidget {
   const CachedImageContainer({
@@ -16,6 +17,7 @@ class CachedImageContainer extends StatelessWidget {
     this.gradient,
     this.margin,
     this.padding,
+    this.isLoading = false,
   });
   final String imageUrl;
   final double? height;
@@ -27,10 +29,11 @@ class CachedImageContainer extends StatelessWidget {
   final List<BoxShadow>? boxShadow;
   final BoxBorder? border;
   final BorderRadiusGeometry? borderRadius;
+  final bool isLoading;
 
   @override
   Widget build(BuildContext context) {
-    return CachedNetworkImage(
+    return  CachedNetworkImage(
       imageUrl: imageUrl,
       imageBuilder: (context, imageProvider) {
         return Container(
@@ -47,7 +50,7 @@ class CachedImageContainer extends StatelessWidget {
           ),
         );
       },
-      placeholder: (context, url) => CustomLoading(splash: true,),
+      placeholder: (context, url) => Skeletonizer(child: SizedBox()),
       errorWidget: (context, url, error) => Icon(Icons.error),
     );
   }
