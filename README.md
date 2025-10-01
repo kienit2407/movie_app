@@ -12,7 +12,7 @@
  - 💻 If you wanna be interesting when cloning that project in yourlocal
  - ❓ You only clone this project folowing link, after clonning you have to run like below:
 
-### 🐳 Copy base rapidly
+### 🐳 Copy & paste rapidly
 ```bash
 flutter pub get
 ```

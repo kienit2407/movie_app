@@ -38,6 +38,7 @@ Future<void> main() async {
     //Init get it để tiêm phụ thuộc
     await initializeGetit(); //<- hàm thuần
     await Hive.initFlutter();
+    Hive.openBox('genre');
     //Next one load môi trường
     await dotenv.load(fileName: 'assets/.env');
     // //khởi động biến môi trường cho supabase
@@ -67,7 +68,7 @@ class MovieApp extends StatelessWidget {
         BlocProvider(create: (context) => LatestMovieCubit()..getLatestMovie()),
         BlocProvider(create: (context) => DetailMovieCubit()),
         BlocProvider(create: (context) => GenreCubit()..getGenreMovie()),
-        BlocProvider(create: (context) => CountryMovieCubit()),
+        BlocProvider(create: (context) => CountryMovieCubit()..getCountryMovie()),
         BlocProvider(create: (context) => FetchFillterCubit()),
       ],
       child: MaterialApp(

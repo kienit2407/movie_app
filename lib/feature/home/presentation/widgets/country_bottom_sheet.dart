@@ -33,24 +33,16 @@ class CountryBottomSheet extends StatefulWidget {
 }
 
 class _CountryBottomSheetState extends State<CountryBottomSheet> {
-  List<bool> isSelectedCountry = [];
-  List<CountryMovieEntity> countryEntity = [];
+  // List<CountryMovieEntity> countryEntity = [];
   @override
   void initState() {
-    context.read<CountryMovieCubit>().getCountryMovie();
     super.initState();
   }
 
   @override
   Widget build(BuildContext context) {
     return BlocConsumer<CountryMovieCubit, CountryMovieState>(
-      listener: (context, state) {
-        if (state is CountryMovieSuccess) {
-          countryEntity.clear();
-          countryEntity.addAll(state.countryMovie);
-          isSelectedCountry = List<bool>.filled(countryEntity.length, false);
-        }
-      },
+      listener: (context, state) {},
       builder: (context, state) {
         return BackdropFilter(
           filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
@@ -115,14 +107,7 @@ class _CountryBottomSheetState extends State<CountryBottomSheet> {
                       backgroundColor: Colors.transparent,
                     ),
                     onPressed: () {
-                      String? country;
-                      final selectedIndexCountries = isSelectedCountry
-                          .indexWhere((selected) => selected);
-                      if (selectedIndexCountries != -1) {
-                        country = countryEntity[selectedIndexCountries].slug;
-                      }
-                      final fillterResult = FillterMovieReq(typeList: country!, fillterType: Filltertype.country);
-                      AppNavigator.push(context,  AllMoviePage(fillterReq: fillterResult ));
+                      
                     },
                     child: Row(
                       spacing: 10,
@@ -165,16 +150,8 @@ class _CountryBottomSheetState extends State<CountryBottomSheet> {
         children: List.generate(state.countryMovie.length, (index) {
           return GestureDetector(
             onTap: () {
-              setState(() {
-                if (isSelectedCountry[index]) {
-                  isSelectedCountry[index] = !isSelectedCountry[index];
-                } else {
-                  isSelectedCountry = List<bool>.filled(
-                    state.countryMovie.length,
-                    false,
-                  );
-                  isSelectedCountry[index] = !isSelectedCountry[index];
-                }
+              setState(() { 
+                
               });
 
               print(state.countryMovie[index].slug);
@@ -185,9 +162,9 @@ class _CountryBottomSheetState extends State<CountryBottomSheet> {
               padding: EdgeInsets.all(8),
               decoration: BoxDecoration(
                 border: Border.all(
-                  color: isSelectedCountry[index]
-                      ? Color(0xffF1D775)
-                      : Color(0xff5E6070),
+                  // color: isSelectedCountry[index]
+                  //     ? Color(0xffF1D775)
+                  //     : Color(0xff5E6070),
                 ),
                 borderRadius: BorderRadius.circular(8),
               ),
@@ -196,9 +173,9 @@ class _CountryBottomSheetState extends State<CountryBottomSheet> {
                 duration: Duration(milliseconds: 200),
                 style: TextStyle(
                   fontSize: 10,
-                  color: isSelectedCountry[index]
-                      ? Color(0xffF1D775)
-                      : Colors.white,
+                  // color: isSelectedCountry[index]
+                  //     ? Color(0xffF1D775)
+                  //     : Colors.white,
                 ),
                 child: Text(state.countryMovie[index].name),
               ),

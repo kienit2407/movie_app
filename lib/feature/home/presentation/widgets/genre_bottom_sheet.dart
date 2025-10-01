@@ -3,15 +3,10 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
-import 'package:movie_app/common/helpers/navigation/app_navigation.dart';
 import 'package:movie_app/common/helpers/sort_map.dart';
 import 'package:movie_app/core/config/themes/app_color.dart';
-import 'package:movie_app/feature/home/domain/entities/fillterType.dart';
-import 'package:movie_app/feature/home/domain/entities/fillter_genre_movie_req.dart';
-import 'package:movie_app/feature/home/domain/entities/genre_movie_entity.dart';
 import 'package:movie_app/feature/home/presentation/bloc/genre_cubit.dart';
 import 'package:movie_app/feature/home/presentation/bloc/genre_state.dart';
-import 'package:movie_app/feature/movie_pagination/presentation/pages/all_movie_page.dart';
 import 'package:shimmer/shimmer.dart';
 
 class GenreBottomSheet extends StatefulWidget {
@@ -34,11 +29,11 @@ class GenreBottomSheet extends StatefulWidget {
 }
 
 class _GenreBottomSheetState extends State<GenreBottomSheet> {
+  @override
+  void initState() {
+    super.initState();
+  }
   bool expandSort = false;
-  int isSelectedGenre = 0;
-  int isSelectedLang = 0;
-  int isSelectedTime = 0;
-  bool isLoading = false;
   @override
   Widget build(BuildContext context) {
     return BackdropFilter(
@@ -203,10 +198,7 @@ class _GenreBottomSheetState extends State<GenreBottomSheet> {
                                                    color:  Colors.white,
                                               ),
                                               child: Text(
-                                                SortMap
-                                                    .sortLangMap[index]
-                                                    .values
-                                                    .single,
+                                                SortMap.sortLangMap[index].values.single,
                                               ),
                                             ),
                                           ),
@@ -245,12 +237,6 @@ class _GenreBottomSheetState extends State<GenreBottomSheet> {
                                             setState(() {
                                               
                                             });
-                                            print(
-                                              SortMap
-                                                  .sortFieldMap[index]
-                                                  .keys
-                                                  .single,
-                                            );
                                           },
                                           child: AnimatedContainer(
                                             curve: Curves.easeInOut,
@@ -352,9 +338,7 @@ class _GenreBottomSheetState extends State<GenreBottomSheet> {
         children: List.generate(state.genreMovie.length, (index) {
           return GestureDetector(
             onTap: () {
-              setState(() {
-                isSelectedGenre = index;
-              });
+              print(state.genreMovie[index].slug);
             },
             child: AnimatedContainer(
               curve: Curves.easeInOut,
