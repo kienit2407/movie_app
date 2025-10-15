@@ -3,6 +3,8 @@ import 'package:dio_cache_interceptor/dio_cache_interceptor.dart';
 import 'package:dio_smart_retry/dio_smart_retry.dart';
 import 'package:http_cache_hive_store/http_cache_hive_store.dart';
 import 'package:movie_app/common/helpers/contants/app_url.dart';
+import 'package:movie_app/common/helpers/token_storage.dart';
+import 'package:movie_app/core/config/network/intorceptors/auth_interceptor.dart';
 import 'package:movie_app/core/errol/app_exception.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:pretty_dio_logger/pretty_dio_logger.dart';
@@ -15,9 +17,6 @@ class DioClient {
   static const int _receiveTimeout = 30000; // thời gian để nhận kết nối
   static const int _sendTimeout = 30000; // thời gian để gửi đi post
 
-  // nhận assessToken và refreshToken
-  String? _accessToken; // do là accessToken có thể thay đổi khi chạy chương trình
-  String? _refreshToken;
  
   //Mình bị lỗi lazyInit nghĩa là khai báo late mà không gán giá trị, hàm là future nhưng không thể async nên lỗi 
 
@@ -34,9 +33,9 @@ class DioClient {
   // ({String? baseUrl}) { // phải đảm bảo Dio được khởi tạo trước khi sử dụng các phương thức khác. nó áp dụng cho các request khác không làm lặp code 
 
   //khai báo một factory contructor -> nó sẽ trả về instance theo singleton
-  static Future<DioClient> create({String? baseUrl}) async {
+  static Future<DioClient> create() async {
     final client = DioClient._internal();
-    await client.initalizeCacheOption(baseUrl: baseUrl);
+    await client.initalizeCacheOption();
     client._initDio();
     return client;
   } 
@@ -44,11 +43,10 @@ class DioClient {
 // Constructor private, không init gì
   DioClient._internal();
     //khởi tạo instance dio
-  void _initDio({String? baseUrl}) {
-        
+  void _initDio() {
       _dio = Dio(); //gán trước -> lí do là do dio nếu dùng cacade thì interceptor đều khỏi tạo cùng 1 cùng nhưng mà. do là trong interceptor cần instance của dio nhưng khi khai báo như vậy nó khởi tạo không kịp gây ra lỗi. Nên giải pháp là [gán trước rồi cho nó gán từng cái base option và interceptor lần lượt]
       _dio.options = BaseOptions( // dùng để cấu hình các thiết lập mặc định ban đầu cho "tất cả request", giúp cần lặp lại cho từng req
-        baseUrl: baseUrl ?? AppUrl.baseUrl,
+        baseUrl: AppUrl.baseUrl, // đường dẫn domain
         connectTimeout: Duration(milliseconds: _connectTimeout), // đây là thời gian mà client kết nối đến server nếu quá timeout thì sẽ báo lỗi timeout. Ngăn ứng dụng treo, server không phản hồi, đảm bảo trải nghiệm khi có lỗi thì show ra không để đợi lâu
         receiveTimeout: Duration(milliseconds: _receiveTimeout), //Nếu mà đã kết nối với server rồi nhưng thời gian truyền dữ liệu be timeouted thì cũng sẽ quăng lỗi. Tránh ứng dụng bị treo và bảo vệ ứng dựng khi sever phản hồi chậm, hoặc có vấn đề
         sendTimeout: Duration(milliseconds: _sendTimeout),//-> thời gian gửi lên tương tự 2 cái kia
@@ -57,17 +55,24 @@ class DioClient {
           'Accept': 'application/json', //tương tự khi get về cũng expectn là 1 dạng json báo cho server biết
           // 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36', //giả lập yêu cầu được gửi từ trình duyệt
           // 'Referer': 'https://phimapi.com'
-          
+          'x-client-platform' : "mobile"
         },
         responseType: ResponseType.json, //định dạng dữ liệu dio mặc định là json rồi. Alternative, nó còn những dữ liệu khác byte cho file, plain cho text
         validateStatus: (status) {
           return status != null && status >= 200 && status < 300; // kiểm status code mà server trả về
         },
       );
+        // khởi tạo lấy từ hive
+      // final tokenStorage = TokenStorage();
       _dio.interceptors.addAll([ // là một hàm để ngăn chặn, bộ lọc giữa req va res
         DioCacheInterceptor(options: _cacheOptions), //đặt ở đầu tiên để cache response. Đẩm bảo dữ liệu được cache nagy khi nhận từ server
         // _AuthInterceptor(this),
-
+        // AuthInterceptor(
+        //   dio: dio, 
+        //   getAccessToken: tokenStorage.getAccessToken, 
+        //   getRefreshToken: tokenStorage.getRefreshToken, 
+        //   saveToken: tokenStorage.saveToken
+        // ),
         //retry khi when requesting is failed
         RetryInterceptor( //-. cái này đã đủ kích hoạt cache cho mọi request rồi
           dio: _dio, //nhận vào dio để control việc retry khi bị fail 

@@ -4,7 +4,7 @@ import 'package:flutter/widgets.dart';
 import 'package:movie_app/common/components/loading/custom_loading.dart';
 import 'package:skeletonizer/skeletonizer.dart';
 
-class CachedImageContainer extends StatelessWidget {
+class CachedImageContainer extends StatefulWidget {
   const CachedImageContainer({
     super.key,
     required this.imageUrl,
@@ -32,21 +32,28 @@ class CachedImageContainer extends StatelessWidget {
   final bool isLoading;
 
   @override
+  State<CachedImageContainer> createState() => _CachedImageContainerState();
+}
+
+class _CachedImageContainerState extends State<CachedImageContainer> {
+  @override
   Widget build(BuildContext context) {
     return  CachedNetworkImage(
-      imageUrl: imageUrl,
+ 
+      imageUrl: widget.imageUrl,
+
       imageBuilder: (context, imageProvider) {
         return Container(
-          height: height,
-          width: width,
-          margin: margin,
-          padding: padding,
+          height: widget.height,
+          width: widget.width,
+          margin: widget.margin,
+          padding: widget.padding, 
           decoration: BoxDecoration(
-            image: DecorationImage(image: imageProvider, fit: boxFit),
-            gradient: gradient,
-            border: border,
-            boxShadow: boxShadow,
-            borderRadius: borderRadius,
+            image: DecorationImage(image: imageProvider, fit: widget.boxFit),
+            gradient: widget.gradient,
+            border: widget.border,
+            boxShadow: widget.boxShadow,
+            borderRadius: widget.borderRadius,
           ),
         );
       },

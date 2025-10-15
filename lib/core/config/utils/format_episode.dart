@@ -25,7 +25,11 @@ extension ConvertLang on String {
       case 'Vietsub + Lồng Tiếng' :
       return 'PĐ.LT';
       case 'Vietsub + Thuyết Minh' :
-      return 'PĐ.TM';
+      return 'PD.TM';
+      case 'Vietsub + Thuyết Minh + Lồng Tiếng' :
+      return 'PĐ.TM.LT';
+      case 'Vietsub + Lồng Tiếng + Thuyết Minh' :
+      return 'PĐ.LT.TM';
     }
     // if(lang == 'Vietsub') {
     //   return 'PĐ';

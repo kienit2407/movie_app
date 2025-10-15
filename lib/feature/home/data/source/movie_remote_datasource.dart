@@ -15,6 +15,10 @@ abstract class MovieRemoteDatasource {
   Future<List<CountryMovieModel>> getMoiveCountry();
   Future<FillterGenreModel> getFillterMovieGenre(FillterMovieReq fillterGenreReg);
   Future<FillterGenreModel> getFillterMovieCountry(FillterMovieReq fillterGenreReg);
+  Future<FillterGenreModel> getRecommendedMovie(FillterMovieReq fillterGenreReg);
+  Future<FillterGenreModel> getKoreaMovie();
+  Future<FillterGenreModel> getChinaMovie();
+  Future<FillterGenreModel> getUsUkMovie(FillterMovieReq fillterGenreReg);
 }
 
 class MovieRemoteDatasourceImpl implements MovieRemoteDatasource {
@@ -130,6 +134,81 @@ class MovieRemoteDatasourceImpl implements MovieRemoteDatasource {
         }
       );
       if(response.data['status'] == 'success') {
+        print('Calling api succeed');
+        return FillterGenreModel.fromMap(response.data['data']);
+      } else {
+        throw ServerException('Failed when loading data');
+      }
+    } catch (e) {
+      rethrow;
+    }
+  }
+  
+  @override
+  Future<FillterGenreModel> getKoreaMovie() async {
+    try {
+      final response = await dioClient.get(
+        path: AppUrl.getFillterMovieCountry('han-quoc'),
+        queryParameters: {
+          'page' : '1',
+          'sort_field' : 'modified.time',
+          'sort_type' : 'desc',
+          'limit' : 10,
+        }
+      );
+      if(response.data['status'] == 'success') {
+        print('Calling api succeed');
+        return FillterGenreModel.fromMap(response.data['data']);
+      } else {
+        throw ServerException('Failed when loading data');
+      }
+    } catch (e) {
+      rethrow;
+    }
+  }
+  
+  @override
+  Future<FillterGenreModel> getChinaMovie() async {
+    try {
+      final response = await dioClient.get(
+        path: AppUrl.getFillterMovieCountry('trung-quoc'),
+        queryParameters: {
+          'page' : '1',
+          'sort_field' : 'modified.time',
+          'sort_type' : 'desc',
+          'limit' : 10,
+        }
+      );
+      if(response.data['status'] == 'success') {
+        print('Calling api succeed');
+        return FillterGenreModel.fromMap(response.data['data']);
+      } else {
+        throw ServerException('Failed when loading data');
+      }
+    } catch (e) {
+      rethrow;
+    }
+  }
+  
+  @override
+  Future<FillterGenreModel> getUsUkMovie(FillterMovieReq fillterGenreReg) {
+    // TODO: implement getUsUkMovie
+    throw UnimplementedError();
+  }
+  
+  @override
+  Future<FillterGenreModel> getRecommendedMovie(FillterMovieReq fillterGenreReg) async {
+    try {
+      final response = await dioClient.get(
+        path: AppUrl.getFillterRecomended(fillterGenreReg.typeList),
+        queryParameters: {
+          'page' : fillterGenreReg.page,
+          'sort_field' : fillterGenreReg.copyWith(sortField: 'modified.time'),
+          'sort_type' : fillterGenreReg.sortType,
+          'limit' : fillterGenreReg.limit,
+        }
+      );
+      if(response.data['status'] == true) {
         print('Calling api succeed');
         return FillterGenreModel.fromMap(response.data['data']);
       } else {

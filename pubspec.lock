@@ -17,6 +17,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.3.60"
+  alien_signals:
+    dependency: transitive
+    description:
+      name: alien_signals
+      sha256: "01684b67626554f6719852e9e0dd730b44c84c724f1176935b6d8df05e6d11f9"
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.5.4"
   analyzer:
     dependency: transitive
     description:
@@ -274,7 +282,7 @@ packages:
     source: hosted
     version: "3.1.2"
   crypto:
-    dependency: transitive
+    dependency: "direct main"
     description:
       name: crypto
       sha256: "1e445881f28f22d6140f181e07737b22f1e099a5e1ff94b0af2f9e4a463f4855"
@@ -401,6 +409,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.3.3"
+  fast_cached_network_image:
+    dependency: "direct main"
+    description:
+      name: fast_cached_network_image
+      sha256: "38e95bef764f7a68937c2d415169ba58fbf1472bbeb093d8ba045f241553aae8"
+      url: "https://pub.dev"
+    source: hosted
+    version: "1.3.3+5"
   ffi:
     dependency: transitive
     description:
@@ -478,6 +494,14 @@ packages:
     description: flutter
     source: sdk
     version: "0.0.0"
+  flutter_animate:
+    dependency: "direct main"
+    description:
+      name: flutter_animate
+      sha256: "7befe2d3252728afb77aecaaea1dec88a89d35b9b1d2eea6d04479e8af9117b5"
+      url: "https://pub.dev"
+    source: hosted
+    version: "4.5.2"
   flutter_bloc:
     dependency: "direct main"
     description:
@@ -526,6 +550,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "6.1.2"
+  flutter_hooks:
+    dependency: "direct main"
+    description:
+      name: flutter_hooks
+      sha256: "8ae1f090e5f4ef5cfa6670ce1ab5dddadd33f3533a7f9ba19d9f958aa2a89f42"
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.21.3+1"
   flutter_lints:
     dependency: "direct dev"
     description:
@@ -540,7 +572,7 @@ packages:
     source: sdk
     version: "0.0.0"
   flutter_secure_storage:
-    dependency: transitive
+    dependency: "direct main"
     description:
       name: flutter_secure_storage
       sha256: "9cad52d75ebc511adfae3d447d5d13da15a55a92c9410e50f67335b6d21d16ea"
@@ -595,6 +627,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "0.1.3"
+  flutter_solidart:
+    dependency: "direct main"
+    description:
+      name: flutter_solidart
+      sha256: f2309df099358343fa3e39c34dde685f7a9dae7a82c5c995b7a0e71452ea4b7a
+      url: "https://pub.dev"
+    source: hosted
+    version: "2.7.0"
   flutter_staggered_animations:
     dependency: "direct main"
     description:
@@ -603,6 +643,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.1.1"
+  flutter_staggered_grid_view:
+    dependency: transitive
+    description:
+      name: flutter_staggered_grid_view
+      sha256: "19e7abb550c96fbfeb546b23f3ff356ee7c59a019a651f8f102a4ba9b7349395"
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.7.0"
   flutter_svg:
     dependency: "direct main"
     description:
@@ -821,6 +869,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.0.1"
+  infinite_scroll_pagination:
+    dependency: "direct main"
+    description:
+      name: infinite_scroll_pagination
+      sha256: b0d28e37cd8f62490ff6aef63f9db93d4c78b7f11b7c6b26f33c69d8476fda78
+      url: "https://pub.dev"
+    source: hosted
+    version: "5.1.1"
   intl:
     dependency: "direct main"
     description:
@@ -1338,6 +1394,30 @@ packages:
     description: flutter
     source: sdk
     version: "0.0.0"
+  sliver_tools:
+    dependency: "direct main"
+    description:
+      name: sliver_tools
+      sha256: eae28220badfb9d0559207badcbbc9ad5331aac829a88cb0964d330d2a4636a6
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.2.12"
+  solid_annotations:
+    dependency: "direct main"
+    description:
+      name: solid_annotations
+      sha256: e56c929bd46fcc8c22abd65ecddb03e9ad1feca27c07d551f19dd5c5c8cf4114
+      url: "https://pub.dev"
+    source: hosted
+    version: "1.0.0"
+  solidart:
+    dependency: transitive
+    description:
+      name: solidart
+      sha256: e647103799a4f8393ecdaecf902d134fcdd2a6e169f257a0193352ee8c40a21a
+      url: "https://pub.dev"
+    source: hosted
+    version: "2.8.0"
   source_gen:
     dependency: transitive
     description:
@@ -1658,6 +1738,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.4.0"
+  visibility_detector:
+    dependency: "direct main"
+    description:
+      name: visibility_detector
+      sha256: dd5cc11e13494f432d15939c3aa8ae76844c42b723398643ce9addb88a5ed420
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.4.0+2"
   vm_service:
     dependency: transitive
     description:
@@ -1747,5 +1835,5 @@ packages:
     source: hosted
     version: "2.1.0"
 sdks:
-  dart: ">=3.9.0 <4.0.0"
+  dart: ">=3.9.2 <4.0.0"
   flutter: ">=3.32.4"

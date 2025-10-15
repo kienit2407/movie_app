@@ -1,19 +1,30 @@
 import 'dart:async';
-
+import 'dart:math';
+import 'dart:ui';
+import 'package:animate_do/animate_do.dart';
+import 'package:fast_cached_network_image/fast_cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
+import 'package:infinite_scroll_pagination/infinite_scroll_pagination.dart';
+import 'package:movie_app/common/components/alert_dialog/app_alert_dialog.dart';
+import 'package:movie_app/common/components/lost_network.dart';
 import 'package:movie_app/common/helpers/contants/app_url.dart';
 import 'package:movie_app/common/helpers/navigation/app_navigation.dart';
+import 'package:movie_app/common/helpers/static_data.dart';
 import 'package:movie_app/core/config/themes/app_color.dart';
+import 'package:movie_app/core/config/utils/animated_dialog.dart';
 import 'package:movie_app/core/config/utils/cached_image.dart';
 import 'package:movie_app/core/config/utils/format_episode.dart';
 import 'package:movie_app/core/config/utils/sharder_text.dart';
+import 'package:movie_app/core/config/utils/show_detail_movie_dialog.dart';
 import 'package:movie_app/feature/home/domain/entities/fillter_genre_movie_req.dart';
 import 'package:movie_app/feature/home/domain/entities/fillter_movie_genre_entity.dart';
 import 'package:movie_app/feature/home/domain/entities/new_movie_entity.dart';
-import 'package:movie_app/feature/home/presentation/bloc/fetch_fillter_cubit.dart';
-import 'package:movie_app/feature/home/presentation/bloc/fetch_fillter_state.dart';
+import 'package:movie_app/feature/movie_pagination/presentation/bloc/fetch_fillter_cubit.dart';
+import 'package:movie_app/feature/movie_pagination/presentation/bloc/fetch_fillter_state.dart';
+import 'package:sliver_tools/sliver_tools.dart';
 
 class AllMoviePage extends StatefulWidget {
   const AllMoviePage({super.key, required this.fillterReq});
@@ -26,180 +37,245 @@ class AllMoviePage extends StatefulWidget {
 class _AllMoviePageState extends State<AllMoviePage> {
   final ScrollController _scrollController = ScrollController();
   List<ItemEntity> allItems = [];
+  Set<String> animatedItems = {};
+  String? _titlePage;
+  late final PagingController<int, ItemEntity> _pagingController;
+
+  final random = Random();
+  late final Map<LinearGradient, Color> _selectedGradient;
   // Timer? _debounceTimer;
-  bool _isLoadingMore = false;
   @override
   void initState() {
-    initializeData();
-    _scrollController.addListener(_onScroll);
-    super.initState();
-  }
+    super.initState(); // phải để lên đầu vì cái nào sau nó sẽ đươc build trước
+    
+    _selectedGradient =
+        StaticData.randomeGadientTitlePage[random.nextInt(
+          StaticData.randomeGadientTitlePage.length,
+        )];
 
-  void initializeData() {
-    if(_isLoadingMore) return;
-    context.read<FetchFillterCubit>().fetchFillterGenre(
-      widget.fillterReq,
-    ); // -> khởi tạo dữ liệu
+    // tiến hành call api
+    _pagingController = PagingController(
+      getNextPageKey: (state) =>
+          state.lastPageIsEmpty ? null : state.nextIntPageKey,
+      fetchPage: (pageKey) async {
+        final response = await context.read<FetchFillterCubit>().fetchApi(
+          widget.fillterReq,
+          pageKey,
+        );
+        return response.items;
+      },
+    );
   }
 
   @override
   void dispose() {
     _scrollController.dispose();
-    _scrollController.removeListener(_onScroll);
+    _pagingController.dispose();
     super.dispose();
-  }
-
-  void _onScroll() {
-    // nếu đang loading và hết data thì band now không cho passs -> nếu k có cái này thì nó sẽ gọi call api liên tục vì theo listener scroll của user và nếu user kéo quá nhanh
-    final maxScroll = _scrollController
-        .position
-        .maxScrollExtent; // CÁCH TÍNH CỦA SCROLL NÀY VÍ DỤ: 100 tiem và cao 150 thì maxitem
-    final currentScrollPosition = _scrollController.position.pixels;
-    if (currentScrollPosition >= maxScroll && !_isLoadingMore) {
-      // // Debounce để chỉ gọi _loadMore sau 300ms
-      // _debounceTimer?.cancel();
-      // _debounceTimer = Timer(Duration(milliseconds: 30), () {
-      //   _loadMore();
-      // });
-      _loadMore();
-      
-    }
-  }
-
-  void _loadMore() {
-    if (_isLoadingMore) return;
-    setState(() {
-      _isLoadingMore = true;
-    });
-    context.read<FetchFillterCubit>().loadApi(widget.fillterReq);
-
-  }
-
-  void _onRefresh() {
-    setState(() {
-      _isLoadingMore = false;
-      allItems.clear();
-    });
-    initializeData();
   }
 
   @override
   Widget build(BuildContext context) {
+    final gradientColor = _selectedGradient.keys.single;
+    final appBarColor = _selectedGradient.values.single;
     return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        surfaceTintColor: Colors.transparent,
-        flexibleSpace: Container(
-          // decoration: BoxDecoration(
-          //   gradient: LinearGradient(
-          //     colors: [
-          //       Color.fromARGB(255, 52, 196, 163).withOpacity(.3),
-          //       Color.fromARGB(255, 52, 196, 163).withOpacity(.3),
-          //     ],
-          //     begin: Alignment.topCenter,
-          //     end: Alignment.bottomCenter,
-          //   ),
-          // ),
-        ),
-        leading: IconButton(
-          style: IconButton.styleFrom(backgroundColor: Colors.white12),
-          onPressed: () {
-            AppNavigator.pop(context);
-          },
-          icon: Icon(Iconsax.arrow_left_2_copy, color: Colors.white),
+      extendBodyBehindAppBar: true,
+      appBar: PreferredSize(
+        preferredSize: const Size.fromHeight(60),
+        child: ClipRect(
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+            child: AppBar(
+              backgroundColor: appBarColor.withOpacity(.7),
+              surfaceTintColor: Colors.transparent,
+              shadowColor: Colors.transparent,
+              // flexibleSpace: Container(
+              //   decoration: BoxDecoration(
+              //     gradient: LinearGradient(
+              //       colors: [
+              //         Color.fromARGB(255, 52, 196, 163).withOpacity(.3),
+              //         Color.fromARGB(255, 52, 196, 163).withOpacity(.3),
+              //       ],
+              //       begin: Alignment.topCenter,
+              //       end: Alignment.bottomCenter,
+              //     ),
+              //   ),
+              // ),
+              leading: IconButton(
+                style: IconButton.styleFrom(backgroundColor: Colors.white12),
+                onPressed: () {
+                  AppNavigator.pop(context);
+                },
+                icon: Icon(Iconsax.arrow_left_2_copy, color: Colors.white),
+              ),
+            ),
+          ),
         ),
       ),
-      body: BlocConsumer<FetchFillterCubit, FetchFillterState>(
-        listener: (context, state) {
-          if (state is FetchFillterLoadingMore) {
-            _isLoadingMore = true;
-          } else {
-            _isLoadingMore = false;
-          }
-          if (state is FetchFillterSuccess) {
-            final FillterMovieGenreEntity fillterMovieEntity =
-                state.fillterMovieGenreEntity;
-            setState(() {
-              allItems.addAll(fillterMovieEntity.items);
-            });
-          }
-        },
-        builder: (context, builderState) {
-          return _builContent(builderState);
-        },
+      body: Stack(
+        children: [
+          Container(
+            width: double.infinity,
+            height: double.infinity,
+            decoration: BoxDecoration(gradient: gradientColor),
+          ),
+          _builContent(),
+        ],
       ),
     );
   }
-  // Widget _buildBody(FetchFillterState state) {
-  //   switch (state) {
-  //     case Fet: return _builContent(state);
-      
-  //   }
-    
-  // }
-  Widget _builContent(FetchFillterState state) {
-    
+
+  Widget _builContent() {
     return RefreshIndicator.adaptive(
-      
       color: Colors.white,
-      onRefresh: () async => _onRefresh(),
+      onRefresh: () async => {},
       child: Scrollbar(
         controller: _scrollController,
         interactive: true,
-        child: CustomScrollView(
-          controller: _scrollController,
-          slivers: [
-            _buildGrid(allItems), //có nên để danh sách ở local không
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 10),
+          child: CustomScrollView(
+            cacheExtent: 1500.0,
+            controller: _scrollController,
+            slivers: [
               SliverToBoxAdapter(
-                child: AnimatedContainer(
-                  curve: Curves.easeInOut,
-                  duration: Duration(milliseconds: 300),
-                  height: _isLoadingMore ? 80 : 0, // Chiều cao nhỏ cho indicator
-                  padding: const EdgeInsets.all(8.0),
-                  margin: EdgeInsets.only(bottom: 100),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      _isLoadingMore ? CircularProgressIndicator.adaptive() : SizedBox(),
-                      Text('Loading')
-                    ],
-                  ),
+                child: const SizedBox(height: kToolbarHeight + 80),
+              ),
+              SliverToBoxAdapter(
+                child: BlocBuilder<FetchFillterCubit, FetchFillterState>(
+                  builder: (context, state) {
+                    if (state is FetchFillterSuccess) {
+                      return ZoomIn(
+                        duration: Duration(milliseconds: 200),
+                        child: SharderText(
+                          gradient: LinearGradient(
+                            colors: [
+                              Color(0xff1C1C1C),
+                              Color(0xff1C1C1C),
+                              Color(0xff1C1C1C),
+                              Color(0xff727387),
+                              Color(0xff1C1C1C),
+                            ],
+                            begin: Alignment.centerRight,
+                            end: Alignment.centerLeft,
+                          ),
+                          child: Text(
+                            state.titlePage,
+                            style: TextStyle(
+                              fontSize: 30,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      );
+                    }
+                    return SizedBox();
+                  },
                 ),
               ),
-              
-          ],
+              SliverToBoxAdapter(child: const SizedBox(height: 10)),
+              PagingListener(
+                controller: _pagingController,
+                builder: (context, state, fetchNextPage) {
+                  return MultiSliver(
+                    children: [
+                      PagedSliverGrid<int, ItemEntity>(
+                        addAutomaticKeepAlives: true,
+                        state: state,
+                        fetchNextPage: fetchNextPage,
+                        builderDelegate: PagedChildBuilderDelegate(
+                          newPageProgressIndicatorBuilder: (context) =>
+                              SizedBox(),
+                          noMoreItemsIndicatorBuilder: (context) =>
+                              LostNetworkPage(),
+                          firstPageProgressIndicatorBuilder: (context) =>
+                              Center(
+                                child: CircularProgressIndicator.adaptive(),
+                              ),
+                          itemBuilder: (context, item, index) {
+                            return AnimationConfiguration.staggeredGrid(
+                              position: index,
+                              columnCount: 3,
+                              duration: const Duration(milliseconds: 400),
+                              child: ScaleAnimation(
+                                curve: Curves.easeOut,
+                                child: SlideAnimation(
+                                  verticalOffset: 50,
+                                  child: FadeInAnimation(
+                                    child: _buildItem(item),
+                                  ),
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                        gridDelegate:
+                            const SliverGridDelegateWithMaxCrossAxisExtent(
+                              mainAxisSpacing: 10,
+                              crossAxisSpacing: 10,
+                              maxCrossAxisExtent: 200,
+                              childAspectRatio: 2 / 3.4,
+                            ),
+                      ),
+
+                      if (state.hasNextPage == true)
+                        SliverToBoxAdapter(child: _buildIndicator()),
+                    ],
+                  );
+                },
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildGrid(List<ItemEntity> itemEntity) {
-    return SliverGrid(
-      gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
-        mainAxisSpacing: 10,
-        crossAxisSpacing: 10,
-        maxCrossAxisExtent:
-            150, //chiều rộng tối đa của mỗi item. -> cái này nó sẽ tự tính toán theo màn hình có thể chứa bao nhiêu item -> cross theo chiều ngang đối với các listview có dạng dọc
-        // crossAxisSpacing: , gap giữa các item theo chiều ngang
-        childAspectRatio: 2 / 3, // tỉ lệ giữa width và height
+  Widget _buildIndicator() {
+    return AnimatedContainer(
+      curve: Curves.easeInOut,
+      duration: Duration(milliseconds: 300),
+      height: 60, // Chiều cao nhỏ cho indicator
+      padding: const EdgeInsets.all(8.0),
+      margin: EdgeInsets.only(bottom: 100),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [CircularProgressIndicator.adaptive(), Text('Loading')],
       ),
-      // shrinkWrap: true, // // co lại vừa với content. Nhưng dùng expanded thì item nó sẽ spread out và không cần renđẻ theo shrinkWrap vì nếu 1000 item đi thì nó sẽ bọc và phải render ra 1000 item và tính toán
-      delegate: SliverChildBuilderDelegate(
-        (context, index) {
-          return GestureDetector(
-            onTap: () => print(itemEntity[index].slug),
-            child: SizedBox(
+    );
+  }
+
+  Widget _buildItem(ItemEntity itemEntity) {
+    return GestureDetector(
+      onTap: () {
+        showAnimatedDialog(
+          context: context, 
+          dialog: ShowDetailMovieDialog(
+            slug: itemEntity.slug
+          )
+        );
+      },
+      child: SizedBox(
+        child: Column(
+          children: [
+            AspectRatio(
+              aspectRatio: 2 / 3,
               child: Stack(
                 children: [
-                  CachedImageContainer(
-                    imageUrl: AppUrl.convertImageAddition(
-                      itemEntity[index].posterUrl,
-                    ),
-                    boxFit: BoxFit.cover,
+                  Container(
                     height: double.infinity,
                     width: double.infinity,
-                    border: Border.all(color: Colors.white, width: 2),
-                    borderRadius: BorderRadius.circular(8),
+                    decoration: BoxDecoration(
+                      border: Border.all(color: Colors.white, width: 2),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: FastCachedImage(
+                        url: AppUrl.convertImageAddition(itemEntity.posterUrl),
+                        fit: BoxFit.cover,
+                      ),
+                    ),
                   ),
                   Align(
                     alignment: Alignment.topLeft,
@@ -211,7 +287,7 @@ class _AllMoviePageState extends State<AllMoviePage> {
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text(
-                        itemEntity[index].tmdb.voteAverage.toStringAsFixed(1),
+                        itemEntity.tmdb.voteAverage.toStringAsFixed(1),
                         style: TextStyle(
                           fontSize: 10,
                           fontWeight: FontWeight.w700,
@@ -228,23 +304,33 @@ class _AllMoviePageState extends State<AllMoviePage> {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         _itemChip(
-                          content: itemEntity[index].lang.toConvertLang(),
+                          content: itemEntity.lang.toConvertLang(),
                           isLeft: true,
                         ),
-                        _itemChip(
-                          content: itemEntity[index].quality,
-                          isGadient: true,
-                        ),
+                        _itemChip(content: itemEntity.quality, isGadient: true),
                       ],
                     ),
                   ),
                 ],
               ),
             ),
-          );
-        },
-        addRepaintBoundaries: true,
-        childCount: itemEntity.length,
+            const SizedBox(height: 5),
+            Text(
+              itemEntity.name,
+              textAlign: TextAlign.center,
+              overflow: TextOverflow.ellipsis,
+              maxLines: 1,
+              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+            ),
+            Text(
+              itemEntity.originName,
+              textAlign: TextAlign.center,
+              overflow: TextOverflow.ellipsis,
+              maxLines: 1,
+              style: TextStyle(fontSize: 10, color: Colors.grey),
+            ),
+          ],
+        ),
       ),
     );
   }

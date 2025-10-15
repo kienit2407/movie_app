@@ -25,14 +25,13 @@ class FetchFillterFailure extends FetchFillterState{
   List<Object?> get props => [message];
 }
 class FetchFillterSuccess extends FetchFillterState {
-  final FillterMovieGenreEntity fillterMovieGenreEntity;
-  final bool hasReachedMax;
+  // final FillterMovieGenreEntity fillterMovieGenreEntity;
+  final String titlePage;
+
+  FetchFillterSuccess({ required this.titlePage});
   
 
-  FetchFillterSuccess({
-    required this.fillterMovieGenreEntity,
-    this.hasReachedMax = true,
-  });
+ 
   @override
-  List<Object?> get props => [fillterMovieGenreEntity];
+  List<Object?> get props => [ titlePage];
 }

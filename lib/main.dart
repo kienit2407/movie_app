@@ -1,4 +1,5 @@
 import 'package:device_preview/device_preview.dart';
+import 'package:fast_cached_network_image/fast_cached_network_image.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -11,21 +12,24 @@ import 'package:movie_app/common/bloc/AuthWithSocial/auth_with_social_cubit.dart
 import 'package:movie_app/core/config/di/service_locator.dart';
 import 'package:movie_app/core/config/network/init_supabase.dart';
 import 'package:movie_app/core/config/themes/app_theme.dart';
+import 'package:movie_app/core/config/utils/support_rotate_screen.dart';
 import 'package:movie_app/feature/auth/presentation/reset_password/bloc/confirm_token_cubit.dart';
 import 'package:movie_app/feature/auth/presentation/reset_password/bloc/reset_password_cubit.dart';
 import 'package:movie_app/feature/auth/presentation/sign_in/bloc/sign_in_cubit.dart';
 import 'package:movie_app/feature/auth/presentation/sign_up/bloc/sign_up_cubit.dart';
+import 'package:movie_app/feature/detail_movie/presentation/pages/movie_detail_page.dart';
 import 'package:movie_app/feature/home/presentation/bloc/country_movie_cubit.dart';
 import 'package:movie_app/feature/home/presentation/bloc/detail_movie_cubit.dart';
-import 'package:movie_app/feature/home/presentation/bloc/fetch_fillter_cubit.dart';
+import 'package:movie_app/feature/movie_pagination/presentation/bloc/fetch_fillter_cubit.dart';
 import 'package:movie_app/feature/home/presentation/bloc/genre_cubit.dart';
-import 'package:movie_app/feature/home/presentation/bloc/latest_movie_cubit.dart';
+import 'package:movie_app/feature/home/presentation/bloc/carousel_display_cubit.dart';
 import 'package:movie_app/feature/home/presentation/pages/home_page.dart';
 import 'package:movie_app/feature/intro/presentation/splash/bloc/splash_cubit.dart';
 
 Future<void> main() async {
   // ensure flutter Initialized before of all
   WidgetsFlutterBinding.ensureInitialized();
+    SupportRotateScreen.onlyPotrait;
   //đảm bảo hiện màn hình trước
   runApp(
     // DevicePreview(
@@ -38,7 +42,8 @@ Future<void> main() async {
     //Init get it để tiêm phụ thuộc
     await initializeGetit(); //<- hàm thuần
     await Hive.initFlutter();
-    Hive.openBox('genre');
+    await FastCachedImageConfig.init();
+    // Hive.openBox('authBox');
     //Next one load môi trường
     await dotenv.load(fileName: 'assets/.env');
     // //khởi động biến môi trường cho supabase
@@ -57,6 +62,7 @@ class MovieApp extends StatelessWidget {
       // <- custom status bar
       const SystemUiOverlayStyle(statusBarColor: Colors.transparent),
     );
+    SupportRotateScreen.onlyPotrait;
     return MultiBlocProvider(
       providers: [
         BlocProvider(create: (context) => SplashCubit()..appStarted()), //<- khởi động app, để xét xem có người dùng chưa
@@ -65,11 +71,11 @@ class MovieApp extends StatelessWidget {
         BlocProvider(create: (context) => AuthWithSocialCubit()),
         BlocProvider(create: (context) => ResetPasswordCubit()),
         BlocProvider(create: (context) => ConfirmTokenCubit()),
-        BlocProvider(create: (context) => LatestMovieCubit()..getLatestMovie()),
+        BlocProvider(create: (context) => CarouselDisplayCubit()..getLatestMovie()),
         BlocProvider(create: (context) => DetailMovieCubit()),
         BlocProvider(create: (context) => GenreCubit()..getGenreMovie()),
         BlocProvider(create: (context) => CountryMovieCubit()..getCountryMovie()),
-        BlocProvider(create: (context) => FetchFillterCubit()),
+        BlocProvider(create: (context) => FetchFillterCubit(),),
       ],
       child: MaterialApp(
         // locale: DevicePreview.locale(context),

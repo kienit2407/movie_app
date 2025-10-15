@@ -11,13 +11,20 @@ class GetFillterGenreUsecase extends UseCase <Either<String, FillterMovieGenreEn
   Future<Either<String, FillterMovieGenreEntity>> call({required FillterMovieReq params}) async {
     switch(params.fillterType) {
       case Filltertype.genre:
-        if(params.typeList.isEmpty) {
-        return Left('U not pick anything. Pls pick least one !');
-      }
         return await sl<MovieRepository>().getFillterMovieGenre(params);
 
       case Filltertype.country: 
         return await sl<MovieRepository>().getFillterMovieCountry(params);
+
+      case Filltertype.recomendation:
+        return await sl<MovieRepository>().getRecomendedMovie(params);
+
+      case Filltertype.koreaMovie:
+        return await sl<MovieRepository>().getKoreaMovie();
+
+      case Filltertype.chinaMovie:
+        return await sl<MovieRepository>().getChinaMovie();
+
       case Filltertype.all:
         // TODO: Handle this case.
         throw UnimplementedError();

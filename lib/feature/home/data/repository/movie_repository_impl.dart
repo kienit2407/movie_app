@@ -78,5 +78,35 @@ class MovieRepositoryImpl implements MovieRepository {
     }
   }
   
+  @override
+  Future<Either<String, FillterMovieGenreEntity>> getRecomendedMovie(FillterMovieReq fillterGenreReg) async  {
+    try {
+      final fillterMovieGenre = await sl<MovieRemoteDatasource>().getRecommendedMovie(fillterGenreReg);
+      return Right(fillterMovieGenre.toEntity());
+    } on NetworkException catch (e) {
+      return Left('$e');
+    }
+  }
+  
+  @override
+  Future<Either<String, FillterMovieGenreEntity>> getKoreaMovie() async {
+    try {
+      final fillterMovieGenre = await sl<MovieRemoteDatasource>().getKoreaMovie();
+      return Right(fillterMovieGenre.toEntity());
+    } on NetworkException catch (e) {
+      return Left('$e');
+    }
+  }
+  
+  @override
+  Future<Either<String, FillterMovieGenreEntity>> getChinaMovie() async {
+   try {
+      final fillterMovieGenre = await sl<MovieRemoteDatasource>().getChinaMovie();
+      return Right(fillterMovieGenre.toEntity());
+    } on NetworkException catch (e) {
+      return Left('$e');
+    }
+  }
+  
 
 } 
