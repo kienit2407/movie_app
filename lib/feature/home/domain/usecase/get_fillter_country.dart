@@ -8,9 +8,6 @@ import 'package:movie_app/feature/home/domain/repository/movie_repository.dart';
 class GetFillterCountryUsecase extends UseCase <Either<String, FillterMovieGenreEntity>, FillterMovieReq> {
   @override
   Future<Either<String, FillterMovieGenreEntity>> call({required FillterMovieReq params}) async {
-    if(params.typeList.isEmpty) {
-      return Left('U not pick anything. Pls pick least one !');
-    }
     return await sl<MovieRepository>().getFillterMovieCountry(params);
   }
   

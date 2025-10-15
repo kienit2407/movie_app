@@ -10,6 +10,7 @@ class FillterMovieReq {
   final String? sortLang;
   final String? year;
   final String? category;
+  final String? country;
   final String? limit;
   final Filltertype fillterType;
 
@@ -20,6 +21,7 @@ class FillterMovieReq {
     this.sortType = 'desc', // giảm dần
     this.sortLang,
     this.year,
+    this.country,
     this.category,
     this.limit = '21',
     this.fillterType = Filltertype.all,
@@ -65,6 +67,7 @@ class FillterMovieReq {
     String? sortLang,
     String? year,
     String? category,
+    String? country,
     String? limit,
     Filltertype? fillterType,
   }) {
@@ -76,6 +79,7 @@ class FillterMovieReq {
       sortLang: sortLang ?? this.sortLang,
       year: year ?? this.year,
       category: category ?? this.category,
+      country: country ?? this.country,
       limit: limit ?? this.limit,
       fillterType: fillterType ?? this.fillterType,
     );

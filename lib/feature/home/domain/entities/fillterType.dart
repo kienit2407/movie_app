@@ -1,5 +1,8 @@
 enum Filltertype {
   all,
   genre,
-  country
+  country,
+  recomendation,
+  koreaMovie,
+  chinaMovie
 }

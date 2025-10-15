@@ -13,4 +13,7 @@ abstract class MovieRepository {
   Future<Either<String, List<CountryMovieEntity>>> getCountryMovie ();
   Future<Either<String, FillterMovieGenreEntity>> getFillterMovieGenre (FillterMovieReq fillterGenreReg);
   Future<Either<String, FillterMovieGenreEntity>> getFillterMovieCountry (FillterMovieReq fillterGenreReg);
+  Future<Either<String, FillterMovieGenreEntity>> getRecomendedMovie (FillterMovieReq fillterGenreReg);
+  Future<Either<String, FillterMovieGenreEntity>> getKoreaMovie ();
+  Future<Either<String, FillterMovieGenreEntity>> getChinaMovie ();
 }

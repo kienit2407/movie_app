@@ -19,7 +19,7 @@ class AppAlertDialog extends StatefulWidget {
 class _AppAlertDialogState extends State<AppAlertDialog> {
   @override
   void initState() {
-    closeDialog();
+    // closeDialog();
     super.initState();
   }
   @override

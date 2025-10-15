@@ -3,10 +3,16 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
+import 'package:movie_app/common/components/alert_dialog/app_alert_dialog.dart';
+import 'package:movie_app/common/helpers/navigation/app_navigation.dart';
 import 'package:movie_app/common/helpers/sort_map.dart';
 import 'package:movie_app/core/config/themes/app_color.dart';
+import 'package:movie_app/core/config/utils/animated_dialog.dart';
+import 'package:movie_app/feature/home/domain/entities/fillterType.dart';
+import 'package:movie_app/feature/home/domain/entities/fillter_genre_movie_req.dart';
 import 'package:movie_app/feature/home/presentation/bloc/genre_cubit.dart';
 import 'package:movie_app/feature/home/presentation/bloc/genre_state.dart';
+import 'package:movie_app/feature/movie_pagination/presentation/pages/all_movie_page.dart';
 import 'package:shimmer/shimmer.dart';
 
 class GenreBottomSheet extends StatefulWidget {
@@ -18,7 +24,8 @@ class GenreBottomSheet extends StatefulWidget {
         curve: Curves.easeInOut,
         duration: Duration(milliseconds: 300),
       ),
-      isScrollControlled:true, //mặc định chiếm 50% màn hình nhưng muón chiếm toàn bộ container thì set true
+      isScrollControlled:
+          true, //mặc định chiếm 50% màn hình nhưng muón chiếm toàn bộ container thì set true
       context: context,
       builder: (context) => GenreBottomSheet(),
     );
@@ -29,19 +36,40 @@ class GenreBottomSheet extends StatefulWidget {
 }
 
 class _GenreBottomSheetState extends State<GenreBottomSheet> {
+  String? selectedGenre;
+  String? selectedLanguage;
+  String? selectedSortField;
+
   @override
   void initState() {
     super.initState();
   }
+
+  void _handleFiltedResult() {
+    if (selectedGenre == null) {
+      showAnimatedDialog(
+        context: context,
+        dialog: AppAlertDialog(content: "Please choose least a genre !", title: 'Warning!'),
+      );
+      return;
+    }
+
+    final filteredResult = FillterMovieReq(
+      typeList: selectedGenre!,
+      sortLang: selectedLanguage,
+      sortField: selectedSortField,
+      fillterType: Filltertype.genre,
+    );
+    AppNavigator.push(context, AllMoviePage(fillterReq: filteredResult));
+  }
+
   bool expandSort = false;
   @override
   Widget build(BuildContext context) {
     return BackdropFilter(
       filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
       child: BlocConsumer<GenreCubit, GenreState>(
-        listener: (context, state) {
-
-        },
+        listener: (context, state) {},
         builder: (context, state) {
           return AnimatedContainer(
             duration: Duration(milliseconds: 200),
@@ -68,9 +96,9 @@ class _GenreBottomSheetState extends State<GenreBottomSheet> {
                   padding: const EdgeInsets.symmetric(horizontal: 10),
                   child: Row(
                     spacing: 5,
-                    crossAxisAlignment: CrossAxisAlignment.end,
+                    crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
-                      Icon(Iconsax.category),
+                      Icon(Iconsax.category, size: 16),
                       Text(
                         'Thể loại',
                         style: TextStyle(fontWeight: FontWeight.w700),
@@ -98,6 +126,8 @@ class _GenreBottomSheetState extends State<GenreBottomSheet> {
                       onTap: () {
                         setState(() {
                           expandSort = !expandSort;
+                          selectedLanguage = null;
+                          selectedSortField = null;
                         });
                       },
                       child: Padding(
@@ -146,16 +176,16 @@ class _GenreBottomSheetState extends State<GenreBottomSheet> {
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 Row(
+                                  crossAxisAlignment: CrossAxisAlignment.center,
                                   spacing: 5,
                                   children: [
-                                    Icon(Iconsax.translate_copy, size: 18),
+                                    Icon(Iconsax.translate_copy, size: 16),
                                     Text(
                                       'Language',
                                       style: TextStyle(
-                                        fontWeight: FontWeight.w700
+                                        fontWeight: FontWeight.w700,
                                       ),
                                     ),
-                                    
                                   ],
                                 ),
                                 const SizedBox(height: 10),
@@ -169,39 +199,59 @@ class _GenreBottomSheetState extends State<GenreBottomSheet> {
                                     children: List.generate(
                                       SortMap.sortLangMap.length,
                                       (index) {
-                                        return GestureDetector(
-                                          onTap: () {
-                                            setState(() {
-                                              
-                                            });
-                                          },
-                                          child: AnimatedContainer(
-                                            curve: Curves.easeInOut,
-                                            duration: Duration(
-                                              milliseconds: 200,
-                                            ),
-                                            padding: EdgeInsets.all(8),
-                                            decoration: BoxDecoration(
-                                              border: BoxBorder.all(color: Color(0xff5E6070)),
-                                              borderRadius: BorderRadius.circular(8),
-                                            ),
-                                            child: AnimatedDefaultTextStyle(
-                                              curve: Curves.easeInOut,
-                                              duration: Duration(
-                                                milliseconds: 200,
-                                              ),
-                                              style: TextStyle(
-                                                fontSize: 10,
-                                                // color: isSelectedLang[index]
-                                                //     ? Color(0xffF1D775)
-                                                //     :
-                                                   color:  Colors.white,
-                                              ),
-                                              child: Text(
-                                                SortMap.sortLangMap[index].values.single,
-                                              ),
+                                        final slug = SortMap
+                                            .sortLangMap[index]
+                                            .keys
+                                            .single;
+
+                                        bool isSelected =
+                                            selectedLanguage == slug;
+
+                                        return ChoiceChip(
+                                          showCheckmark: false,
+                                          side: BorderSide(
+                                            color: isSelected
+                                                ? Color(0xffF1D775)
+                                                : Color(0xff5E6070),
+                                          ),
+                                          backgroundColor: Color(
+                                            0xff2F3345,
+                                          ), // ← Background trong suốt
+                                          selectedColor: Color(0xff2F3345),
+                                          label: Text(
+                                            SortMap
+                                                .sortLangMap[index]
+                                                .values
+                                                .single,
+                                            style: TextStyle(
+                                              color: isSelected
+                                                  ? Color(0xffF1D775)
+                                                  : Colors.white,
+                                              fontSize: 10,
                                             ),
                                           ),
+                                          labelPadding: EdgeInsets.symmetric(
+                                            horizontal: 2,
+                                          ),
+                                          pressElevation: 2.0,
+                                          visualDensity:
+                                              VisualDensity.comfortable,
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius:
+                                                BorderRadiusGeometry.circular(
+                                                  20,
+                                                ),
+                                          ),
+
+                                          selected: true,
+                                          onSelected: (value) {
+                                            setState(() {
+                                              selectedLanguage = isSelected
+                                                  ? null
+                                                  : slug;
+                                            });
+                                           
+                                          },
                                         );
                                       },
                                     ),
@@ -210,15 +260,15 @@ class _GenreBottomSheetState extends State<GenreBottomSheet> {
                                 const SizedBox(height: 20),
                                 Row(
                                   spacing: 5,
+                                  crossAxisAlignment: CrossAxisAlignment.center,
                                   children: [
-                                    Icon(Iconsax.sort_copy, size: 18),
+                                    Icon(Iconsax.sort_copy, size: 16),
                                     Text(
                                       'Sort',
                                       style: TextStyle(
-                                        fontWeight: FontWeight.w700
+                                        fontWeight: FontWeight.w700,
                                       ),
                                     ),
-                                    
                                   ],
                                 ),
                                 const SizedBox(height: 10),
@@ -232,46 +282,56 @@ class _GenreBottomSheetState extends State<GenreBottomSheet> {
                                     children: List.generate(
                                       SortMap.sortFieldMap.length,
                                       (index) {
-                                        return GestureDetector(
-                                          onTap: () {
-                                            setState(() {
-                                              
-                                            });
-                                          },
-                                          child: AnimatedContainer(
-                                            curve: Curves.easeInOut,
-                                            duration: Duration(
-                                              milliseconds: 200,
-                                            ),
-                                            padding: EdgeInsets.all(8),
-                                            decoration: BoxDecoration(
-                                              border: Border.all(
-                                                // color: isSelectedTime[index]
-                                                //     ? Color(0xffF1D775)
-                                                //     : Color(0xff5E6070),
-                                              ),
-                                              borderRadius:
-                                                  BorderRadius.circular(8),
-                                            ),
-                                            child: AnimatedDefaultTextStyle(
-                                              curve: Curves.easeInOut,
-                                              duration: Duration(
-                                                milliseconds: 200,
-                                              ),
-                                              style: TextStyle(
-                                                fontSize: 10,
-                                                // color: isSelectedTime[index]
-                                                //     ? Color(0xffF1D775)
-                                                //     : Colors.white,
-                                              ),
-                                              child: Text(
-                                                SortMap
-                                                    .sortFieldMap[index]
-                                                    .values
-                                                    .single,
-                                              ),
+                                        final slug = SortMap
+                                            .sortFieldMap[index]
+                                            .keys
+                                            .single;
+                                        bool isSelected =
+                                            selectedSortField == slug;
+                                        return ChoiceChip(
+                                          showCheckmark: false,
+                                          side: BorderSide(
+                                            color: isSelected
+                                                ? Color(0xffF1D775)
+                                                : Color(0xff5E6070),
+                                          ),
+                                          backgroundColor: Color(
+                                            0xff2F3345,
+                                          ), // <- Background trong suốt
+                                          selectedColor: Color(0xff2F3345),
+                                          label: Text(
+                                            SortMap
+                                                .sortFieldMap[index]
+                                                .values
+                                                .single,
+                                            style: TextStyle(
+                                              color: isSelected
+                                                  ? Color(0xffF1D775)
+                                                  : Colors.white,
+                                              fontSize: 10,
                                             ),
                                           ),
+                                          labelPadding: EdgeInsets.symmetric(
+                                            horizontal: 2,
+                                          ),
+                                          pressElevation: 2.0,
+                                          visualDensity:
+                                              VisualDensity.comfortable,
+                                          selected: true,
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius:
+                                                BorderRadiusGeometry.circular(
+                                                  20,
+                                                ),
+                                          ),
+                                          onSelected: (value) {
+                                            setState(() {
+                                              selectedSortField = isSelected
+                                                  ? null
+                                                  : slug; // nếu như chip được chọn nghĩa là nó đang true và nếu bằng true thì xoá nó còn nếu là một c
+                                              // một chip khác thì sẽ thay bằng cái đó
+                                            });
+                                          },
                                         );
                                       },
                                     ),
@@ -301,9 +361,7 @@ class _GenreBottomSheetState extends State<GenreBottomSheet> {
                       minimumSize: Size.fromHeight(40),
                       backgroundColor: Colors.transparent,
                     ),
-                    onPressed: () {
-                      
-                    },
+                    onPressed: _handleFiltedResult,
                     child: Row(
                       spacing: 10,
                       mainAxisAlignment: MainAxisAlignment.center,
@@ -331,39 +389,39 @@ class _GenreBottomSheetState extends State<GenreBottomSheet> {
   Widget _buildGenreList(GenreMovieSuccess state) {
     return SingleChildScrollView(
       child: Wrap(
-        spacing: 10,
-        runSpacing: 10,
+        spacing: 8,
         alignment:
             WrapAlignment.start, //CĂN CHỈNH CÁC ITEM TRONG 1 DÒNG HOẶC CỘT
         children: List.generate(state.genreMovie.length, (index) {
-          return GestureDetector(
-            onTap: () {
-              print(state.genreMovie[index].slug);
-            },
-            child: AnimatedContainer(
-              curve: Curves.easeInOut,
-              duration: Duration(milliseconds: 200),
-              padding: EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                border: Border.all(
-                  // color: isSelectedGenre[index]
-                  //     ? Color(0xffF1D775)
-                  //     : Color(0xff5E6070),
-                ),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: AnimatedDefaultTextStyle(
-                curve: Curves.easeInOut,
-                duration: Duration(milliseconds: 200),
-                style: TextStyle(
-                  fontSize: 10,
-                  // color: isSelectedGenre[index]
-                  //     ? Color(0xffF1D775)
-                  //     : Colors.white,
-                ),
-                child: Text(state.genreMovie[index].name),
+          final slug = state.genreMovie[index].slug;
+          bool isSelected = selectedGenre == slug;
+
+          return ChoiceChip(
+            showCheckmark: false,
+            side: BorderSide(
+              color: isSelected ? Color(0xffF1D775) : Color(0xff5E6070),
+            ),
+            backgroundColor: Color(0xff2F3345), // ← Background trong suốt
+            selectedColor: Color(0xff2F3345),
+            label: Text(
+              state.genreMovie[index].name,
+              style: TextStyle(
+                color: isSelected ? Color(0xffF1D775) : Colors.white,
+                fontSize: 10,
               ),
             ),
+            labelPadding: EdgeInsets.symmetric(horizontal: 2),
+            pressElevation: 2.0,
+            visualDensity: VisualDensity.comfortable,
+            selected: true,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadiusGeometry.circular(20),
+            ),
+            onSelected: (value) {
+              setState(() {
+                selectedGenre = isSelected ? null : slug;
+              });
+            },
           );
         }),
       ),

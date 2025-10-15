@@ -3,8 +3,10 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
+import 'package:movie_app/common/components/alert_dialog/app_alert_dialog.dart';
 import 'package:movie_app/common/helpers/navigation/app_navigation.dart';
 import 'package:movie_app/core/config/themes/app_color.dart';
+import 'package:movie_app/core/config/utils/animated_dialog.dart';
 import 'package:movie_app/core/config/utils/shimmer_movie_genre.dart';
 import 'package:movie_app/feature/home/domain/entities/country_movie_entity.dart';
 import 'package:movie_app/feature/home/domain/entities/fillterType.dart';
@@ -33,12 +35,27 @@ class CountryBottomSheet extends StatefulWidget {
 }
 
 class _CountryBottomSheetState extends State<CountryBottomSheet> {
-  // List<CountryMovieEntity> countryEntity = [];
+  String? selectedCountry;
+
   @override
   void initState() {
     super.initState();
   }
+  void _handleFiltedResult() {
+    if (selectedCountry == null) {
+      showAnimatedDialog(
+        context: context,
+        dialog: AppAlertDialog(content: "Please choose least a country!", title: 'Warning!'),
+      );
+      return;
+    }
 
+    final filteredResult = FillterMovieReq(
+      typeList: selectedCountry!,
+      fillterType: Filltertype.country,
+    );
+    AppNavigator.push(context, AllMoviePage(fillterReq: filteredResult));
+  }
   @override
   Widget build(BuildContext context) {
     return BlocConsumer<CountryMovieCubit, CountryMovieState>(
@@ -106,9 +123,7 @@ class _CountryBottomSheetState extends State<CountryBottomSheet> {
                       minimumSize: Size.fromHeight(40),
                       backgroundColor: Colors.transparent,
                     ),
-                    onPressed: () {
-                      
-                    },
+                    onPressed: _handleFiltedResult,
                     child: Row(
                       spacing: 10,
                       mainAxisAlignment: MainAxisAlignment.center,
@@ -145,41 +160,36 @@ class _CountryBottomSheetState extends State<CountryBottomSheet> {
   Widget _buildCountryItem(CountryMovieSuccess state) {
     return SingleChildScrollView(
       child: Wrap(
-        spacing: 10,
-        runSpacing: 10,
+        spacing: 5,
         children: List.generate(state.countryMovie.length, (index) {
-          return GestureDetector(
-            onTap: () {
-              setState(() { 
-                
-              });
-
-              print(state.countryMovie[index].slug);
-            },
-            child: AnimatedContainer(
-              curve: Curves.easeInOut,
-              duration: Duration(milliseconds: 200),
-              padding: EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                border: Border.all(
-                  // color: isSelectedCountry[index]
-                  //     ? Color(0xffF1D775)
-                  //     : Color(0xff5E6070),
-                ),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: AnimatedDefaultTextStyle(
-                curve: Curves.easeInOut,
-                duration: Duration(milliseconds: 200),
-                style: TextStyle(
-                  fontSize: 10,
-                  // color: isSelectedCountry[index]
-                  //     ? Color(0xffF1D775)
-                  //     : Colors.white,
-                ),
-                child: Text(state.countryMovie[index].name),
+          final slug = state.countryMovie[index].slug;
+          bool isSelected = selectedCountry == slug;
+          return ChoiceChip(
+            showCheckmark: false,
+            side: BorderSide(
+              color: isSelected ? Color(0xffF1D775) : Color(0xff5E6070),
+            ),
+            backgroundColor: Color(0xff2F3345), // ← Background trong suốt
+            selectedColor: Color(0xff2F3345),
+            label: Text(
+              state.countryMovie[index].name,
+              style: TextStyle(
+                color: isSelected ? Color(0xffF1D775) : Colors.white,
+                fontSize: 10,
               ),
             ),
+            labelPadding: EdgeInsets.symmetric(horizontal: 2),
+            pressElevation: 2.0,
+            visualDensity: VisualDensity.comfortable,
+            selected: true,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadiusGeometry.circular(20),
+            ),
+            onSelected: (value) {
+              setState(() {
+                selectedCountry = isSelected ? null : slug;
+              });
+            },
           );
         }),
       ),

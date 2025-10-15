@@ -2,31 +2,36 @@ import 'dart:math' as math;
 import 'dart:ui';
 import 'package:animate_do/animate_do.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:carousel_slider/carousel_controller.dart';
 import 'package:carousel_slider/carousel_slider.dart';
+import 'package:carousel_slider/carousel_state.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
-import 'package:liquid_glass_renderer/liquid_glass_renderer.dart';
-import 'package:movie_app/app_data.dart';
 import 'package:movie_app/common/helpers/contants/app_url.dart';
-import 'package:movie_app/common/helpers/fake_api.dart';
+import 'package:movie_app/common/helpers/navigation/app_navigation.dart';
+import 'package:movie_app/common/helpers/sort_map.dart';
 import 'package:movie_app/core/config/assets/app_image.dart';
 import 'package:movie_app/core/config/themes/app_color.dart';
 import 'package:movie_app/core/config/utils/cached_image.dart';
 import 'package:movie_app/core/config/utils/format_episode.dart';
 import 'package:movie_app/core/config/utils/list_gadient.dart';
 import 'package:movie_app/core/config/utils/sharder_text.dart';
+import 'package:movie_app/feature/home/domain/entities/fillterType.dart';
+import 'package:movie_app/feature/home/domain/entities/fillter_genre_movie_req.dart';
 import 'package:movie_app/feature/home/domain/entities/new_movie_entity.dart';
-import 'package:movie_app/feature/home/presentation/bloc/genre_cubit.dart';
-import 'package:movie_app/feature/home/presentation/bloc/genre_state.dart';
-import 'package:movie_app/feature/home/presentation/bloc/latest_movie_cubit.dart';
-import 'package:movie_app/feature/home/presentation/bloc/latest_movie_state.dart';
+import 'package:movie_app/feature/home/presentation/bloc/carousel_display_state.dart';
+import 'package:movie_app/feature/home/presentation/bloc/carousel_display_cubit.dart';
 import 'package:movie_app/feature/home/presentation/widgets/blur_effect.dart';
 import 'package:movie_app/feature/home/presentation/widgets/country_bottom_sheet.dart';
 import 'package:movie_app/feature/home/presentation/widgets/genre_bottom_sheet.dart';
 import 'package:movie_app/feature/home/presentation/widgets/overlay_gadient.dart';
 import 'package:movie_app/feature/home/presentation/widgets/polk_effect.dart';
+import 'package:movie_app/feature/movie_pagination/presentation/bloc/fetch_fillter_cubit.dart';
+import 'package:movie_app/feature/movie_pagination/presentation/bloc/fetch_fillter_state.dart';
+import 'package:movie_app/feature/movie_pagination/presentation/pages/all_movie_page.dart';
 import 'package:skeletonizer/skeletonizer.dart';
 
 class HomePage extends StatefulWidget {
@@ -49,11 +54,13 @@ class _HomePageState extends State<HomePage>
   double _chipOffset = 0.0;
   bool isSelectedGenre = false;
   bool _isLoading = false;
-  
+
   @override
   void initState() {
     indexCarouselController = CarouselSliderController();
     super.initState();
+    // context.read<FetchFillterCubit>().fetchFillterGenreNotLoadMore(FillterMovieReq(typeList: '', fillterType: Filltertype.chinaMovie));
+    // context.read<FetchFillterCubit>().fetchFillterGenreNotLoadMore(FillterMovieReq(typeList: '', fillterType: Filltertype.koreaMovie));
     // Theo dõi vị trí cuộn để điều khiển chip buttons
     _scrollController.addListener(() {
       final offset = _scrollController.offset;
@@ -72,6 +79,7 @@ class _HomePageState extends State<HomePage>
     final screenHeight = MediaQuery.of(context).size.height;
     final screenWidth = MediaQuery.of(context).size.width;
     return Scaffold(
+
       extendBodyBehindAppBar: true, //-> dùng khi muốn làm appbar trong suốt
       extendBody:
           true, //-> cái này nó sẽ render full màn hình bottom nav trong suốt
@@ -133,14 +141,18 @@ class _HomePageState extends State<HomePage>
                 Image.asset(AppImage.splashLogo, scale: 1.5),
                 Spacer(),
                 IconButton.outlined(
-                  onPressed: () {},
+                  onPressed: () {
+                    GenreBottomSheet.show(context);
+                  },
                   icon: Icon(Iconsax.filter),
                 ),
                 const SizedBox(width: 15),
                 Stack(
                   children: [
                     IconButton.outlined(
-                      onPressed: () {},
+                      onPressed: () {
+                        
+                      },
                       icon: Icon(Iconsax.notification),
                     ),
                     Positioned(
@@ -185,7 +197,7 @@ class _HomePageState extends State<HomePage>
                           onPressed: () {
                             GenreBottomSheet.show(context);
                           },
-                          isSelected: isSelectedGenre
+                          isSelected: isSelectedGenre,
                         ),
                         _buildChipButton(
                           onPressed: () => CountryBottomSheet.show(context),
@@ -254,22 +266,59 @@ class _HomePageState extends State<HomePage>
   }
 
   Widget _lastedMovie() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 10),
-      child: Column(
-        children: List.generate(3, (index) {
-          return _itemLatestMovieCountry(
-            content: 'Phim Hàn Quốc Mới Nhất',
-            gadient: ListGadient.listGadient[index],
+    return BlocBuilder<FetchFillterCubit, FetchFillterState>(
+      builder: (context, state) {
+        if (state is FetchFillterSuccess) {
+          return Padding(
+            padding: const EdgeInsets.symmetric(vertical: 10),
+            child: Column(
+              children: [
+                _itemLatestMovieCountry(
+                  content: "Korea Movie Latest",
+                  gadient: LinearGradient(
+                    colors: [
+                      Color(0xff94D877),
+                      Color(0xff8FD199),
+                      Color.fromARGB(255, 197, 226, 224),
+                    ],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  items: state.fillterMovieGenreEntity.items,
+                  typeOfList: 'han-quoc'
+                ),
+                _itemLatestMovieCountry(
+                  content: "China Movie Latest",
+                  gadient: LinearGradient(
+                    colors: [Color(0xffA088BD), Color.fromARGB(255, 216, 213, 220)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  items: state.fillterMovieGenreEntity.items,
+                  typeOfList: 'trung-quoc'
+                ),
+                // _itemLatestMovieCountry(
+                //   content: "US-UK Movie Latest",
+                //   gadient: LinearGradient(
+                //     colors: [Color(0xffEAC66B), Color.fromARGB(255, 210, 204, 191)],
+                //     begin: Alignment.topLeft,
+                //     end: Alignment.bottomRight,
+                //   ),
+                // ),
+              ],
+            ),
           );
-        }),
-      ),
+        }
+        return SizedBox();
+      },
     );
   }
-
+  
   Widget _itemLatestMovieCountry({
-    required String? content,
+    required String content,
     required Gradient gadient,
+    required List<ItemEntity> items,
+    required String typeOfList
   }) {
     return Column(
       children: [
@@ -280,14 +329,23 @@ class _HomePageState extends State<HomePage>
               child: SharderText(
                 gradient: gadient,
                 child: Text(
-                  'Phim Hàn Quốc mới nhất',
+                  content,
                   style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                 ),
               ),
             ),
             Spacer(),
             IconButton(
-              onPressed: () {},
+              onPressed: () {
+                final filteredResult = FillterMovieReq(
+                  typeList: typeOfList,
+                  fillterType: Filltertype.country,
+                );
+                AppNavigator.push(
+                  context,
+                  AllMoviePage(fillterReq: filteredResult),
+                );
+              },
               icon: Icon(Iconsax.arrow_right_3_copy),
             ),
           ],
@@ -300,28 +358,16 @@ class _HomePageState extends State<HomePage>
               scrollDirection: Axis.horizontal,
               // shrinkWrap: true, // sử dụng cái này thì nó sẽ đo chiều cao của list nếu 100 item thì nó sẽ nặng và lagy -> chậm
               //thay vì dùng nó để tránh lõi khi nhét list view vào colum thì dùng Expanded listview sẽ chiếm hết phần trống flutter chỉ việc render trong viewport
-              addAutomaticKeepAlives:true, // từ động giữ state của widget con khi cúng ra khở màn hình và rebuild khong cần thiết
+              addAutomaticKeepAlives:
+                  true, // từ động giữ state của widget con khi cúng ra khở màn hình và rebuild khong cần thiết
               // addRepaintBoundaries: false, // cái này nó giảm vẽ lại nhưng nêis widget con ít thày đôi khi không cầ sử dụng
               // addSemanticIndexes: true,
               // primary: true,
               separatorBuilder: (context, index) => SizedBox(width: 10),
-              itemCount: AppData.posterList.length,
+              itemCount: items.length,
               cacheExtent: 500, //khởng pixel render trước khi thấy viewport
               itemBuilder: (context, index) {
-                return AnimationConfiguration.staggeredList(
-                  position: index,
-                  duration: const Duration(milliseconds: 800),
-                  child: SlideAnimation(
-                    verticalOffset: 50,
-                    curve: Curves.easeInOut,
-                    child: FadeInAnimation(
-                      curve: Curves.easeInOut,
-                      child: _itemLatestMovie(
-                        imgeUrl: AppData.posterList[index],
-                      ),
-                    ),
-                  ),
-                );
+                return _itemLatestMovie(items: items[index]);
               },
             ),
           ),
@@ -330,7 +376,7 @@ class _HomePageState extends State<HomePage>
     );
   }
 
-  Widget _itemLatestMovie({String? imgeUrl}) {
+  Widget _itemLatestMovie({required ItemEntity items}) {
     return SizedBox(
       width: 140,
       height: 200,
@@ -343,8 +389,7 @@ class _HomePageState extends State<HomePage>
             decoration: BoxDecoration(
               image: DecorationImage(
                 image: CachedNetworkImageProvider(
-                  imgeUrl ??
-                      'https://static.nutscdn.com/vimg/300-0/d0f979ab72160593e538fcc702b7e749.jp',
+                  AppUrl.convertImageAddition(items.posterUrl),
                 ),
                 fit: BoxFit.cover,
               ),
@@ -361,8 +406,11 @@ class _HomePageState extends State<HomePage>
                     mainAxisAlignment: MainAxisAlignment.center,
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      _itemChip(content: 'Tập 20', isLeft: true),
-                      _itemChip(content: 'FHD', isGadient: true),
+                      _itemChip(
+                        content: items.lang.toConvertLang(),
+                        isLeft: true,
+                      ),
+                      _itemChip(content: items.quality, isGadient: true),
                     ],
                   ),
                 ),
@@ -373,14 +421,14 @@ class _HomePageState extends State<HomePage>
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 10),
             child: Text(
-              'Bạn Gái Tôi Trở Thành Con Trai Rồi!',
+              items.name,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
             ),
           ),
           Text(
-            'Hiến ngư',
+            items.originName,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: TextStyle(
@@ -437,19 +485,9 @@ class _HomePageState extends State<HomePage>
       children: [
         Padding(
           padding: const EdgeInsets.only(left: 20),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'What are you watching ?',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
-              ),
-              IconButton(
-                padding: EdgeInsets.zero,
-                onPressed: () {},
-                icon: Icon(Iconsax.arrow_right_3_copy),
-              ),
-            ],
+          child: Text(
+            'What are you watching ?',
+            style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
           ),
         ),
         SingleChildScrollView(
@@ -457,9 +495,21 @@ class _HomePageState extends State<HomePage>
           scrollDirection: Axis.horizontal,
           child: Row(
             spacing: 10,
-            children: List.generate(6, (index) {
-              return _movieThemeItem(
-                ListGadient.listGadient[index % ListGadient.listGadient.length],
+            children: List.generate(SortMap.sortMovie.length, (index) {
+              final sortMovie = SortMap.sortMovie[index];
+              return GestureDetector(
+                onTap: () {
+                  final result = FillterMovieReq(
+                    typeList: sortMovie.keys.single,
+                    fillterType: Filltertype.recomendation,
+                  );
+                  AppNavigator.push(context, AllMoviePage(fillterReq: result));
+                },
+                child: _movieThemeItem(
+                  ListGadient.listGadient[index %
+                      ListGadient.listGadient.length],
+                  SortMap.sortMovie[index].values.single,
+                ),
               );
             }),
           ),
@@ -468,7 +518,7 @@ class _HomePageState extends State<HomePage>
     );
   }
 
-  Widget _movieThemeItem(Gradient gadient) {
+  Widget _movieThemeItem(Gradient gadient, String content) {
     return SizedBox(
       height: MediaQuery.of(context).size.height * .12,
       width: 150,
@@ -495,7 +545,7 @@ class _HomePageState extends State<HomePage>
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Text(
-                    'Marvel',
+                    content,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
@@ -503,7 +553,7 @@ class _HomePageState extends State<HomePage>
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
-                      Text(
+                      const Text(
                         'Watch More',
                         style: TextStyle(
                           fontWeight: FontWeight.w500,
@@ -523,16 +573,16 @@ class _HomePageState extends State<HomePage>
   }
 
   Widget _buildCarouselPoster(double screenHeight, double screenWidth) {
-    return BlocConsumer<LatestMovieCubit, LatestMovieState>(
+    return BlocConsumer<CarouselDisplayCubit, CarouselDisplayState>(
       listener: (context, state) {
-        if(state is LatestMovieLoading) {
+        if (state is CarouselLoading) {
           _isLoading = true;
         } else {
           _isLoading = false;
         }
       },
       builder: (context, data) {
-        if (data is LatestMovieSuccess) {
+        if (data is CarouselSuccess) {
           return SizedBox(
             height: screenHeight * .89,
             width: screenWidth,
@@ -592,7 +642,8 @@ class _HomePageState extends State<HomePage>
       ),
     );
   }
-  Widget _buildCategory (List<CategoryEntity> category) {
+
+  Widget _buildCategory(List<CategoryEntity> category) {
     return SizedBox(
       height: MediaQuery.of(context).size.height * .04,
       child: Padding(
@@ -601,25 +652,21 @@ class _HomePageState extends State<HomePage>
           alignment: WrapAlignment.center,
           spacing: 5,
           runSpacing: 5,
-          children: List.generate(category.length, (index){
+          children: List.generate(category.length, (index) {
             return Container(
               padding: EdgeInsets.symmetric(horizontal: 5, vertical: 5),
               decoration: BoxDecoration(
                 color: Colors.white.withOpacity(.1),
                 borderRadius: BorderRadius.circular(5),
-              
               ),
-              child: Text(category[index].name,
-                style: TextStyle(
-                  fontSize: 9,
-                ),
-              ),
+              child: Text(category[index].name, style: TextStyle(fontSize: 9)),
             );
-          })
+          }),
         ),
       ),
     );
   }
+
   Widget _buildInforMovie(List<ItemEntity> latestMovie) {
     return Skeletonizer(
       enabled: _isLoading,
@@ -758,9 +805,6 @@ class _HomePageState extends State<HomePage>
       ),
     );
   }
-
-
-  
 
   Widget _buildChipButton(
     String content, {
@@ -1003,18 +1047,3 @@ class _HomePageState extends State<HomePage>
     );
   }
 }
-// CachedImageContainer(
-//                     imageUrl: AppUrl.convertImageDirect(
-//                       latestMovie[index].posterUrl,
-//                     ),
-//                     boxFit: BoxFit.cover,
-//                     margin: EdgeInsets.symmetric(horizontal: 27),
-//                     border: Border.all(color: Colors.white, width: 3),
-//                     borderRadius: BorderRadius.circular(15),
-//                   ),
-//với ui mà sử dụng được 1 man hình thì không ccanf tach ra thành file
-
-// Padding(
-//   padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom), -> padding cho bàn phím
-//   child: ...,
-// )

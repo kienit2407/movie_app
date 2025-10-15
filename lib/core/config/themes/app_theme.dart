@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:movie_app/core/config/themes/app_color.dart';
 
 class AppTheme {
@@ -10,6 +11,12 @@ class AppTheme {
       elevation: 0, // Loại bỏ độ
       
     ),
+    appBarTheme: AppBarTheme(
+      systemOverlayStyle: SystemUiOverlayStyle(
+          statusBarIconBrightness: Brightness.light,
+          statusBarBrightness:Brightness.dark ,
+        ),
+      ),
     useMaterial3: true,
     textTheme: TextTheme(bodyMedium: TextStyle(color: Colors.white)),
     scaffoldBackgroundColor: AppColor.bgApp, //<- đặt màu theme cho scaffold

@@ -1,24 +1,32 @@
 import 'dart:async';
+import 'dart:math';
+import 'dart:ui';
 
+import 'package:animate_do/animate_do.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
+import 'package:movie_app/common/components/alert_dialog/app_alert_dialog.dart';
 import 'package:movie_app/common/helpers/contants/app_url.dart';
 import 'package:movie_app/common/helpers/navigation/app_navigation.dart';
+import 'package:movie_app/common/helpers/static_data.dart';
 import 'package:movie_app/core/config/themes/app_color.dart';
+import 'package:movie_app/core/config/utils/animated_dialog.dart';
 import 'package:movie_app/core/config/utils/cached_image.dart';
 import 'package:movie_app/core/config/utils/format_episode.dart';
 import 'package:movie_app/core/config/utils/sharder_text.dart';
+import 'package:movie_app/core/config/utils/show_detail_movie_dialog.dart';
 import 'package:movie_app/feature/home/domain/entities/fillter_genre_movie_req.dart';
 import 'package:movie_app/feature/home/domain/entities/fillter_movie_genre_entity.dart';
 import 'package:movie_app/feature/home/domain/entities/new_movie_entity.dart';
-import 'package:movie_app/feature/home/presentation/bloc/fetch_fillter_cubit.dart';
-import 'package:movie_app/feature/home/presentation/bloc/fetch_fillter_state.dart';
+import 'package:movie_app/feature/movie_pagination/presentation/bloc/fetch_fillter_cubit.dart';
+import 'package:movie_app/feature/movie_pagination/presentation/bloc/fetch_fillter_state.dart';
 
 class AllMoviePage extends StatefulWidget {
   const AllMoviePage({super.key, required this.fillterReq});
   final FillterMovieReq fillterReq;
-
+  
   @override
   State<AllMoviePage> createState() => _AllMoviePageState();
 }
@@ -26,17 +34,23 @@ class AllMoviePage extends StatefulWidget {
 class _AllMoviePageState extends State<AllMoviePage> {
   final ScrollController _scrollController = ScrollController();
   List<ItemEntity> allItems = [];
+  Set<String> animatedItems = {};
+  final random = Random();
+  late final Map<LinearGradient, Color> _selectedGradient;
   // Timer? _debounceTimer;
   bool _isLoadingMore = false;
   @override
   void initState() {
+    super.initState(); // phải để lên đầu vì cái nào sau nó sẽ đươc build trước
+    _selectedGradient = StaticData.randomeGadientTitlePage[
+      random.nextInt(StaticData.randomeGadientTitlePage.length)];
+    allItems.clear();
     initializeData();
     _scrollController.addListener(_onScroll);
-    super.initState();
   }
 
   void initializeData() {
-    if(_isLoadingMore) return;
+    if (_isLoadingMore) return;
     context.read<FetchFillterCubit>().fetchFillterGenre(
       widget.fillterReq,
     ); // -> khởi tạo dữ liệu
@@ -62,17 +76,15 @@ class _AllMoviePageState extends State<AllMoviePage> {
       //   _loadMore();
       // });
       _loadMore();
-      
     }
   }
-
+  
   void _loadMore() {
     if (_isLoadingMore) return;
     setState(() {
       _isLoadingMore = true;
     });
     context.read<FetchFillterCubit>().loadApi(widget.fillterReq);
-
   }
 
   void _onRefresh() {
@@ -85,71 +97,124 @@ class _AllMoviePageState extends State<AllMoviePage> {
 
   @override
   Widget build(BuildContext context) {
+    final gradientColor = _selectedGradient.keys.single;
+    final appBarColor = _selectedGradient.values.single;
     return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        surfaceTintColor: Colors.transparent,
-        flexibleSpace: Container(
-          // decoration: BoxDecoration(
-          //   gradient: LinearGradient(
-          //     colors: [
-          //       Color.fromARGB(255, 52, 196, 163).withOpacity(.3),
-          //       Color.fromARGB(255, 52, 196, 163).withOpacity(.3),
-          //     ],
-          //     begin: Alignment.topCenter,
-          //     end: Alignment.bottomCenter,
-          //   ),
-          // ),
-        ),
-        leading: IconButton(
-          style: IconButton.styleFrom(backgroundColor: Colors.white12),
-          onPressed: () {
-            AppNavigator.pop(context);
-          },
-          icon: Icon(Iconsax.arrow_left_2_copy, color: Colors.white),
+      extendBodyBehindAppBar: true,
+      appBar: PreferredSize(
+        preferredSize: const Size.fromHeight(60) ,
+        child: ClipRect(
+          child: BackdropFilter(
+            filter: ImageFilter.blur(
+              sigmaX:20,
+              sigmaY: 20
+            ),
+            child: AppBar(
+              backgroundColor: appBarColor.withOpacity(.7),
+              surfaceTintColor: Colors.transparent,
+              shadowColor: Colors.transparent,
+              // flexibleSpace: Container(
+              //   decoration: BoxDecoration(
+              //     gradient: LinearGradient(
+              //       colors: [
+              //         Color.fromARGB(255, 52, 196, 163).withOpacity(.3),
+              //         Color.fromARGB(255, 52, 196, 163).withOpacity(.3),
+              //       ],
+              //       begin: Alignment.topCenter,
+              //       end: Alignment.bottomCenter,
+              //     ),
+              //   ),
+              // ),
+              leading: IconButton(
+                style: IconButton.styleFrom(backgroundColor: Colors.white12),
+                onPressed: () {
+                  AppNavigator.pop(context);
+                },
+                icon: Icon(Iconsax.arrow_left_2_copy, color: Colors.white),
+              ),
+            ),
+          ),
         ),
       ),
-      body: BlocConsumer<FetchFillterCubit, FetchFillterState>(
-        listener: (context, state) {
-          if (state is FetchFillterLoadingMore) {
-            _isLoadingMore = true;
-          } else {
-            _isLoadingMore = false;
-          }
-          if (state is FetchFillterSuccess) {
-            final FillterMovieGenreEntity fillterMovieEntity =
-                state.fillterMovieGenreEntity;
-            setState(() {
-              allItems.addAll(fillterMovieEntity.items);
-            });
-          }
-        },
-        builder: (context, builderState) {
-          return _builContent(builderState);
-        },
+      body: Stack(
+        children: [
+          Container(
+            width: double.infinity,
+            height: double.infinity,
+            decoration: BoxDecoration(
+              gradient:gradientColor
+            ),
+          ),
+          BlocConsumer<FetchFillterCubit, FetchFillterState>(
+            listener: (context, state) {
+              if (state is FetchFillterLoadingMore) {
+                _isLoadingMore = true;
+              } else {
+                _isLoadingMore = false;
+              }
+              if (state is FetchFillterSuccess) {
+                final FillterMovieGenreEntity fillterMovieEntity =
+                    state.fillterMovieGenreEntity;
+                allItems.addAll(fillterMovieEntity.items);
+              }
+            },
+            builder: (context, builderState) {
+              if(builderState is FetchFillterSuccess) {
+                return _builContent(builderState);
+              }
+              return SizedBox();
+            },
+          ),
+        ],
       ),
     );
   }
-  // Widget _buildBody(FetchFillterState state) {
-  //   switch (state) {
-  //     case Fet: return _builContent(state);
-      
-  //   }
-    
-  // }
-  Widget _builContent(FetchFillterState state) {
-    
+  
+  Widget _builContent(FetchFillterSuccess state) {
     return RefreshIndicator.adaptive(
-      
       color: Colors.white,
       onRefresh: () async => _onRefresh(),
       child: Scrollbar(
         controller: _scrollController,
         interactive: true,
-        child: CustomScrollView(
-          controller: _scrollController,
-          slivers: [
-            _buildGrid(allItems), //có nên để danh sách ở local không
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 10),
+          child: CustomScrollView(
+            
+            controller: _scrollController,
+            slivers: [
+              SliverToBoxAdapter(
+                child: const SizedBox(height: kToolbarHeight + 80,),
+              ),
+              SliverToBoxAdapter(
+                child: ZoomIn(
+                  duration: Duration(milliseconds: 200),
+                  child: SharderText(
+                    gradient: LinearGradient(
+                      colors: [
+                        Color(0xff1C1C1C),
+                        Color(0xff1C1C1C),
+                        Color(0xff1C1C1C),
+                        Color(0xff727387),
+                        Color(0xff1C1C1C),
+                      ],
+                      
+                      begin:Alignment.centerRight,
+                      end: Alignment.centerLeft
+                    ),
+                    child: Text(state.fillterMovieGenreEntity.titlePage,
+                      style: TextStyle(
+                        fontSize: 30,
+                        fontWeight: FontWeight.bold
+                      ),
+                    ),
+                  ),
+                )
+              ),
+              SliverToBoxAdapter(
+                child: const SizedBox(height: 10,),
+              ),
+              _buildGrid(allItems), //có nên để danh sách ở local không
               SliverToBoxAdapter(
                 child: AnimatedContainer(
                   curve: Curves.easeInOut,
@@ -160,14 +225,16 @@ class _AllMoviePageState extends State<AllMoviePage> {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      _isLoadingMore ? CircularProgressIndicator.adaptive() : SizedBox(),
-                      Text('Loading')
+                      _isLoadingMore
+                          ? CircularProgressIndicator.adaptive()
+                          : SizedBox(),
+                      Text('Loading'),
                     ],
                   ),
                 ),
               ),
-              
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -178,23 +245,65 @@ class _AllMoviePageState extends State<AllMoviePage> {
       gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
         mainAxisSpacing: 10,
         crossAxisSpacing: 10,
+
         maxCrossAxisExtent:
-            150, //chiều rộng tối đa của mỗi item. -> cái này nó sẽ tự tính toán theo màn hình có thể chứa bao nhiêu item -> cross theo chiều ngang đối với các listview có dạng dọc
+            200, //chiều rộng tối đa của mỗi item. -> cái này nó sẽ tự tính toán theo màn hình có thể chứa bao nhiêu item -> cross theo chiều ngang đối với các listview có dạng dọc
         // crossAxisSpacing: , gap giữa các item theo chiều ngang
-        childAspectRatio: 2 / 3, // tỉ lệ giữa width và height
+        childAspectRatio: 2 / 3.4, // tỉ lệ giữa width và height
       ),
       // shrinkWrap: true, // // co lại vừa với content. Nhưng dùng expanded thì item nó sẽ spread out và không cần renđẻ theo shrinkWrap vì nếu 1000 item đi thì nó sẽ bọc và phải render ra 1000 item và tính toán
       delegate: SliverChildBuilderDelegate(
         (context, index) {
-          return GestureDetector(
-            onTap: () => print(itemEntity[index].slug),
-            child: SizedBox(
+          final item = itemEntity[index];
+          final shouldAnimate = !animatedItems.contains(item.id);
+          if (shouldAnimate) {
+            animatedItems.add(item.id); // Đánh dấu đã animate
+          }
+          return AnimationConfiguration.staggeredGrid(
+            position: index,
+            columnCount: 3,
+            duration: const Duration(milliseconds: 400),
+            child: shouldAnimate
+                ? ScaleAnimation(
+                    curve: Curves.easeOut,
+                    child: SlideAnimation(
+                      verticalOffset: 50,
+                      child: FadeInAnimation(child: _buildItem(item)),
+                    ),
+                  )
+                : _buildItem(item),
+          );
+        },
+
+        addRepaintBoundaries: true,
+        childCount: itemEntity.length,
+      ),
+    );
+  }
+
+  Widget _buildItem(ItemEntity itemEntity) {
+    BuildContext? dialogContext;
+    return GestureDetector(
+      key: ValueKey(itemEntity.id),
+      onLongPressStart: (details) async {
+        dialogContext = await showAnimatedDialog(
+          context: context,
+          dialog: ShowDetailMovieDialog(slug: itemEntity.slug),
+        );
+      },
+
+      onLongPressEnd: (details) {
+        Navigator.of(dialogContext!).pop(); // Đóng dialog
+      },
+      child: SizedBox(
+        child: Column(
+          children: [
+            AspectRatio(
+              aspectRatio: 2 / 3,
               child: Stack(
                 children: [
                   CachedImageContainer(
-                    imageUrl: AppUrl.convertImageAddition(
-                      itemEntity[index].posterUrl,
-                    ),
+                    imageUrl: AppUrl.convertImageAddition(itemEntity.posterUrl),
                     boxFit: BoxFit.cover,
                     height: double.infinity,
                     width: double.infinity,
@@ -211,7 +320,7 @@ class _AllMoviePageState extends State<AllMoviePage> {
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text(
-                        itemEntity[index].tmdb.voteAverage.toStringAsFixed(1),
+                        itemEntity.tmdb.voteAverage.toStringAsFixed(1),
                         style: TextStyle(
                           fontSize: 10,
                           fontWeight: FontWeight.w700,
@@ -228,23 +337,33 @@ class _AllMoviePageState extends State<AllMoviePage> {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         _itemChip(
-                          content: itemEntity[index].lang.toConvertLang(),
+                          content: itemEntity.lang.toConvertLang(),
                           isLeft: true,
                         ),
-                        _itemChip(
-                          content: itemEntity[index].quality,
-                          isGadient: true,
-                        ),
+                        _itemChip(content: itemEntity.quality, isGadient: true),
                       ],
                     ),
                   ),
                 ],
               ),
             ),
-          );
-        },
-        addRepaintBoundaries: true,
-        childCount: itemEntity.length,
+            const SizedBox(height: 5),
+            Text(
+              itemEntity.name,
+              textAlign: TextAlign.center,
+              overflow: TextOverflow.ellipsis,
+              maxLines: 1,
+              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+            ),
+            Text(
+              itemEntity.originName,
+              textAlign: TextAlign.center,
+              overflow: TextOverflow.ellipsis,
+              maxLines: 1,
+              style: TextStyle(fontSize: 10, color: Colors.grey),
+            ),
+          ],
+        ),
       ),
     );
   }

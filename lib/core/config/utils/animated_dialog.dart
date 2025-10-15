@@ -1,27 +1,24 @@
 import 'package:flutter/material.dart';
 
-Future<void> showAnimatedDialog({
+Future<BuildContext?> showAnimatedDialog({
   required BuildContext context,
   required Widget dialog,
 }) async {
- await showGeneralDialog(
+  await showGeneralDialog(
     barrierDismissible: true,
     barrierLabel: '',
-    context: context, 
+    context: context,
     transitionDuration: Duration(milliseconds: 300),
-    pageBuilder: (context, a1, a2){
+    pageBuilder: (context, a1, a2) {
+      Future.delayed(Duration(seconds: 2), () async {
+        Navigator.of(context).pop();
+      });
       return dialog;
     },
     transitionBuilder: (context, animation, secondaryAnimation, child) {
       return ScaleTransition(
-        scale: CurvedAnimation(
-          parent: animation,
-          curve: Curves.easeOutBack
-        ),
-        child: FadeTransition(
-          opacity: animation,
-          child: child,
-        ),
+        scale: CurvedAnimation(parent: animation, curve: Curves.easeOutBack),
+        child: FadeTransition(opacity: animation, child: child),
       );
     },
   );

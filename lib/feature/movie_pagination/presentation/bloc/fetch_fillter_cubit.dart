@@ -1,22 +1,39 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:movie_app/core/config/di/service_locator.dart';
+import 'package:movie_app/feature/home/domain/entities/fillterType.dart';
 import 'package:movie_app/feature/home/domain/entities/fillter_genre_movie_req.dart';
 import 'package:movie_app/feature/home/domain/entities/fillter_movie_genre_entity.dart';
 import 'package:movie_app/feature/home/domain/entities/new_movie_entity.dart';
 import 'package:movie_app/feature/home/domain/usecase/get_fillter_genre.dart';
-import 'package:movie_app/feature/home/presentation/bloc/fetch_fillter_state.dart';
+import 'package:movie_app/feature/movie_pagination/presentation/bloc/fetch_fillter_state.dart';
 
 class FetchFillterCubit extends Cubit<FetchFillterState>  {
   FetchFillterCubit() : super(FetchFillterInitial());
   int _currentPage = 1;
   List<ItemEntity> _allItems = [];
   bool _hasReachedMax = true;
+  Future <void> fetchFillterGenreNotLoadMore (FillterMovieReq fillterGenreMovieReq) async{
+    try {
+      
+      final result = await sl<GetFillterGenreUsecase>().call(params: fillterGenreMovieReq);
+      result.fold(
+        (l) {
+          emit(FetchFillterFailure(message: l));
+        },
+        (data) {
+          emit( 
+            FetchFillterSuccess(
+              fillterMovieGenreEntity: data,
+            )
+          );
+        }
+      );
+    } catch (e) {
+      rethrow;
+    }
+  }
   Future<void> fetchFillterGenre(FillterMovieReq fillterGenreMovieReq) async {
     try {
-      if(fillterGenreMovieReq.typeList.isEmpty){
-        emit(FetchFillterFailure(message: 'Bn chưa chọn genr'));
-        return;
-      }
       //reset danh sách lại từ đầu
       _allItems.clear();
       _currentPage = 1;
