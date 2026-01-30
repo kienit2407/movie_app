@@ -693,7 +693,6 @@ class _EpisodesSliverState extends State<_EpisodesSliver> {
                     height: 32,
                     child: TextField(
                       controller: _searchController,
-                      keyboardType: TextInputType.number,
                       textInputAction: TextInputAction.search,
                       textAlignVertical: TextAlignVertical.center,
                       onSubmitted: (_) => _submitEpisode(),

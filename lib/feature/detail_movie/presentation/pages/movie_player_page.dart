@@ -1097,7 +1097,6 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
                 child: TextField(
                   onSubmitted: (_) => _submitEpisode(),
                   controller: _searchController,
-                  keyboardType: TextInputType.number,
                   textInputAction: TextInputAction.search,
                   textAlignVertical: TextAlignVertical.center, // quan trọng
                   style: const TextStyle(
