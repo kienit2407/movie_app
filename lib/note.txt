@@ -1,0 +1,112 @@
+- Trong dự án thực tế hoàn toàn có thể sử dụng equatable cho phần generate cho phần copy with (nó giúp tạo bản sao của đối tượng thay đổi những trường cần thiết mà không thay đổi toàn bộ hoặc code thủ công từng trường của contructor, tất cả sẽ nhờ vào complie lo. Nhằm đảm bảo tính bất biến). Và equatable sẽ triển khai hashcode theo value dựa trên props (hashcode là gì? mỗi đối tượng sẽ có 1 hashCode khác nhau, dù cùng giá trị nhưng vẫn khác ô nhớ, Việc ghi đè hashCode là so sánh chúng có cùng giá trị và đối tượng không tránh ui rebuild vô tội vạ)
+- Riêng freezed nó sẽ giúp giúp chúng ta 3 việc:
+    + Định nghĩa contructor & props
+    + ghi đè hash code
+    + 
+Cmd + shift + V => open readme preview
+/// MÔ HÌNH MVVM
+
+lib/
+├── data/
+│   ├── api_service.dart           // Gọi Dio/Http
+│   └── models/                    // ProductModel (Json Serializable)
+├── features/
+│   └── product/
+│       ├── product_repository.dart // Gọi ApiService, hứng lỗi try-catch
+│       ├── product_list_vm.dart    // (Controller) AsyncNotifier quản lý List
+│       ├── product_detail_vm.dart  // (Controller) FamilyAsyncNotifier quản lý Detail
+│       └── views/
+│           ├── product_list_page.dart
+│           └── product_detail_page.dart
+
+
+
+// MÔ HÌNH CLEAN-LITE
+
+lib/
+├── core/ ... (Network, Utils, Config)
+├── features/
+│   └── product/
+│       ├── data/                  // Lớp Dữ liệu
+│       │   ├── dtos/              // ProductDTO (Data Transfer Object - map từ JSON)
+│       │   ├── datasources/       // ProductRemoteDataSource (Gọi API)
+│       │   └── repositories/      // ProductRepositoryImpl (Xử lý try-catch, map DTO -> Model)
+│       ├── domain/                // Lớp Nghiệp vụ (Gọn nhẹ)
+│       │   ├── models/            // Product (Entity thuần, không chứa logic JSON)
+│       │   └── repositories/      // ProductRepository (Interface/Abstract class)
+│       └── presentation/          // Lớp Giao diện
+│           ├── controllers/       // ProductListController, ProductDetailController
+│           ├── states/            // ProductListState (Class chứa page, products...)
+│           └── ui/                // ProductListPage, ProductDetailPage, Widgets...
+
+
+lib/
+├── core/ ... (Network, Utils, Config)
+├── features/
+│   └── product/
+│       ├── data/                  // Lớp Dữ liệu
+│       │   ├── dtos/              // ProductDTO (Data Transfer Object - map từ JSON)
+│       │   ├── datasources/       // ProductRemoteDataSource (Gọi API)
+│       │   └── repositories/      // ProductRepositoryImpl (Xử lý try-catch, map DTO -> Model)
+│       ├── ├── domain/
+│       │   ├── entities/
+│       │   ├── repositories/ (Interface)
+│       │   └── usecases // GetProductListUseCase, GetProductDetailUseCase
+│       └── presentation/          // Lớp Giao diện
+│           ├── controllers/       // ProductListController, ProductDetailController
+│           ├── states/            // ProductListState (Class chứa page, products...)
+│           └── ui/                // ProductListPage, ProductDetailPage, Widgets...
+
+
+// Class cha chứa mọi thứ về phân trang
+class PaginationState<T> {
+  final List<T> items;      // List generic: Có thể là Product, Order, User...
+  final int page;
+  final int total;
+  final bool isLoading;
+  final bool isLoadingMore; // Load more riêng biệt
+
+  const PaginationState({
+    this.items = const [],
+    this.page = 1,
+    this.total = 0,
+    this.isLoading = false,
+    this.isLoadingMore = false,
+  });
+  
+  // Logic check còn data hay không viết 1 lần ở đây
+  bool get hasMore => items.length < total;
+
+  // CopyWith generic
+  PaginationState<T> copyWith({
+    List<T>? items,
+    int? page,
+    int? total,
+    bool? isLoading,
+    bool? isLoadingMore,
+  }) {
+    return PaginationState<T>(
+      items: items ?? this.items,
+      page: page ?? this.page,
+      total: total ?? this.total,
+      isLoading: isLoading ?? this.isLoading,
+      isLoadingMore: isLoadingMore ?? this.isLoadingMore,
+    );
+  }
+}
+
+class CatalogState {
+  // Thay vì khai báo rời rạc, gom hết vào 1 cục Generic
+  final PaginationState<ProductListItem> productsData; 
+  
+  final List<BrandModel> brands;
+  final String searchQuery;
+
+  const CatalogState({
+    this.productsData = const PaginationState(), // Khởi tạo mặc định
+    this.brands = const [],
+    this.searchQuery = '',
+  });
+
+  // Khi copyWith chỉ cần gọi productsData.copyWith(...)
+}

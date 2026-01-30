@@ -1,0 +1,52 @@
+                  normalize = value % itemCount;
+                  setState(() {
+                    _currentPage = normalize;
+                  });
+                }
+              },
+            ),
+            itemCount: itemCountStandart,
+            itemBuilder: (BuildContext context, int index, int realiindex) {
+              final double itemCount = itemCountStandart.toDouble();
+              double diff = index - _currentPage;
+              diff = diff - itemCount * (diff / itemCount).round();
+              diff = diff.clamp(-1.0, 1.0);
+              final double angle = diff * (math.pi * 0.1);
+              return GestureDetector(
+                onTap: () {
+                  AppNavigator.push(
+                    context,
+                    MovieDetailPage(slug: latestMovie[index].slug),
+                  );
+                },
+                onLongPress: () {
+                  HapticFeedback.mediumImpact();
+                  showAnimatedDialog(
+                    context: context,
+                    dialog: ShowDetailMovieDialog(
+                      slug: latestMovie[index].slug,
+                    ),
+                  );
+                },
+                child: Center(
+                  child: Transform.rotate(
+                    angle: angle,
+                    child: CachedImageContainer(
+                      imageUrl: AppUrl.convertImageDirect(
+                        latestMovie[index].posterUrl,
+                      ),
+                      boxFit: BoxFit.cover,
+                      margin: EdgeInsets.symmetric(horizontal: 27),
+                      border: Border.all(color: Colors.white, width: 3),
+                      borderRadius: BorderRadius.circular(15),
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+      ),
+    );
+  }
+}
