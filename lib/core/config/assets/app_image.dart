@@ -5,4 +5,5 @@ class AppImage {
 
   static const String splashBackground = '${basePath}bg_splash${format}';
   static const String splashLogo = '${basePath}logo${format}';
+  static const String splashIcon = '${basePath}icon${format}';
 }

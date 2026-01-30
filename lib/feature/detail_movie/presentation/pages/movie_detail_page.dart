@@ -601,19 +601,19 @@ class _EpisodesSliverState extends State<_EpisodesSliver> {
         SliverToBoxAdapter(
           child: Container(
             padding: const EdgeInsets.only(top: 5, bottom: 5),
-            height: 65,
+            height: 50,
             decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [Color(0xff272A39), Color(0xff191A24)],
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-              ),
-              border: Border(
-                top: BorderSide(color: Colors.white.withValues(alpha: 0.1)),
-              ),
+              // gradient: LinearGradient(
+              //   colors: [Color(0xff272A39), Color(0xff191A24)],
+              //   begin: Alignment.topCenter,
+              //   end: Alignment.bottomCenter,
+              // ),
+              // border: Border(
+              //   top: BorderSide(color: Colors.white.withValues(alpha: 0.1)),
+              // ),
             ),
             child: ListView.separated(
-              padding: EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+              // padding: EdgeInsets.symmetric(horizontal: 10, vertical: 10),
               separatorBuilder: (context, index) => const SizedBox(width: 10),
               scrollDirection: Axis.horizontal,
               itemCount: widget.episodes.length,
@@ -660,6 +660,8 @@ class _EpisodesSliverState extends State<_EpisodesSliver> {
             ),
           ),
         ),
+        const SizedBox(height: 10),
+
         SliverToBoxAdapter(
           child: Container(
             margin: const EdgeInsets.only(bottom: 16),

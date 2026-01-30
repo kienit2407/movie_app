@@ -34,6 +34,8 @@ import 'package:movie_app/feature/home/presentation/bloc/country_movie_cubit.dar
 import 'package:movie_app/feature/home/presentation/bloc/genre_cubit.dart';
 import 'package:movie_app/feature/home/presentation/pages/home_page.dart';
 import 'package:movie_app/feature/intro/presentation/splash/bloc/splash_cubit.dart';
+import 'package:movie_app/feature/intro/presentation/splash/bloc/splash_state.dart';
+import 'package:movie_app/feature/intro/presentation/splash/pages/splash.dart';
 import 'package:movie_app/feature/movie_pagination/presentation/bloc/fetch_fillter_cubit.dart';
 import 'package:movie_app/feature/search/presentation/bloc/search_cubit.dart';
 
@@ -44,7 +46,6 @@ Future<void> main() async {
   SupportRotateScreen.onlyPotrait();
   debugPrint('=== [2/6] Screen orientation set ===');
 
-  // Khởi tạo tất cả dependencies TRƯỚC KHI runApp
   await dotenv.load(fileName: 'assets/.env');
   debugPrint('=== [4/7] Dotenv loaded ===');
 
@@ -53,7 +54,7 @@ Future<void> main() async {
   debugPrint('=== [5/7] Hive initialized ===');
 
   await FastCachedImageConfig.init(
-    clearCacheAfter: const Duration(hours: 10), // Tự động xóa sau 15 ngày
+    clearCacheAfter: const Duration(hours: 10),
   );
   debugPrint('=== [6/7] FastCachedImage initialized ===');
 
@@ -120,13 +121,28 @@ class MovieApp extends StatelessWidget {
             OverlayEntry(
               builder: (context) => Navigator(
                 onGenerateRoute: (settings) {
-                  return MaterialPageRoute(
-                    builder: (context) => const HomePage(),
-                  );
+                  switch (settings.name) {
+                    case '/home':
+                      return MaterialPageRoute(
+                        builder: (_) => const HomePage(),
+                      );
+                    case '/':
+                    default:
+                      return MaterialPageRoute(
+                        builder: (_) => const SplashPage(),
+                      );
+                  }
                 },
               ),
             ),
-            OverlayEntry(builder: (context) => const MiniPlayerOverlay()),
+            OverlayEntry(
+              builder: (context) => BlocBuilder<SplashCubit, SplashState>(
+                builder: (context, state) {
+                  if (state is DisplaySplash) return const SizedBox.shrink();
+                  return const MiniPlayerOverlay();
+                },
+              ),
+            ),
           ],
         ),
       ),
