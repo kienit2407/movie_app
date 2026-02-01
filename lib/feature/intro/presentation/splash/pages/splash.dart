@@ -71,8 +71,8 @@ class _SplashPageState extends State<SplashPage> {
                 );
               },
               child: Container(
-                width: 100,
-                height: 100,
+                width: 200,
+                height: 200,
                 decoration: BoxDecoration(
                   image: DecorationImage(
                     image: AssetImage(AppImage.splashIcon),

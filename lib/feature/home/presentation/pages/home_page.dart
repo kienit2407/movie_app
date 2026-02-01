@@ -15,6 +15,7 @@ import 'package:liquid_glass_renderer/liquid_glass_renderer.dart';
 import 'package:movie_app/common/components/lost_network.dart';
 import 'package:movie_app/common/helpers/contants/app_url.dart';
 import 'package:movie_app/common/helpers/navigation/app_navigation.dart';
+import 'package:movie_app/core/config/utils/episode_map.dart';
 import 'package:movie_app/feature/detail_movie/presentation/pages/movie_detail_page.dart';
 import 'package:movie_app/common/helpers/sort_map.dart';
 import 'package:movie_app/core/config/assets/app_image.dart';
@@ -1219,6 +1220,11 @@ class _ItemLatestMovie extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // 1. Parse chuỗi ngôn ngữ sang List các Enum
+    final List<MediaTagType> langTags = items.lang.toMediaTags();
+
+    // 2. Lấy tập hiện tại (Check null an toàn)
+    final String? currentEp = items.episodeCurrent;
     return GestureDetector(
       onTap: () {
         AppNavigator.push(context, MovieDetailPage(slug: items.slug));
@@ -1268,7 +1274,23 @@ class _ItemLatestMovie extends StatelessWidget {
                           vertical: 3,
                         ),
                         decoration: BoxDecoration(
-                          color: AppColor.secondColor,
+                          gradient: const LinearGradient(
+                            colors: [
+                              Color(0xFFC77DFF), // Tím
+                              Color(0xFFFF9E9E), // Hồng cam (ở giữa)
+                              Color(0xFFFFD275),
+                            ], // Vàng],
+                            begin: Alignment.topRight,
+                            end: Alignment.bottomLeft,
+                          ),
+                          boxShadow: const [
+                            BoxShadow(
+                              color: Color(0xFFC77DFF),
+                              blurRadius: 12,
+                              offset: Offset(0, 0),
+                              spreadRadius: -2,
+                            ),
+                          ],
                           borderRadius: BorderRadius.circular(6),
                         ),
                         child: Text(
@@ -1282,23 +1304,26 @@ class _ItemLatestMovie extends StatelessWidget {
                       ),
                     ),
                     Positioned(
-                      right: 0,
-                      bottom: 0,
-                      left: 0,
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        mainAxisSize: MainAxisSize.min,
+                      // right: 0,
+                      bottom: 5,
+                      left: 5,
+                      child: Column(
+                        spacing: 3,
+                        crossAxisAlignment:
+                            CrossAxisAlignment.start, // Căn lề phải
+                        verticalDirection: VerticalDirection.up,
                         children: [
-                          _ItemChip(
-                            content: items.lang.toConvertLang(),
-                            isLeft: true,
-                            size: 8,
+                          ...langTags.map(
+                            (tag) =>
+                                _buildBadge(text: tag.label, color: tag.color),
                           ),
-                          _ItemChip(
-                            content: items.quality,
-                            isGadient: true,
-                            size: 8,
-                          ),
+                          if (currentEp != null &&
+                              currentEp.isNotEmpty &&
+                              currentEp != 'Full')
+                            _buildBadge(
+                              text: EpisodeFormatter.toShort(currentEp),
+                              color: Colors.redAccent,
+                            ),
                         ],
                       ),
                     ),
@@ -1332,6 +1357,25 @@ class _ItemLatestMovie extends StatelessWidget {
     );
   }
 
+  Widget _buildBadge({required String text, required Color color}) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 0),
+      decoration: BoxDecoration(
+        color: color,
+        border: Border.all(color: color), // Viền đậm cùng tông
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Text(
+        text,
+        style: TextStyle(
+          color: Colors.white, // Chữ đậm cùng tông
+          fontSize: 9,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+    );
+  }
+
   Widget _buildSkeletonForposter() {
     // Bọc AspectRatio để đảm bảo nó luôn có hình dáng poster phim (2:3)
     return AspectRatio(
@@ -1350,49 +1394,49 @@ class _ItemLatestMovie extends StatelessWidget {
   }
 }
 
-class _ItemChip extends StatelessWidget {
-  final String content;
-  final bool isGadient;
-  final double? size;
-  final bool isLeft;
+// class _ItemChip extends StatelessWidget {
+//   final String content;
+//   final bool isGadient;
+//   final double? size;
+//   final bool isLeft;
 
-  const _ItemChip({
-    required this.content,
-    this.isGadient = false,
-    this.size,
-    this.isLeft = false,
-  });
+//   const _ItemChip({
+//     required this.content,
+//     this.isGadient = false,
+//     this.size,
+//     this.isLeft = false,
+//   });
 
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: EdgeInsets.all(5),
-      decoration: BoxDecoration(
-        color: isGadient ? null : Colors.white,
-        borderRadius: isLeft
-            ? BorderRadius.only(topLeft: Radius.circular(5))
-            : BorderRadius.only(topRight: Radius.circular(5)),
-        gradient: isGadient
-            ? LinearGradient(
-                colors: [Color(0xffe73827), Color.fromARGB(255, 254, 136, 115)],
-                begin: Alignment.topRight,
-                end: Alignment.bottomLeft,
-              )
-            : null,
-      ),
-      child: Center(
-        child: Text(
-          content,
-          style: TextStyle(
-            fontSize: size ?? 10,
-            fontWeight: FontWeight.w600,
-            color: AppColor.bgApp,
-          ),
-        ),
-      ),
-    );
-  }
-}
+//   @override
+//   Widget build(BuildContext context) {
+//     return Container(
+//       padding: EdgeInsets.all(5),
+//       decoration: BoxDecoration(
+//         color: isGadient ? null : Colors.white,
+//         borderRadius: isLeft
+//             ? BorderRadius.only(topLeft: Radius.circular(5))
+//             : BorderRadius.only(topRight: Radius.circular(5)),
+//         gradient: isGadient
+//             ? LinearGradient(
+//                 colors: [Color(0xffe73827), Color.fromARGB(255, 254, 136, 115)],
+//                 begin: Alignment.topRight,
+//                 end: Alignment.bottomLeft,
+//               )
+//             : null,
+//       ),
+//       child: Center(
+//         child: Text(
+//           content,
+//           style: TextStyle(
+//             fontSize: size ?? 10,
+//             fontWeight: FontWeight.w600,
+//             color: AppColor.bgApp,
+//           ),
+//         ),
+//       ),
+//     );
+//   }
+// }
 
 class _CountrySkeletonList extends StatelessWidget {
   const _CountrySkeletonList();

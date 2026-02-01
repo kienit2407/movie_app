@@ -60,7 +60,7 @@ class _MovieSectionWithScrollState extends State<MovieSectionWithScroll> {
           padding: EdgeInsets.only(left: 20),
           child: Text(
             'Bạn muốn xem gì hôm nay?',
-            style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
           ),
         ),
         // --- LIST ---
@@ -117,7 +117,7 @@ class _MovieSectionWithScrollState extends State<MovieSectionWithScroll> {
                         begin: Alignment.topRight,
                         end: Alignment.bottomLeft,
                       ),
-                      borderRadius: BorderRadius.circular(10),
+                      borderRadius: BorderRadius.circular(2),
                     ),
                   ),
                 ),
@@ -139,8 +139,38 @@ class _MovieSectionWithScrollState extends State<MovieSectionWithScroll> {
             child: Container(
               decoration: BoxDecoration(
                 // lớp nền
-                borderRadius: BorderRadius.circular(10),
+                borderRadius: BorderRadius.only(
+                  topLeft: Radius.circular(15),
+                  topRight: Radius.circular(30),
+                  bottomLeft: Radius.circular(30),
+                  bottomRight: Radius.circular(15),
+                ),
                 gradient: gadient,
+              ),
+            ),
+          ),
+          Positioned.fill(
+            child: Container(
+              decoration: BoxDecoration(
+                // lớp nền
+                borderRadius: BorderRadius.only(
+                  topLeft: Radius.circular(100),
+                  topRight: Radius.circular(30),
+                  bottomLeft: Radius.circular(30),
+                  bottomRight: Radius.circular(100),
+                ),
+                gradient: RadialGradient(
+                  center: Alignment.center, // Tâm điểm sáng nằm giữa
+                  radius: 0.8, // Độ lan toả (0.8 là lan ra khoảng 80% hộp)
+                  colors: [
+                    // Màu ở tâm: Trắng mờ (để tạo cảm giác sáng lên)
+                    Colors.white.withOpacity(0.2),
+
+                    // Màu ở ngoài rìa: Trong suốt (để lộ màu nền bên dưới)
+                    Colors.transparent,
+                  ],
+                  // (Tuỳ chọn) stops: [0.0, 1.0], // Để kiểm soát độ chuyển màu gắt hay mềm
+                ),
               ),
             ),
           ),

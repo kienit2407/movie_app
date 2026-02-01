@@ -41,14 +41,14 @@ class _SearchPageViewState extends State<_SearchPageView> {
   void initState() {
     super.initState();
     _scrollCtrl.addListener(_onScroll);
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      FocusScope.of(context).requestFocus(_focusNode);
-    });
+    // WidgetsBinding.instance.addPostFrameCallback((_) {
+    //   FocusScope.of(context).requestFocus(_focusNode);
+    // });
   }
 
   void _onScroll() {
     if (_scrollCtrl.position.pixels >=
-        _scrollCtrl.position.maxScrollExtent - 200) {
+        _scrollCtrl.position.maxScrollExtent - 100) {
       final cubit = context.read<SearchCubit>();
       final state = cubit.state;
       if (state is SearchLoaded && state.hasMore) {

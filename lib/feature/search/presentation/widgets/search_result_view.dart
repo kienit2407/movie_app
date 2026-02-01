@@ -7,6 +7,7 @@ import 'package:movie_app/common/helpers/contants/app_url.dart';
 import 'package:movie_app/common/helpers/navigation/app_navigation.dart';
 import 'package:movie_app/core/config/themes/app_color.dart';
 import 'package:movie_app/core/config/utils/animated_dialog.dart';
+import 'package:movie_app/core/config/utils/episode_map.dart';
 import 'package:movie_app/core/config/utils/format_episode.dart';
 import 'package:movie_app/core/config/utils/show_detail_movie_dialog.dart';
 import 'package:movie_app/feature/detail_movie/data/model/detail_movie_model.dart';
@@ -42,7 +43,11 @@ class SearchResultView extends StatelessWidget {
       child: AnimationLimiter(
         child: GridView.builder(
           controller: scrollController,
-          padding:  EdgeInsets.only(left: 10, right: 10, bottom: MediaQuery.of(context).padding.bottom),
+          padding: EdgeInsets.only(
+            left: 10,
+            right: 10,
+            bottom: MediaQuery.of(context).padding.bottom,
+          ),
           gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
             mainAxisSpacing: 20,
             crossAxisSpacing: 10,
@@ -52,15 +57,11 @@ class SearchResultView extends StatelessWidget {
           itemCount: movies.length + (hasMore ? 3 : 0),
           itemBuilder: (context, index) {
             if (index >= movies.length) {
-              return const SizedBox(
-                height: 100,
-                width: 100,
-                child: SizedBox(),
-              );
+              return const SizedBox(height: 100, width: 100, child: SizedBox());
             }
-      
+
             final movie = movies[index];
-      
+
             return AnimationConfiguration.staggeredGrid(
               position: index,
               columnCount: 3,
@@ -80,6 +81,11 @@ class SearchResultView extends StatelessWidget {
   }
 
   Widget _buildItem(MovieModel movie, BuildContext context) {
+    // 1. Parse chuỗi ngôn ngữ sang List các Enum
+    final List<MediaTagType> langTags = movie.lang.toMediaTags();
+
+    // 2. Lấy tập hiện tại (Check null an toàn)
+    final String? currentEp = movie.episode_current;
     return GestureDetector(
       onTap: () {
         AppNavigator.push(context, MovieDetailPage(slug: movie.slug));
@@ -103,7 +109,7 @@ class SearchResultView extends StatelessWidget {
                     width: double.infinity,
                     decoration: BoxDecoration(
                       border: Border.all(color: Colors.white, width: 2),
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: BorderRadius.circular(10),
                     ),
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(8),
@@ -125,7 +131,23 @@ class SearchResultView extends StatelessWidget {
                         horizontal: 8,
                       ),
                       decoration: BoxDecoration(
-                        color: AppColor.secondColor,
+                        gradient: const LinearGradient(
+                          colors: [
+                            Color(0xFFC77DFF), // Tím
+                            Color(0xFFFF9E9E), // Hồng cam (ở giữa)
+                            Color(0xFFFFD275),
+                          ], // Vàng],
+                          begin: Alignment.topRight,
+                          end: Alignment.bottomLeft,
+                        ),
+                        boxShadow: const [
+                          BoxShadow(
+                            color: Color(0xFFC77DFF),
+                            blurRadius: 12,
+                            offset: Offset(0, 0),
+                            spreadRadius: -2,
+                          ),
+                        ],
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text(
@@ -138,18 +160,26 @@ class SearchResultView extends StatelessWidget {
                     ),
                   ),
                   Positioned(
-                    right: 0,
-                    bottom: 2,
-                    left: 0,
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      mainAxisSize: MainAxisSize.min,
+                    // right: 0,
+                    bottom: 5,
+                    left: 5,
+                    child: Column(
+                      spacing: 3,
+                      crossAxisAlignment:
+                          CrossAxisAlignment.start, // Căn lề phải
+                      verticalDirection: VerticalDirection.up,
                       children: [
-                        _itemChip(
-                          content: movie.lang.toConvertLang(),
-                          isLeft: true,
+                        ...langTags.map(
+                          (tag) =>
+                              _buildBadge(text: tag.label, color: tag.color),
                         ),
-                        _itemChip(content: movie.quality, isGadient: true),
+                        if (currentEp != null &&
+                            currentEp.isNotEmpty &&
+                            currentEp != 'Full')
+                          _buildBadge(
+                            text: EpisodeFormatter.toShort(currentEp),
+                            color: Colors.redAccent,
+                          ),
                       ],
                     ),
                   ),
@@ -177,36 +207,20 @@ class SearchResultView extends StatelessWidget {
     );
   }
 
-  Widget _itemChip({
-    required String content,
-    bool isGadient = false,
-    double? size,
-    bool isLeft = false,
-  }) {
+  Widget _buildBadge({required String text, required Color color}) {
     return Container(
-      padding: const EdgeInsets.all(5),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 0),
       decoration: BoxDecoration(
-        color: isGadient ? null : Colors.white,
-        borderRadius: isLeft
-            ? const BorderRadius.only(topLeft: Radius.circular(5))
-            : const BorderRadius.only(topRight: Radius.circular(5)),
-        gradient: isGadient
-            ? const LinearGradient(
-                colors: [Color(0xffe73827), Color.fromARGB(255, 254, 136, 115)],
-                begin: Alignment.topRight,
-                end: Alignment.bottomLeft,
-              )
-            : null,
+        color: color,
+        border: Border.all(color: color), // Viền đậm cùng tông
+        borderRadius: BorderRadius.circular(10),
       ),
-      child: Center(
-        child: Text(
-          content,
-          style: TextStyle(
-            fontSize: size ?? 8,
-            fontWeight: FontWeight.w600,
-            color: AppColor.bgApp,
-            decoration: TextDecoration.none,
-          ),
+      child: Text(
+        text,
+        style: TextStyle(
+          color: Colors.white, // Chữ đậm cùng tông
+          fontSize: 9,
+          fontWeight: FontWeight.bold,
         ),
       ),
     );

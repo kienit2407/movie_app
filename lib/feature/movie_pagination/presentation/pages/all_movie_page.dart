@@ -9,6 +9,7 @@ import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
 import 'package:movie_app/common/helpers/contants/app_url.dart';
 import 'package:movie_app/common/helpers/navigation/app_navigation.dart';
+import 'package:movie_app/core/config/utils/episode_map.dart';
 import 'package:movie_app/feature/detail_movie/presentation/pages/movie_detail_page.dart';
 import 'package:movie_app/common/helpers/static_data.dart';
 import 'package:movie_app/core/config/themes/app_color.dart';
@@ -226,13 +227,15 @@ class _AllMoviePageState extends State<AllMoviePage> {
                 child: BlocBuilder<FetchFillterCubit, FetchFillterState>(
                   builder: (context, state) {
                     if (state is FetchFillterLoading) {
-                      return Align( // widget giúp k bị ép size từ parent
+                      return Align(
+                        // widget giúp k bị ép size từ parent
                         alignment: Alignment.centerLeft,
                         child: Shimmer.fromColors(
                           baseColor: Color(0xff272A39).withOpacity(.2),
                           highlightColor: Color(0xff191A24).withOpacity(.2),
                           child: Container(
-                            width: 150, //để giữ đúng kích thước của title k bị ép sai  của sliverBoxAdapter
+                            width:
+                                150, //để giữ đúng kích thước của title k bị ép sai  của sliverBoxAdapter
                             height: 34,
                             decoration: BoxDecoration(
                               gradient: LinearGradient(
@@ -413,7 +416,31 @@ class _AllMoviePageState extends State<AllMoviePage> {
     );
   }
 
+  Widget _buildBadge({required String text, required Color color}) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 0),
+      decoration: BoxDecoration(
+        color: color,
+        border: Border.all(color: color), // Viền đậm cùng tông
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Text(
+        text,
+        style: TextStyle(
+          color: Colors.white, // Chữ đậm cùng tông
+          fontSize: 9,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+    );
+  }
+
   Widget _buildItem(ItemEntity itemEntity) {
+    // 1. Parse chuỗi ngôn ngữ sang List các Enum
+    final List<MediaTagType> langTags = itemEntity.lang.toMediaTags();
+
+    // 2. Lấy tập hiện tại (Check null an toàn)
+    final String? currentEp = itemEntity.episodeCurrent;
     return GestureDetector(
       onTap: () {
         AppNavigator.push(context, MovieDetailPage(slug: itemEntity.slug));
@@ -438,7 +465,8 @@ class _AllMoviePageState extends State<AllMoviePage> {
                     width: double.infinity,
                     decoration: BoxDecoration(
                       border: Border.all(color: Colors.white, width: 2),
-                      borderRadius: BorderRadius.circular(8),
+
+                      borderRadius: BorderRadius.circular(10),
                     ),
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(8),
@@ -454,8 +482,25 @@ class _AllMoviePageState extends State<AllMoviePage> {
                       margin: EdgeInsets.only(top: 5, left: 5),
                       padding: EdgeInsets.symmetric(vertical: 5, horizontal: 8),
                       decoration: BoxDecoration(
-                        color: AppColor.secondColor,
+                        // color: AppColor.secondColor,
                         borderRadius: BorderRadius.circular(8),
+                        gradient: const LinearGradient(
+                          colors: [
+                            Color(0xFFC77DFF), // Tím
+                            Color(0xFFFF9E9E), // Hồng cam (ở giữa)
+                            Color(0xFFFFD275),
+                          ], // Vàng],
+                          begin: Alignment.topRight,
+                          end: Alignment.bottomLeft,
+                        ),
+                        boxShadow: const [
+                          BoxShadow(
+                            color: Color(0xFFC77DFF),
+                            blurRadius: 12,
+                            offset: Offset(0, 0),
+                            spreadRadius: -2,
+                          ),
+                        ],
                       ),
                       child: Text(
                         itemEntity.tmdb.voteAverage.toStringAsFixed(1),
@@ -467,18 +512,25 @@ class _AllMoviePageState extends State<AllMoviePage> {
                     ),
                   ),
                   Positioned(
-                    right: 0,
-                    bottom: 2,
-                    left: 0,
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      mainAxisSize: MainAxisSize.min,
+                    bottom: 5,
+                    left: 5,
+                    child: Column(
+                      spacing: 3,
+                      crossAxisAlignment:
+                          CrossAxisAlignment.start, // Căn lề phải
+                      verticalDirection: VerticalDirection.up,
                       children: [
-                        _itemChip(
-                          content: itemEntity.lang.toConvertLang(),
-                          isLeft: true,
+                        ...langTags.map(
+                          (tag) =>
+                              _buildBadge(text: tag.label, color: tag.color),
                         ),
-                        _itemChip(content: itemEntity.quality, isGadient: true),
+                        if (currentEp != null &&
+                            currentEp.isNotEmpty &&
+                            currentEp != 'Full')
+                          _buildBadge(
+                            text: EpisodeFormatter.toShort(currentEp),
+                            color: Colors.redAccent,
+                          ),
                       ],
                     ),
                   ),
@@ -506,38 +558,38 @@ class _AllMoviePageState extends State<AllMoviePage> {
     );
   }
 
-  Widget _itemChip({
-    required String content,
-    bool isGadient = false,
-    double? size,
-    bool isLeft = false,
-  }) {
-    return Container(
-      padding: EdgeInsets.all(5),
-      decoration: BoxDecoration(
-        color: isGadient ? null : Colors.white,
-        borderRadius: isLeft
-            ? BorderRadius.only(topLeft: Radius.circular(5))
-            : BorderRadius.only(topRight: Radius.circular(5)),
-        gradient: isGadient
-            ? LinearGradient(
-                colors: [Color(0xffe73827), Color.fromARGB(255, 254, 136, 115)],
-                begin: Alignment.topRight,
-                end: Alignment.bottomLeft,
-              )
-            : null,
-      ),
-      child: Center(
-        child: Text(
-          content,
-          style: TextStyle(
-            fontSize: size ?? 8,
-            fontWeight: FontWeight.w600,
-            color: AppColor.bgApp,
-            decoration: TextDecoration.none,
-          ),
-        ),
-      ),
-    );
-  }
+  // Widget _itemChip({
+  //   required String content,
+  //   bool isGadient = false,
+  //   double? size,
+  //   bool isLeft = false,
+  // }) {
+  //   return Container(
+  //     padding: EdgeInsets.all(5),
+  //     decoration: BoxDecoration(
+  //       color: isGadient ? null : Colors.white,
+  //       borderRadius: isLeft
+  //           ? BorderRadius.only(topLeft: Radius.circular(5))
+  //           : BorderRadius.only(topRight: Radius.circular(5)),
+  //       gradient: isGadient
+  //           ? LinearGradient(
+  //               colors: [Color(0xffe73827), Color.fromARGB(255, 254, 136, 115)],
+  //               begin: Alignment.topRight,
+  //               end: Alignment.bottomLeft,
+  //             )
+  //           : null,
+  //     ),
+  //     child: Center(
+  //       child: Text(
+  //         content,
+  //         style: TextStyle(
+  //           fontSize: size ?? 8,
+  //           fontWeight: FontWeight.w600,
+  //           color: AppColor.bgApp,
+  //           decoration: TextDecoration.none,
+  //         ),
+  //       ),
+  //     ),
+  //   );
+  // }
 }

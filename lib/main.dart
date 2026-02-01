@@ -9,6 +9,7 @@ import 'package:hive_ce/hive.dart';
 import 'package:hive_ce_flutter/hive_flutter.dart';
 import 'package:movie_app/common/models/watch_progress_model.dart';
 import 'package:movie_app/common/bloc/AuthWithSocial/auth_with_social_cubit.dart';
+import 'package:movie_app/core/app_nav.dart';
 import 'package:movie_app/core/config/di/service_locator.dart';
 import 'package:movie_app/core/config/network/init_supabase.dart';
 import 'package:movie_app/core/config/themes/app_theme.dart';
@@ -120,6 +121,7 @@ class MovieApp extends StatelessWidget {
           initialEntries: [
             OverlayEntry(
               builder: (context) => Navigator(
+                key: AppNav.key,
                 onGenerateRoute: (settings) {
                   switch (settings.name) {
                     case '/home':

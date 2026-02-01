@@ -5,16 +5,19 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
+import 'package:movie_app/common/components/alert_dialog/app_alert_dialog.dart';
 import 'package:movie_app/common/helpers/contants/app_url.dart';
 import 'package:movie_app/common/helpers/navigation/app_navigation.dart';
 import 'package:movie_app/core/config/di/service_locator.dart';
 import 'package:movie_app/core/config/themes/app_color.dart';
+import 'package:movie_app/core/config/utils/animated_dialog.dart';
 import 'package:movie_app/core/config/utils/format_episode.dart';
 import 'package:movie_app/feature/detail_movie/data/model/detail_movie_model.dart';
 import 'package:movie_app/feature/detail_movie/domain/usecase/get_detail_movie_usecase.dart';
 import 'package:movie_app/feature/detail_movie/presentation/bloc/detail_movie_cubit.dart';
 import 'package:movie_app/feature/detail_movie/presentation/bloc/detail_movie_state.dart';
 import 'package:movie_app/feature/detail_movie/presentation/pages/movie_detail_page.dart';
+import 'package:movie_app/feature/detail_movie/presentation/pages/movie_player_page.dart';
 import 'package:skeletonizer/skeletonizer.dart';
 import 'package:youtube_player_flutter/youtube_player_flutter.dart';
 
@@ -366,7 +369,7 @@ class _DialogContentState extends State<_DialogContent> {
                               ? TextOverflow.visible
                               : TextOverflow.ellipsis,
                           style: TextStyle(
-                            fontSize: 14,
+                            fontSize: 12,
                             height: 1.5,
                             color: Colors.white.withOpacity(0.8),
                           ),
@@ -684,18 +687,26 @@ class _DialogContentState extends State<_DialogContent> {
               HapticFeedback.mediumImpact();
               if (hasEpisodes) {
                 Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('Đang phát: ${movie.origin_name}'),
-                    behavior: SnackBarBehavior.floating,
-                    backgroundColor: AppColor.secondColor,
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => MoviePlayerPage(
+                      slug: movie.slug,
+                      movieName: movie.name,
+                      episodes: episodes,
+                      movie: movie,
+                      initialServerIndex: 0,
+                    ),
                   ),
                 );
               } else {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Phim chưa có tập nào'),
-                    behavior: SnackBarBehavior.floating,
+                showAnimatedDialog(
+                  context: context,
+                  dialog: AppAlertDialog(
+                    buttonTitle: 'Đóng',
+                    content:
+                        'Phim hiện chưa có tập để xem. Vui lòng thử lại sau nhé!',
+                    title: 'Thông báo',
                   ),
                 );
               }
@@ -734,7 +745,7 @@ class _DialogContentState extends State<_DialogContent> {
                     style: TextStyle(
                       color: Colors.white,
                       fontWeight: FontWeight.bold,
-                      fontSize: 14,
+                      fontSize: 13,
                     ),
                   ),
                 ],
@@ -774,7 +785,7 @@ class _DialogContentState extends State<_DialogContent> {
                     style: TextStyle(
                       color: Colors.white,
                       fontWeight: FontWeight.w600,
-                      fontSize: 14,
+                      fontSize: 13,
                     ),
                   ),
                 ],
@@ -788,6 +799,17 @@ class _DialogContentState extends State<_DialogContent> {
 
   String _cleanHtmlTags(String htmlString) {
     final RegExp exp = RegExp(r'<[^>]*>', multiLine: true, caseSensitive: true);
-    return htmlString.replaceAll(exp, '').trim();
+
+    // 1. Xóa thẻ HTML
+    String textWithoutTags = htmlString.replaceAll(exp, '');
+    String textWithoutTagsSecond = textWithoutTags
+        .replaceAll('&nbsp;', ' ')
+        .trim();
+    String textWithoutTagsThird = textWithoutTagsSecond
+        .replaceAll('&#39;', ' ')
+        .trim();
+
+    // 2. Thay thế &nbsp; bằng dấu cách
+    return textWithoutTagsThird.replaceAll('&quot;', ' ').trim();
   }
 }

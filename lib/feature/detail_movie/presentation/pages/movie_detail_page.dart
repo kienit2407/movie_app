@@ -17,6 +17,7 @@ import 'package:movie_app/core/config/themes/app_color.dart';
 import 'package:movie_app/core/config/utils/animated_dialog.dart';
 import 'package:movie_app/core/config/utils/blocking_back_page.dart';
 import 'package:movie_app/core/config/utils/cover_map.dart';
+import 'package:movie_app/core/config/utils/episode_map.dart';
 import 'package:movie_app/core/config/utils/format_episode.dart';
 import 'package:movie_app/core/config/utils/show_detail_movie_dialog.dart';
 import 'package:movie_app/feature/detail_movie/data/model/detail_movie_model.dart';
@@ -424,7 +425,7 @@ class _EpisodesSliverState extends State<_EpisodesSliver> {
     }
 
     final isSingle = widget.movieType == 'single';
-    
+
     final isFullMovie = widget.movie.episode_current == 'Full';
 
     final itemsToShow = isSingle ? widget.episodes : _currentServerData;
@@ -748,7 +749,8 @@ class _EpisodesSliverState extends State<_EpisodesSliver> {
 
             return GestureDetector(
               onTap: () {
-                final selectedModel = _currentServerModel; // server đang chọn theo _selectedServerIndex
+                final selectedModel =
+                    _currentServerModel; // server đang chọn theo _selectedServerIndex
                 if (selectedModel.server_data.isEmpty) return;
 
                 final episodeData = selectedModel.server_data[index];
@@ -817,6 +819,12 @@ class _RecommendationItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // 1. Parse chuỗi ngôn ngữ sang List các Enum
+    final List<MediaTagType> langTags = itemEntity.lang.toMediaTags();
+
+    // 2. Lấy tập hiện tại (Check null an toàn)
+    final String? currentEp = itemEntity.episodeCurrent;
+
     return GestureDetector(
       onTap: () {
         AppNavigator.push(context, MovieDetailPage(slug: itemEntity.slug));
@@ -861,7 +869,23 @@ class _RecommendationItem extends StatelessWidget {
                         horizontal: 8,
                       ),
                       decoration: BoxDecoration(
-                        color: AppColor.secondColor,
+                        gradient: const LinearGradient(
+                          colors: [
+                            Color(0xFFC77DFF), // Tím
+                            Color(0xFFFF9E9E), // Hồng cam (ở giữa)
+                            Color(0xFFFFD275),
+                          ], // Vàng],
+                          begin: Alignment.topRight,
+                          end: Alignment.bottomLeft,
+                        ),
+                        boxShadow: const [
+                          BoxShadow(
+                            color: Color(0xFFC77DFF),
+                            blurRadius: 12,
+                            offset: Offset(0, 0),
+                            spreadRadius: -2,
+                          ),
+                        ],
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text(
@@ -874,21 +898,26 @@ class _RecommendationItem extends StatelessWidget {
                     ),
                   ),
                   Positioned(
-                    right: 0,
-                    bottom: 2,
-                    left: 0,
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      mainAxisSize: MainAxisSize.min,
+                    // right: 0,
+                    bottom: 5,
+                    left: 5,
+                    child: Column(
+                      spacing: 3,
+                      crossAxisAlignment:
+                          CrossAxisAlignment.start, // Căn lề phải
+                      verticalDirection: VerticalDirection.up,
                       children: [
-                        _buildItemChip(
-                          content: itemEntity.lang.toConvertLang(),
-                          isLeft: true,
+                        ...langTags.map(
+                          (tag) =>
+                              _buildBadge(text: tag.label, color: tag.color),
                         ),
-                        _buildItemChip(
-                          content: itemEntity.quality,
-                          isGadient: true,
-                        ),
+                        if (currentEp != null &&
+                            currentEp.isNotEmpty &&
+                            currentEp != 'Full')
+                          _buildBadge(
+                            text: EpisodeFormatter.toShort(currentEp),
+                            color: Colors.redAccent,
+                          ),
                       ],
                     ),
                   ),
@@ -917,36 +946,20 @@ class _RecommendationItem extends StatelessWidget {
   }
 }
 
-Widget _buildItemChip({
-  required String content,
-  bool isGadient = false,
-  double? size,
-  bool isLeft = false,
-}) {
+Widget _buildBadge({required String text, required Color color}) {
   return Container(
-    padding: const EdgeInsets.all(5),
+    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 0),
     decoration: BoxDecoration(
-      color: isGadient ? null : Colors.white,
-      borderRadius: isLeft
-          ? const BorderRadius.only(topLeft: Radius.circular(5))
-          : const BorderRadius.only(topRight: Radius.circular(5)),
-      gradient: isGadient
-          ? const LinearGradient(
-              colors: [Color(0xffe73827), Color.fromARGB(255, 254, 136, 115)],
-              begin: Alignment.topRight,
-              end: Alignment.bottomLeft,
-            )
-          : null,
+      color: color,
+      border: Border.all(color: color), // Viền đậm cùng tông
+      borderRadius: BorderRadius.circular(10),
     ),
-    child: Center(
-      child: Text(
-        content,
-        style: TextStyle(
-          fontSize: size ?? 8,
-          fontWeight: FontWeight.w600,
-          color: AppColor.bgApp,
-          decoration: TextDecoration.none,
-        ),
+    child: Text(
+      text,
+      style: TextStyle(
+        color: Colors.white, // Chữ đậm cùng tông
+        fontSize: 9,
+        fontWeight: FontWeight.bold,
       ),
     ),
   );

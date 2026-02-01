@@ -7,7 +7,7 @@ extension FormatEpisode on String {
     ); //sử dụng tryParse khi không phải số
     int hours = totalMinutes ~/ 60; //chia lấy nguyên
     int minutes = totalMinutes % 60; //-> chia lấy dư
-    return "${hours.toString()}h ${minutes.toString().padLeft(2, '0')}m";
+    return "${hours.toString()}giờ ${minutes.toString().padLeft(2, '0')}phút";
   }
 }
 
