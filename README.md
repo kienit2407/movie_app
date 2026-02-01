@@ -1,4 +1,4 @@
-# 🎬 MovieApp
+# 🎬 Liquid Phim
 
 > A beautiful and feature-rich movie streaming application built with Flutter, powered by the kkPhim API.
 
