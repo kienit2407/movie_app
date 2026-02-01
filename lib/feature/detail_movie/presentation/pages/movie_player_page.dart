@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:ui';
+import 'package:movie_app/core/config/utils/support_rotate_screen.dart';
 import 'package:fast_cached_network_image/fast_cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -136,7 +137,8 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
       });
     });
 
-    SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
+    // Cho phép auto-rotate trong player
+    SupportRotateScreen.allowAll();
   }
 
   @override
@@ -152,8 +154,10 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
     _minifyCtrl.dispose();
     _panelCtrl.dispose();
     _searchController.dispose();
+
+    // Về lại portrait khi thoát player
+    SupportRotateScreen.onlyPotrait();
     super.dispose();
-    SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
   }
 
   void _showControlsWithAutoHide() {

@@ -44,7 +44,6 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   debugPrint('=== [1/6] WidgetsFlutterBinding initialized ===');
 
-  SupportRotateScreen.onlyPotrait();
   debugPrint('=== [2/6] Screen orientation set ===');
 
   await dotenv.load(fileName: 'assets/.env');

@@ -7,7 +7,12 @@
 ![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)
 
 ---
+## 🛰️ Logo App
+<div align="center">
+<img src="assets/images/logo_icon.png" width="200" alt="Logo App"/>
+</div>
 
+---
 ## ✨ Features
 
 | Icon | Feature | Description |
@@ -201,5 +206,5 @@ Have questions or suggestions? Feel free to reach out!
 ---
 
 <p align="center">
-  Made with ❤️ by <a href="https://github.com/yourusername">Your Name</a>
+  Made with ❤️ by <a href="https://github.com/kienit2407">Trung Kien</a>
 </p>

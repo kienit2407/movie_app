@@ -38,31 +38,31 @@ class SearchResultView extends StatelessWidget {
       );
     }
 
-    return Scrollbar(
+    return PrimaryScrollController(
       controller: scrollController,
-      child: AnimationLimiter(
-        child: GridView.builder(
-          controller: scrollController,
-          padding: EdgeInsets.only(
-            left: 10,
-            right: 10,
-            bottom: MediaQuery.of(context).padding.bottom,
-          ),
-          gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-            mainAxisSpacing: 20,
-            crossAxisSpacing: 10,
-            maxCrossAxisExtent: 150,
-            childAspectRatio: 0.55,
-          ),
-          itemCount: movies.length + (hasMore ? 3 : 0),
-          itemBuilder: (context, index) {
-            if (index >= movies.length) {
-              return const SizedBox(height: 100, width: 100, child: SizedBox());
-            }
+      child: GridView.builder(
+        controller: scrollController,
+        padding: EdgeInsets.only(
+          left: 10,
+          right: 10,
+          bottom: MediaQuery.of(context).padding.bottom,
+        ),
+        gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+          mainAxisSpacing: 20,
+          crossAxisSpacing: 10,
+          maxCrossAxisExtent: 150,
+          childAspectRatio: 0.55,
+        ),
+        itemCount: movies.length + (hasMore ? 3 : 0),
+        itemBuilder: (context, index) {
+          if (index >= movies.length) {
+            return const SizedBox(height: 100, width: 100, child: SizedBox());
+          }
 
-            final movie = movies[index];
+          final movie = movies[index];
 
-            return AnimationConfiguration.staggeredGrid(
+          return AnimationLimiter(
+            child: AnimationConfiguration.staggeredGrid(
               position: index,
               columnCount: 3,
               duration: const Duration(milliseconds: 400),
@@ -73,18 +73,15 @@ class SearchResultView extends StatelessWidget {
                   child: FadeInAnimation(child: _buildItem(movie, context)),
                 ),
               ),
-            );
-          },
-        ),
+            ),
+          );
+        },
       ),
     );
   }
 
   Widget _buildItem(MovieModel movie, BuildContext context) {
-    // 1. Parse chuỗi ngôn ngữ sang List các Enum
     final List<MediaTagType> langTags = movie.lang.toMediaTags();
-
-    // 2. Lấy tập hiện tại (Check null an toàn)
     final String? currentEp = movie.episode_current;
     return GestureDetector(
       onTap: () {
@@ -133,10 +130,10 @@ class SearchResultView extends StatelessWidget {
                       decoration: BoxDecoration(
                         gradient: const LinearGradient(
                           colors: [
-                            Color(0xFFC77DFF), // Tím
-                            Color(0xFFFF9E9E), // Hồng cam (ở giữa)
+                            Color(0xFFC77DFF),
+                            Color(0xFFFF9E9E),
                             Color(0xFFFFD275),
-                          ], // Vàng],
+                          ],
                           begin: Alignment.topRight,
                           end: Alignment.bottomLeft,
                         ),
@@ -160,13 +157,11 @@ class SearchResultView extends StatelessWidget {
                     ),
                   ),
                   Positioned(
-                    // right: 0,
                     bottom: 5,
                     left: 5,
                     child: Column(
                       spacing: 3,
-                      crossAxisAlignment:
-                          CrossAxisAlignment.start, // Căn lề phải
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       verticalDirection: VerticalDirection.up,
                       children: [
                         ...langTags.map(
@@ -212,13 +207,13 @@ class SearchResultView extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 0),
       decoration: BoxDecoration(
         color: color,
-        border: Border.all(color: color), // Viền đậm cùng tông
+        border: Border.all(color: color),
         borderRadius: BorderRadius.circular(10),
       ),
       child: Text(
         text,
         style: TextStyle(
-          color: Colors.white, // Chữ đậm cùng tông
+          color: Colors.white,
           fontSize: 9,
           fontWeight: FontWeight.bold,
         ),
@@ -227,15 +222,14 @@ class SearchResultView extends StatelessWidget {
   }
 
   Widget _buildSkeletonForposter() {
-    // Bọc AspectRatio để đảm bảo nó luôn có hình dáng poster phim (2:3)
     return AspectRatio(
-      aspectRatio: 2 / 3, // Tỉ lệ chuẩn poster phim
+      aspectRatio: 2 / 3,
       child: Shimmer.fromColors(
         baseColor: Color(0xff272A39),
-        highlightColor: Color(0xff4A4E69), // Màu sáng hơn để thấy hiệu ứng
+        highlightColor: Color(0xff4A4E69),
         child: Container(
           decoration: BoxDecoration(
-            color: Colors.black, // Bắt buộc phải có màu để Shimmer phủ lên
+            color: Colors.black,
             borderRadius: BorderRadius.circular(8),
           ),
         ),
