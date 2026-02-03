@@ -11,8 +11,10 @@ class HomeSkeleton extends StatelessWidget {
 
     return Skeletonizer(
       enabled: true,
-      // Nếu muốn shimmer rõ hơn:
-      // effect: const ShimmerEffect(),
+      effect: ShimmerEffect(
+        baseColor: const Color(0xff272A39),
+        highlightColor: const Color(0xff191A24).withOpacity(0.2),
+      ),
       child: SafeArea(
         top: false,
         child: SingleChildScrollView(
@@ -28,54 +30,16 @@ class HomeSkeleton extends StatelessWidget {
                   children: [
                     // background image giả
                     Positioned.fill(
-                      child: Image.network(
-                        'https://dummyimage.com/800x1200/000/fff',
-                        fit: BoxFit.cover,
-                      ),
-                    ),
-
-                    // “carousel cards” giả (3 tấm)
-                    Positioned(
-                      left: 16,
-                      right: 16,
-                      bottom: 18,
-                      child: SizedBox(
-                        height: h * 0.24,
-                        child: Row(
-                          children: [
-                            Expanded(
-                              child: ClipRRect(
-                                borderRadius: BorderRadius.circular(16),
-                                child: Image.network(
-                                  'https://dummyimage.com/400x600/000/fff',
-                                  fit: BoxFit.cover,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: ClipRRect(
-                                borderRadius: BorderRadius.circular(16),
-                                child: Image.network(
-                                  'https://dummyimage.com/400x600/000/fff',
-                                  fit: BoxFit.cover,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: ClipRRect(
-                                borderRadius: BorderRadius.circular(16),
-                                child: Image.network(
-                                  'https://dummyimage.com/400x600/000/fff',
-                                  fit: BoxFit.cover,
-                                ),
-                              ),
-                            ),
-                          ],
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(10),
+                        child: Image.network(
+                          'https://dummyimage.com/800x1200/000/fff',
+                          fit: BoxFit.cover,
                         ),
                       ),
                     ),
+
+                    //
                   ],
                 ),
               ),
@@ -107,7 +71,10 @@ class HomeSkeleton extends StatelessWidget {
                       'Movie title placeholder',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w800,
+                      ),
                     ),
                     SizedBox(height: 6),
                     Text(
@@ -149,12 +116,18 @@ class HomeSkeleton extends StatelessWidget {
                     6,
                     (_) => Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 6),
-                      child: CircleAvatar(radius: 10),
+                      child: Container(
+                        width: 40,
+                        height: 40,
+                        decoration: BoxDecoration(
+                         
+                          shape: BoxShape.circle,
+                        ),
+                      ),
                     ),
                   ),
                 ),
               ),
-
               const SizedBox(height: 14),
 
               // buttons (Container thật)
@@ -165,14 +138,20 @@ class HomeSkeleton extends StatelessWidget {
                     Expanded(
                       child: SizedBox(
                         height: 42,
-                        child: ElevatedButton(onPressed: null, child: Text('Xem phim')),
+                        child: ElevatedButton(
+                          onPressed: null,
+                          child: Text('Xem phim'),
+                        ),
                       ),
                     ),
                     const SizedBox(width: 10),
                     Expanded(
                       child: SizedBox(
                         height: 42,
-                        child: ElevatedButton(onPressed: null, child: Text('Thông tin')),
+                        child: ElevatedButton(
+                          onPressed: null,
+                          child: Text('Thông tin'),
+                        ),
                       ),
                     ),
                   ],
@@ -188,7 +167,10 @@ class HomeSkeleton extends StatelessWidget {
                   children: const [
                     Text(
                       'Phim Hàn Quốc',
-                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                     Spacer(),
                     Text('Xem tất cả'),
@@ -218,9 +200,17 @@ class HomeSkeleton extends StatelessWidget {
                                 ),
                               ),
                               const SizedBox(height: 10),
-                              const Text('Movie name', maxLines: 1, overflow: TextOverflow.ellipsis),
+                              const Text(
+                                'Movie name',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
                               const SizedBox(height: 6),
-                              const Text('Origin name', maxLines: 1, overflow: TextOverflow.ellipsis),
+                              const Text(
+                                'Origin name',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
                             ],
                           ),
                         ),

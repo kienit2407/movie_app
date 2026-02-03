@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:ui';
+import 'package:movie_app/core/config/utils/support_rotate_screen.dart';
 import 'package:fast_cached_network_image/fast_cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -98,6 +99,8 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
   final WatchProgressStorage _watchProgressStorage = WatchProgressStorage();
   final TextEditingController _searchController = TextEditingController();
   bool _isExpandInfor = false;
+  bool _isInMiniMode = false;
+  bool _enteringMiniPlayer = false;
   @override
   void initState() {
     super.initState();
@@ -113,17 +116,38 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
     _currentEpisodeIndex = widget.initialEpisodeIndex;
     _currentServer = widget.initialServer;
 
-    if (_miniPlayerManager.isMiniPlayerActive) {
-      _miniPlayerManager.chewieController?.pause();
-      _miniPlayerManager.chewieController?.dispose();
-    }
+    final handoffController = _miniPlayerManager.handoffController;
+    final handoffLaunch = _miniPlayerManager.handoffLaunch;
 
-    if (widget.initialEpisodeLink != null &&
-        widget.initialEpisodeLink!.isNotEmpty) {
-      _currentEpisodeLink = widget.initialEpisodeLink;
-      _initializePlayer(widget.initialEpisodeLink!);
-    } else if (widget.episodes.isNotEmpty) {
-      _playEpisode(widget.initialEpisodeIndex, widget.episodes.first);
+    if (handoffController != null && handoffLaunch != null) {
+      _miniPlayerManager.takeHandoff();
+      
+      if (mounted) {
+        setState(() {
+          _chewieController = handoffController;
+          _videoPlayerController = handoffController.videoPlayerController;
+          _currentEpisodeLink = handoffLaunch.initialEpisodeLink;
+          _currentEpisodeIndex = handoffLaunch.initialEpisodeIndex;
+          _currentServer = handoffLaunch.initialServer;
+          _selectedServerIndex = handoffLaunch.initialServerIndex;
+        });
+        
+        if (!handoffController.isPlaying) {
+          handoffController.play();
+        }
+      }
+    } else {
+      if (MiniPlayerManager.isVisible.value) {
+        MiniPlayerManager.dismissMiniPlayer();
+      }
+      
+      if (widget.initialEpisodeLink != null &&
+          widget.initialEpisodeLink!.isNotEmpty) {
+        _currentEpisodeLink = widget.initialEpisodeLink;
+        _initializePlayer(widget.initialEpisodeLink!);
+      } else if (widget.episodes.isNotEmpty) {
+        _playEpisode(widget.initialEpisodeIndex, widget.episodes.first);
+      }
     }
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -136,24 +160,55 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
       });
     });
 
-    SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
+    // Cho phép auto-rotate trong player
+    SupportRotateScreen.allowAll();
   }
 
   @override
   void dispose() {
     _saveProgressTimer?.cancel();
     _saveWatchProgress();
-    _chewieController?.pause();
-    _chewieController?.dispose();
-    _videoPlayerController?.dispose();
+    _isInMiniMode = false;
+    MiniPlayerManager.shouldRestorePlayer.removeListener(_onRestorePlayer);
     _hideControlsTimer?.cancel();
     _seekOverlayTimer?.cancel();
     _arrowCtrl.dispose();
     _minifyCtrl.dispose();
     _panelCtrl.dispose();
     _searchController.dispose();
+
+    // Về lại portrait khi thoát player
+    SupportRotateScreen.onlyPotrait();
     super.dispose();
-    SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
+  }
+
+  void _onRestorePlayer() {
+    if (MiniPlayerManager.shouldRestorePlayer.value && _isInMiniMode) {
+      final controller = _miniPlayerManager.handoffController;
+      final launch = _miniPlayerManager.handoffLaunch;
+      
+      if (controller != null && launch != null) {
+        _miniPlayerManager.takeHandoff();
+        
+        if (mounted) {
+          setState(() {
+            _chewieController = controller;
+            _videoPlayerController = controller.videoPlayerController;
+            _currentEpisodeLink = launch.initialEpisodeLink;
+            _currentEpisodeIndex = launch.initialEpisodeIndex;
+            _currentServer = launch.initialServer;
+            _selectedServerIndex = launch.initialServerIndex;
+            _isInMiniMode = false;
+          });
+          
+          if (!controller.isPlaying) {
+            controller.play();
+          }
+        }
+      }
+      
+      _miniPlayerManager.clearRestoreFlag();
+    }
   }
 
   void _showControlsWithAutoHide() {
@@ -485,8 +540,32 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
   }
 
   void _enterMiniPlayer() {
-    if (_chewieController == null) return;
+    final controller = _chewieController;
+    if (controller == null) return;
 
+    final launchData = MiniPlayerLaunchData(
+      slug: widget.slug,
+      movieName: widget.movieName,
+      thumbnailUrl: widget.thumbnailUrl,
+      episodes: widget.episodes,
+      movie: widget.movie,
+      initialEpisodeLink: _currentEpisodeLink,
+      initialEpisodeIndex: _currentEpisodeIndex,
+      initialServer: _currentServer,
+      initialServerIndex: _selectedServerIndex,
+    );
+
+    _miniPlayerManager.showMiniPlayer(
+      controller: controller,
+      launchData: launchData,
+    );
+
+    _isInMiniMode = true;
+    _chewieController = null;
+    _videoPlayerController = null;
+
+    SupportRotateScreen.onlyPotrait();
+    
     Navigator.pop(context);
   }
 
@@ -888,39 +967,33 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
                                       horizontal: 10,
                                       vertical: 10,
                                     ),
-                                    child: Expanded(
-                                      child: Padding(
-                                        padding: EdgeInsets.only(right: 8),
-                                        child: Column(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
-                                          children: [
-                                            Text(
-                                              widget.movie.origin_name,
-                                              maxLines: 2,
-                                              overflow: TextOverflow
-                                                  .ellipsis, // Nếu tên quá dài sẽ hiện "..."
-                                              style: const TextStyle(
-                                                fontSize: 18,
-                                                fontWeight: FontWeight.bold,
-                                                color: Colors.white,
-                                              ),
-                                            ),
-                                            const SizedBox(height: 4),
-                                            Text(
-                                              widget.movie.name,
-                                              maxLines: 1,
-                                              overflow: TextOverflow.ellipsis,
-                                              style: const TextStyle(
-                                                fontSize: 14,
-                                                fontWeight: FontWeight.w500,
-                                                color: AppColor
-                                                    .secondColor, // Màu nhấn cho tên phụ
-                                              ),
-                                            ),
-                                          ],
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          widget.movie.origin_name,
+                                          maxLines: 2,
+                                          overflow: TextOverflow.ellipsis, // Nếu tên quá dài sẽ hiện "..."
+                                          style: const TextStyle(
+                                            fontSize: 18,
+                                            fontWeight: FontWeight.bold,
+                                            color: Colors.white,
+                                          ),
                                         ),
-                                      ),
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          widget.movie.name,
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: const TextStyle(
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.w500,
+                                            color: AppColor
+                                                .secondColor, // Màu nhấn cho tên phụ
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                   ),
                                   const SizedBox(height: 10),

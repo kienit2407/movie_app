@@ -193,13 +193,13 @@ Have questions or suggestions? Feel free to reach out!
 
 - 📘 **Facebook**: [kin240705](https://www.facebook.com/kin240705?locale=vi_VN)
 - 📬 **Email**: trungkien24072005@gmail.com
-- 🐙 **GitHub**: [Your GitHub Profile]
+- 🐙 **GitHub**: [My GitHub Profile](https://github.com/kienit2407)
 
 ---
 
 ## 🙏 Acknowledgments
 
-- 🎬 [kkPhim](https://kkphim.net) for providing the movie API
+- 🎬 [kkPhim](https://kkphim.com) for providing the movie API
 - 🦋 [Flutter](https://flutter.dev) for the amazing framework
 - 🌟 All contributors and supporters
 

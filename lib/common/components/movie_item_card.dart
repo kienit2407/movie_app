@@ -86,7 +86,7 @@ class MovieItemCard extends StatelessWidget {
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         _itemChip(
-                          content: item.lang.toConvertLang(),
+                          content: item.lang,
                           isLeft: true,
                         ),
                         _itemChip(content: item.quality, isGadient: true),

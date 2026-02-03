@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:chewie/chewie.dart';
+import 'package:fast_cached_network_image/fast_cached_network_image.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
 import 'package:movie_app/core/mini_player_manager.dart';
+import 'package:movie_app/feature/detail_movie/presentation/pages/movie_player_page.dart';
+import 'package:movie_app/common/helpers/navigation/app_navigation.dart';
 
 class MiniPlayerOverlay extends StatefulWidget {
   const MiniPlayerOverlay({super.key});
@@ -60,7 +63,25 @@ class _MiniPlayerOverlayState extends State<MiniPlayerOverlay> {
 
               setState(() => _pos = target);
             },
-            onTap: mgr.onTap,
+            onTap: () {
+              final handoff = mgr.detachForOpen();
+              if (handoff.launch != null && handoff.controller != null) {
+                AppNavigator.push(
+                  context,
+                  MoviePlayerPage(
+                    movie: handoff.launch!.movie,
+                    episodes: handoff.launch!.episodes,
+                    movieName: handoff.launch!.movieName,
+                    slug: handoff.launch!.slug,
+                    initialEpisodeIndex: handoff.launch!.initialEpisodeIndex,
+                    initialServer: handoff.launch!.initialServer,
+                    thumbnailUrl: handoff.launch!.thumbnailUrl,
+                    initialEpisodeLink: handoff.launch!.initialEpisodeLink,
+                    initialServerIndex: handoff.launch!.initialServerIndex,
+                  ),
+                );
+              }
+            },
             child: Container(
               width: miniW,
               height: miniH,
@@ -80,7 +101,9 @@ class _MiniPlayerOverlayState extends State<MiniPlayerOverlay> {
                   fit: StackFit.expand,
                   children: [
                     if (mgr.chewieController != null)
-                      Chewie(controller: mgr.chewieController!),
+                      Chewie(controller: mgr.chewieController!)
+                    else if (mgr.launch?.thumbnailUrl != null)
+                      _buildThumbnail(mgr.launch!.thumbnailUrl!),
                     Positioned.fill(
                       child: DecoratedBox(
                         decoration: BoxDecoration(
@@ -111,7 +134,7 @@ class _MiniPlayerOverlayState extends State<MiniPlayerOverlay> {
                                 color: Colors.black.withValues(alpha: 0.3),
                                 shape: BoxShape.circle,
                               ),
-                              child: const Icon(
+                              child: Icon(
                                 Icons.close,
                                 color: Colors.white,
                                 size: 16,
@@ -131,8 +154,29 @@ class _MiniPlayerOverlayState extends State<MiniPlayerOverlay> {
     );
   }
 
+  Widget _buildThumbnail(String url) {
+    return FastCachedImage(
+      url: url,
+      fit: BoxFit.cover,
+      errorBuilder: (context, error, stackTrace) => Container(
+        color: Colors.black12,
+        child: Icon(
+          Iconsax.video,
+          color: Colors.white30,
+          size: 32,
+        ),
+      ),
+      loadingBuilder: (context, progress) => Container(
+        color: Colors.black12,
+        child: CircularProgressIndicator.adaptive(
+          strokeWidth: 2,
+          valueColor: AlwaysStoppedAnimation<Color>(Colors.white30),
+        ),
+      ),
+    );
+  }
+
   Widget _buildPlayPauseOverlay() {
-    // Dùng trực tiếp từ manager
     final controller = mgr.chewieController;
     if (controller == null) return const SizedBox.shrink();
 
@@ -158,13 +202,13 @@ class _MiniPlayerOverlayState extends State<MiniPlayerOverlay> {
             shape: BoxShape.circle,
           ),
           child: controller.isPlaying
-              ? const Icon(
+              ? Icon(
                   Iconsax.pause_copy,
                   key: ValueKey('pause'),
                   color: Colors.white,
                   size: 16,
                 )
-              : const Icon(
+              : Icon(
                   Iconsax.play_copy,
                   key: ValueKey('play'),
                   color: Colors.white,

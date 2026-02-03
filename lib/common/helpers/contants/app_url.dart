@@ -31,6 +31,14 @@ class AppUrl {
   static String getDetailMovie(String slug) => 'phim/$slug';
   static String convertImageDirect(String imageUrl) =>
       'https://phimapi.com/image.php?url=$imageUrl';
-  static String convertImageAddition(String imageUrl) =>
-      'https://phimapi.com/image.php?url=$baseDomainImg$imageUrl';
+  static String convertVideoPlayerDirect(String videoUrl) =>
+      'https://player.phimapi.com/player/?url=$videoUrl';
+  static String convertImageAddition(String imageUrl) {
+    // Nếu URL đã có phimimg.com thì không thêm lại
+    if (imageUrl.startsWith('https://phimimg.com/') ||
+        imageUrl.startsWith('http://phimimg.com/')) {
+      return 'https://phimapi.com/image.php?url=$imageUrl';
+    }
+    return 'https://phimapi.com/image.php?url=$baseDomainImg$imageUrl';
+  }
 }

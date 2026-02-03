@@ -12,12 +12,19 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
 import 'package:liquid_glass_renderer/liquid_glass_renderer.dart';
+import 'package:loading_animation_widget/loading_animation_widget.dart';
 import 'package:movie_app/common/components/lost_network.dart';
 import 'package:movie_app/common/helpers/contants/app_url.dart';
 import 'package:movie_app/common/helpers/navigation/app_navigation.dart';
 import 'package:movie_app/core/config/utils/episode_map.dart';
 import 'package:movie_app/feature/detail_movie/presentation/pages/movie_detail_page.dart';
 import 'package:movie_app/common/helpers/sort_map.dart';
+import 'package:movie_app/core/config/assets/app_image.dart';
+import 'package:movie_app/feature/detail_movie/presentation/bloc/detail_movie_state.dart';
+import 'package:movie_app/feature/detail_movie/presentation/pages/movie_player_page.dart';
+import 'package:movie_app/feature/detail_movie/presentation/bloc/detail_movie_cubit.dart';
+import 'package:movie_app/feature/detail_movie/presentation/pages/movie_player_page.dart';
+import 'package:movie_app/feature/detail_movie/domain/usecase/get_detail_movie_usecase.dart';
 import 'package:movie_app/core/config/assets/app_image.dart';
 import 'package:movie_app/core/config/di/service_locator.dart';
 import 'package:movie_app/core/config/themes/app_color.dart';
@@ -565,7 +572,9 @@ class _HomePageState extends State<HomePage>
               spacing: 10,
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                _buildActionButton(Iconsax.play_circle, 'Xem Phim', () {}),
+                _buildActionButton(Iconsax.play_circle, 'Xem Phim', () async {
+                  await _navigateToPlayer(latestMovie[currentIndex].slug);
+                }),
                 _buildActionButton(Iconsax.info_circle, 'Thông Tin', () {
                   // HapticFeedback.mediumImpact();
                   Navigator.push(
@@ -822,6 +831,119 @@ class _HomePageState extends State<HomePage>
         ),
       ),
     );
+  }
+
+  Future<void> _navigateToPlayer(String slug) async {
+    BuildContext? dialogContext;
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) {
+        dialogContext = context;
+        return Center(
+          child: LoadingAnimationWidget.staggeredDotsWave(
+            color: AppColor.fourthColor,
+
+            size: 30,
+          ),
+        );
+      },
+    );
+
+    try {
+      HapticFeedback.mediumImpact();
+
+      final cubit = DetailMovieCubit(sl<GetDetailMovieUsecase>());
+      await cubit.getDetailMovie(slug);
+
+      if (dialogContext != null && (dialogContext?.mounted ?? false)) {
+        Navigator.pop(dialogContext!);
+      }
+
+      final state = cubit.state;
+      if (state is! DetailMovieSuccessed) return;
+
+      final detail = state.detailMovieModel;
+      final movie = detail.movie;
+      final episodes = detail.episodes;
+
+      if (episodes.isEmpty) return;
+
+      int? currentEpisodeNum;
+      final episodeCurrent = movie.episode_current;
+
+      if (episodeCurrent.toLowerCase().contains('hoàn tất')) {
+        final match = RegExp(r'\((\d+)').firstMatch(episodeCurrent);
+        if (match != null) {
+          currentEpisodeNum = int.tryParse(match.group(1)!);
+        }
+      } else {
+        final match = RegExp(r'(\d+)').firstMatch(episodeCurrent);
+        if (match != null) {
+          currentEpisodeNum = int.tryParse(match.group(1)!);
+        }
+      }
+
+      int serverIndex = 0;
+      int episodeIndex = 0;
+      String? episodeLink;
+
+      if (currentEpisodeNum != null) {
+        for (int s = 0; s < episodes.length; s++) {
+          final serverEpisodes = episodes[s].server_data;
+          for (int e = 0; e < serverEpisodes.length; e++) {
+            final ep = serverEpisodes[e];
+            final epMatch = RegExp(r'(\d+)').firstMatch(ep.name);
+            if (epMatch != null) {
+              final epNum = int.tryParse(epMatch.group(1)!);
+              if (epNum == currentEpisodeNum) {
+                serverIndex = s;
+                episodeIndex = e;
+                episodeLink = ep.link_m3u8;
+                break;
+              }
+            }
+          }
+          if (episodeLink != null) break;
+        }
+      }
+
+      if (episodeLink == null) {
+        if (episodes.isNotEmpty && episodes[0].server_data.isNotEmpty) {
+          serverIndex = 0;
+          episodeIndex = 0;
+          episodeLink = episodes[0].server_data[0].link_m3u8;
+        }
+      }
+
+      if (!mounted || episodeLink == null) {
+        debugPrint('Could not find episode link');
+        return;
+      }
+
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => MoviePlayerPage(
+            slug: movie.slug,
+            movieName: movie.name,
+            thumbnailUrl: movie.poster_url,
+            episodes: episodes,
+            movie: movie,
+            initialEpisodeLink: episodeLink,
+            initialEpisodeIndex: episodeIndex,
+            initialServer: episodes[serverIndex].server_name,
+            initialServerIndex: serverIndex,
+          ),
+        ),
+      );
+    } catch (e) {
+      if (dialogContext != null && (dialogContext?.mounted ?? false)) {
+        Navigator.pop(dialogContext!);
+      }
+      debugPrint('Error navigating to player: $e');
+    }
   }
 
   Widget _buildActionButton(IconData icon, String content, VoidCallback onTap) {

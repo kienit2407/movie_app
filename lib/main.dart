@@ -8,7 +8,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:hive_ce/hive.dart';
 import 'package:hive_ce_flutter/hive_flutter.dart';
 import 'package:movie_app/common/models/watch_progress_model.dart';
-import 'package:movie_app/common/bloc/AuthWithSocial/auth_with_social_cubit.dart';
+import 'package:movie_app/common/models/watch_history_entry.dart';import 'package:movie_app/common/bloc/AuthWithSocial/auth_with_social_cubit.dart';
 import 'package:movie_app/core/app_nav.dart';
 import 'package:movie_app/core/config/di/service_locator.dart';
 import 'package:movie_app/core/config/network/init_supabase.dart';
@@ -39,18 +39,38 @@ import 'package:movie_app/feature/intro/presentation/splash/bloc/splash_state.da
 import 'package:movie_app/feature/intro/presentation/splash/pages/splash.dart';
 import 'package:movie_app/feature/movie_pagination/presentation/bloc/fetch_fillter_cubit.dart';
 import 'package:movie_app/feature/search/presentation/bloc/search_cubit.dart';
+import 'package:path_provider/path_provider.dart';
+import 'dart:io';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   debugPrint('=== [1/6] WidgetsFlutterBinding initialized ===');
 
+  await SystemChrome.setPreferredOrientations([
+    DeviceOrientation.portraitUp,
+    DeviceOrientation.portraitDown,
+  ]);
   debugPrint('=== [2/6] Screen orientation set ===');
 
   await dotenv.load(fileName: 'assets/.env');
   debugPrint('=== [4/7] Dotenv loaded ===');
 
+  // Clear Hive data directory
+  try {
+    final dir = await getApplicationDocumentsDirectory();
+    final hiveDir = Directory('${dir.path}/hive');
+    if (await hiveDir.exists()) {
+      await hiveDir.delete(recursive: true);
+      debugPrint('=== Cleared Hive data directory ===');
+    }
+  } catch (e) {
+    debugPrint('=== Failed to clear Hive directory: $e ===');
+  }
+
   await Hive.initFlutter();
+  
   Hive.registerAdapter(WatchProgressModelAdapter());
+  Hive.registerAdapter(WatchHistoryEntryAdapter());
   debugPrint('=== [5/7] Hive initialized ===');
 
   await FastCachedImageConfig.init(

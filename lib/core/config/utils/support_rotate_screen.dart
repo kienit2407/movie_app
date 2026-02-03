@@ -1,10 +1,18 @@
 import 'package:flutter/services.dart';
 
 class SupportRotateScreen {
-  static void onlyPotrait () {
+  static void onlyPotrait() {
     SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
   }
-  static void allowAll () {
+
+  static void onlyLandscape() {
+    SystemChrome.setPreferredOrientations([
+      DeviceOrientation.landscapeLeft,
+      DeviceOrientation.landscapeRight,
+    ]);
+  }
+
+  static void allowAll() {
     SystemChrome.setPreferredOrientations([
       DeviceOrientation.portraitUp,
       DeviceOrientation.landscapeLeft,

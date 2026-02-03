@@ -20,6 +20,7 @@ import 'package:movie_app/core/config/utils/cover_map.dart';
 import 'package:movie_app/core/config/utils/episode_map.dart';
 import 'package:movie_app/core/config/utils/format_episode.dart';
 import 'package:movie_app/core/config/utils/show_detail_movie_dialog.dart';
+import 'package:movie_app/core/mini_player_manager.dart';
 import 'package:movie_app/feature/detail_movie/data/model/detail_movie_model.dart';
 import 'package:movie_app/feature/detail_movie/domain/usecase/get_detail_movie_usecase.dart';
 import 'package:movie_app/feature/detail_movie/presentation/bloc/detail_movie_cubit.dart';
@@ -390,6 +391,11 @@ class _EpisodesSliverState extends State<_EpisodesSliver> {
 
     widget.onEpisodeSelected?.call(episodeIndex, link);
 
+    // Close mini player before opening new player
+    if (MiniPlayerManager.isVisible.value) {
+      MiniPlayerManager.dismissMiniPlayer();
+    }
+
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -399,7 +405,7 @@ class _EpisodesSliverState extends State<_EpisodesSliver> {
           movieName: widget.movie.name,
           slug: widget.movie.slug,
           initialEpisodeIndex: episodeIndex,
-          initialServer: _currentServerModel.server_name, //  server đang chọn
+          initialServer: _currentServerModel.server_name,
           thumbnailUrl: widget.movie.thumb_url,
           initialEpisodeLink: link,
           initialServerIndex: _selectedServerIndex,
@@ -458,6 +464,10 @@ class _EpisodesSliverState extends State<_EpisodesSliver> {
                       ? data.link_m3u8
                       : data.link_embed;
                   widget.onEpisodeSelected!(index, link);
+                  // Close mini player before opening new player
+                  if (MiniPlayerManager.isVisible.value) {
+                    MiniPlayerManager.dismissMiniPlayer();
+                  }
                   Navigator.push(
                     context,
                     MaterialPageRoute(
@@ -2111,40 +2121,72 @@ class _MovieDetailPageContentState extends State<_MovieDetailPageContent>
                 debugPrint(
                   '=== Navigating to player with link: $_selectedEpisodeLink, index: $_currentEpisodeIndex ===',
                 );
+
+                if (episodes.isEmpty) return;
+
+                int? currentEpisodeNum;
+                final episodeCurrent = movie.episode_current;
+
+                if (episodeCurrent.toLowerCase().contains('hoàn tất')) {
+                  final match = RegExp(r'\((\d+)').firstMatch(episodeCurrent);
+                  if (match != null) {
+                    currentEpisodeNum = int.tryParse(match.group(1)!);
+                  }
+                } else {
+                  final match = RegExp(r'(\d+)').firstMatch(episodeCurrent);
+                  if (match != null) {
+                    currentEpisodeNum = int.tryParse(match.group(1)!);
+                  }
+                }
+
+                int serverIndex = 0;
+                int episodeIndex = 0;
+                String? episodeLink;
+
+                if (currentEpisodeNum != null) {
+                  for (int s = 0; s < episodes.length; s++) {
+                    final serverEpisodes = episodes[s].server_data;
+                    for (int e = 0; e < serverEpisodes.length; e++) {
+                      final ep = serverEpisodes[e];
+                      final epMatch = RegExp(r'(\d+)').firstMatch(ep.name);
+                      if (epMatch != null) {
+                        final epNum = int.tryParse(epMatch.group(1)!);
+                        if (epNum == currentEpisodeNum) {
+                          serverIndex = s;
+                          episodeIndex = e;
+                          episodeLink = ep.link_m3u8;
+                          break;
+                        }
+                      }
+                    }
+                    if (episodeLink != null) break;
+                  }
+                }
+
+                if (episodeLink == null) {
+                  if (episodes.isNotEmpty &&
+                      episodes[0].server_data.isNotEmpty) {
+                    serverIndex = 0;
+                    episodeIndex = 0;
+                    episodeLink = episodes[0].server_data[0].link_m3u8;
+                  }
+                }
+
                 Navigator.of(context).push(
                   NoBackSwipeRoute(
                     builder: (_) => MoviePlayerPage(
-                      movie: movie,
                       slug: movie.slug,
                       movieName: movie.name,
-                      thumbnailUrl: movie.thumb_url.isNotEmpty
-                          ? movie.thumb_url
-                          : movie.poster_url,
+                      thumbnailUrl: movie.poster_url,
                       episodes: episodes,
-                      initialEpisodeLink: _selectedEpisodeLink,
-                      initialEpisodeIndex: _currentEpisodeIndex,
-                      initialServer: episodes.first.server_name,
-                      initialServerIndex: 0,
+                      movie: movie,
+                      initialEpisodeLink: episodeLink,
+                      initialEpisodeIndex: episodeIndex,
+                      initialServer: episodes[serverIndex].server_name,
+                      initialServerIndex: serverIndex,
                     ),
                   ),
                 );
-                // AppNavigator.push(
-                //   context,
-                //   NoBackSwipeRoute(
-                //     builder: (_) => MoviePlayerPage(
-                //       movie: movie,
-                //       slug: movie.slug,
-                //       movieName: movie.name,
-                //       thumbnailUrl: movie.thumb_url.isNotEmpty
-                //           ? movie.thumb_url
-                //           : movie.poster_url,
-                //       episodes: episodes,
-                //       initialEpisodeLink: _selectedEpisodeLink,
-                //       initialEpisodeIndex: _currentEpisodeIndex,
-                //       initialServer: episodes.first.server_name,
-                //     ),
-                //   ),
-                // );
               } else {
                 debugPrint(
                   '=== Cannot navigate: episodes empty or link empty ===',

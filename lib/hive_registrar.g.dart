@@ -3,16 +3,19 @@
 // Check in to version control
 
 import 'package:hive_ce/hive_ce.dart';
+import 'package:movie_app/common/models/watch_history_entry.dart';
 import 'package:movie_app/common/models/watch_progress_model.dart';
 
 extension HiveRegistrar on HiveInterface {
   void registerAdapters() {
     registerAdapter(WatchProgressModelAdapter());
+    registerAdapter(WatchHistoryEntryAdapter());
   }
 }
 
 extension IsolatedHiveRegistrar on IsolatedHiveInterface {
   void registerAdapters() {
     registerAdapter(WatchProgressModelAdapter());
+    registerAdapter(WatchHistoryEntryAdapter());
   }
 }
