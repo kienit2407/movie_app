@@ -857,7 +857,6 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
                             ),
                             onPressed: () => Navigator.pop(context),
                           ),
-                         
                         ],
                       ),
                     ),
@@ -1767,9 +1766,14 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
               data: SliderThemeData(
                 padding: EdgeInsets.zero,
                 trackHeight: _isScrubbing ? 4 : trackHeight ?? 2,
-                trackShape: BufferedSliderTrackShape(
+                trackShape: GradientBufferedSliderTrackShape(
                   buffered: buffered,
                   bufferedColor: Colors.white.withValues(alpha: 0.35),
+                  gradientColors: const [
+                    Color(0xFFC77DFF), // Tím
+                    Color(0xFFFF9E9E), // Hồng cam (ở giữa)
+                    Color(0xFFFFD275),
+                  ],
                 ),
                 activeTrackColor: AppColor.secondColor,
                 inactiveTrackColor: Colors.white.withValues(alpha: 0.15),
@@ -1934,9 +1938,14 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
           data: SliderThemeData(
             padding: EdgeInsets.zero,
             trackHeight: _isScrubbing ? 4 : 2,
-            trackShape: BufferedSliderTrackShape(
+            trackShape: GradientBufferedSliderTrackShape(
               buffered: buffered,
               bufferedColor: Colors.white.withValues(alpha: 0.35),
+              gradientColors: const [
+                Color(0xFFC77DFF), // Tím
+                Color(0xFFFF9E9E), // Hồng cam (ở giữa)
+                Color(0xFFFFD275),
+              ],
             ),
             activeTrackColor: _isScrubbing
                 ? AppColor.secondColor
@@ -2102,10 +2111,12 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
                             fontWeight: FontWeight.bold,
                             size: 18,
                           ),
-                          onPressed: () => Scaffold.of(context).openEndDrawer(), //setting quality
+                          onPressed: () => Scaffold.of(
+                            context,
+                          ).openEndDrawer(), //setting quality
                         ),
                       );
-                    }
+                    },
                   ),
                 ),
               ),
@@ -2254,6 +2265,88 @@ class BufferedSliderTrackShape extends SliderTrackShape
     final playW = rect.width * played;
     if (playW > 0) {
       final playRect = Rect.fromLTWH(rect.left, rect.top, playW, rect.height);
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(playRect, Radius.circular(radius)),
+        activePaint,
+      );
+    }
+  }
+}
+
+class GradientBufferedSliderTrackShape extends SliderTrackShape
+    with BaseSliderTrackShape {
+  const GradientBufferedSliderTrackShape({
+    required this.buffered,
+    required this.bufferedColor,
+    required this.gradientColors,
+    this.radius = 999,
+  });
+
+  final double buffered;
+  final Color bufferedColor;
+  final List<Color> gradientColors;
+  final double radius;
+
+  @override
+  Rect getPreferredRect({
+    required RenderBox parentBox,
+    Offset offset = Offset.zero,
+    required SliderThemeData sliderTheme,
+    bool isEnabled = false,
+    bool isDiscrete = false,
+  }) {
+    final trackHeight = sliderTheme.trackHeight ?? 2;
+    final left = offset.dx;
+    final width = parentBox.size.width;
+    final top = offset.dy + (parentBox.size.height - trackHeight) / 2;
+    return Rect.fromLTWH(left, top, width, trackHeight);
+  }
+
+  @override
+  void paint(
+    PaintingContext context,
+    Offset offset, {
+    required RenderBox parentBox,
+    required SliderThemeData sliderTheme,
+    required Animation<double> enableAnimation,
+    required TextDirection textDirection,
+    required Offset thumbCenter,
+    Offset? secondaryOffset,
+    bool isDiscrete = false,
+    bool isEnabled = false,
+  }) {
+    final rect = getPreferredRect(
+      parentBox: parentBox,
+      offset: offset,
+      sliderTheme: sliderTheme,
+      isEnabled: isEnabled,
+      isDiscrete: isDiscrete,
+    );
+
+    final canvas = context.canvas;
+    final rrect = RRect.fromRectAndRadius(rect, Radius.circular(radius));
+
+    final inactivePaint = Paint()
+      ..color = sliderTheme.inactiveTrackColor ?? const Color(0x55FFFFFF);
+    final bufferedPaint = Paint()..color = bufferedColor;
+
+    canvas.drawRRect(rrect, inactivePaint);
+
+    final bufW = rect.width * buffered.clamp(0.0, 1.0);
+    if (bufW > 0) {
+      final bufRect = Rect.fromLTWH(rect.left, rect.top, bufW, rect.height);
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(bufRect, Radius.circular(radius)),
+        bufferedPaint,
+      );
+    }
+
+    final played = ((thumbCenter.dx - rect.left) / rect.width).clamp(0.0, 1.0);
+    final playW = rect.width * played;
+    if (playW > 0) {
+      final playRect = Rect.fromLTWH(rect.left, rect.top, playW, rect.height);
+      final gradient = LinearGradient(colors: gradientColors);
+      final activePaint = Paint()..shader = gradient.createShader(playRect);
       canvas.drawRRect(
         RRect.fromRectAndRadius(playRect, Radius.circular(radius)),
         activePaint,
