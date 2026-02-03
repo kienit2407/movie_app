@@ -17,6 +17,7 @@ import 'package:movie_app/common/components/lost_network.dart';
 import 'package:movie_app/common/helpers/contants/app_url.dart';
 import 'package:movie_app/common/helpers/navigation/app_navigation.dart';
 import 'package:movie_app/core/config/utils/episode_map.dart';
+import 'package:movie_app/core/config/utils/package_infor.dart';
 import 'package:movie_app/feature/detail_movie/presentation/pages/movie_detail_page.dart';
 import 'package:movie_app/common/helpers/sort_map.dart';
 import 'package:movie_app/core/config/assets/app_image.dart';
@@ -80,8 +81,13 @@ class _HomePageState extends State<HomePage>
   bool _isLoading = false;
   String? selectedValue;
   final ValueNotifier<double> _currentPageNotifier = ValueNotifier<double>(0.0);
+  String appName = '';
+  String packageName = '';
+  String version = '';
+  String buildNumber = '';
   @override
   void initState() {
+    _loadPackageInfo();
     indexCarouselController = CarouselSliderController();
     // _currentPageNotifier = ValueNotifier<double>(0.0);
     super.initState();
@@ -103,6 +109,18 @@ class _HomePageState extends State<HomePage>
     _currentPageNotifier.dispose();
     _scrollController.dispose();
     super.dispose();
+  }
+
+  Future<void> _loadPackageInfo() async {
+    final packageInfo = await PackageInfor.getPackageInfo();
+    if (mounted) {
+      setState(() {
+        appName = packageInfo.appName;
+        packageName = packageInfo.packageName;
+        version = packageInfo.version;
+        buildNumber = packageInfo.buildNumber;
+      });
+    }
   }
 
   @override
@@ -296,6 +314,8 @@ class _HomePageState extends State<HomePage>
   Widget _buildContent() {
     final screenHeight = MediaQuery.of(context).size.height;
     final screenWidth = MediaQuery.of(context).size.width;
+
+
     return PrimaryScrollController(
       controller: _scrollController,
       child: Scrollbar(
@@ -312,6 +332,7 @@ class _HomePageState extends State<HomePage>
               const SizedBox(height: 30),
               _lastedMovie(),
               const SizedBox(height: 30),
+              _buildVersionInfo(),
             ],
           ),
         ),
@@ -513,10 +534,12 @@ class _HomePageState extends State<HomePage>
   Widget _buildCarouselPoster(double screenHeight, double screenWidth) {
     return BlocConsumer<CarouselDisplayCubit, CarouselDisplayState>(
       listener: (context, state) {
-        if (state is CarouselLoading) {
-          _isLoading = true;
-        } else {
-          _isLoading = false;
+        if (state is CarouselSuccess) {
+          setState(() {
+            currentIndex = 0;
+          });
+          _currentPageNotifier.value = 0.0;
+          indexCarouselController.jumpToPage(0);
         }
       },
       builder: (context, data) {
@@ -618,153 +641,141 @@ class _HomePageState extends State<HomePage>
   }
 
   Widget _buildInforMovie(List<ItemEntity> latestMovie) {
-    return Skeletonizer(
-      enabled: _isLoading,
-      child: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 50),
-            child: Text(
-              latestMovie[currentIndex].name,
-              textAlign: TextAlign.justify,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 50),
+          child: Text(
+            latestMovie[currentIndex].name,
+            textAlign: TextAlign.justify,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
+          ),
+        ),
+        SizedBox(height: 2),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 50),
+          child: Text(
+            textAlign: TextAlign.justify,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            latestMovie[currentIndex].originName,
+            style: TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.w500,
+              color: Color(0xfff85032),
             ),
           ),
-          SizedBox(height: 2),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 50),
-            child: Text(
-              textAlign: TextAlign.justify,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              latestMovie[currentIndex].originName,
-              style: TextStyle(
-                fontSize: 10,
-                fontWeight: FontWeight.w500,
-                color: Color(0xfff85032),
-              ),
-            ),
-          ),
-          const SizedBox(height: 15),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: Column(
-              spacing: 10,
-              children: [
-                Wrap(
-                  direction: Axis.horizontal,
-                  runSpacing: 10,
-                  alignment: WrapAlignment.center,
-                  spacing: 10,
-                  children: [
-                    _buildInforChip(
-                      borderColor: Color(0xfff85032),
-                      child: Wrap(
-                        crossAxisAlignment: WrapCrossAlignment.center,
-                        spacing: 5,
-                        children: [
-                          const Text(
-                            'iMdB',
-                            style: TextStyle(
-                              fontSize: 10,
-                              fontWeight: FontWeight.w700,
-                              color: Color(0xfff85032),
-                            ),
-                          ),
-                          Text(
-                            latestMovie[currentIndex].tmdb.voteAverage
-                                .toStringAsFixed(1),
-                            style: TextStyle(
-                              fontSize: 10,
-                              fontWeight: FontWeight.w800,
-                              color: Colors.white,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    _buildInforChip(
-                      isGadient: true,
-                      borderColor: Colors.transparent,
-                      child: Text(
-                        latestMovie[currentIndex].quality,
-                        style: TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ),
-                    _buildInforChip(
-                      child: Text(
-                        latestMovie[currentIndex].year.toString(),
-                        style: TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ),
-                    _buildInforChip(
-                      child: Text(
-                        (latestMovie[currentIndex].episodeCurrent == 'Full')
-                            ? latestMovie[currentIndex].time.toFormatEpisode()
-                            : latestMovie[currentIndex].time,
-                        style: TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                Wrap(
-                  spacing: 10,
-                  crossAxisAlignment: WrapCrossAlignment.center,
-                  children: [
-                    _buildInforChip(
-                      backgroundColor: Colors.white,
-                      child: Text(
-                        latestMovie[currentIndex].episodeCurrent,
-                        style: TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.black,
-                        ),
-                      ),
-                    ),
-                    // if (latestMovie[currentIndex].chieurap == false)
-                    //   _buildInforChip(
-                    //     isGadient: true,
-                    //     borderColor: Colors.transparent,
-                    //     child: const Text(
-                    //       'Chiếu Rạp',
-                    //       style: TextStyle(
-                    //         fontSize: 10,
-                    //         fontWeight: FontWeight.w600,
-                    //         color: Colors.white,
-                    //       ),
-                    //     ),
-                    //   ),
-                    if (latestMovie[currentIndex].subDocquyen == true)
-                      _buildInforChip(
-                        isGadient: true,
-                        borderColor: Colors.transparent,
-                        child: const Text(
-                          'Sub Độc Quyền',
+        ),
+        const SizedBox(height: 15),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+          child: Column(
+            spacing: 10,
+            children: [
+              Wrap(
+                direction: Axis.horizontal,
+                runSpacing: 10,
+                alignment: WrapAlignment.center,
+                spacing: 10,
+                children: [
+                  _buildInforChip(
+                    borderColor: Color(0xfff85032),
+                    child: Wrap(
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      spacing: 5,
+                      children: [
+                        const Text(
+                          'iMdB',
                           style: TextStyle(
                             fontSize: 10,
-                            fontWeight: FontWeight.w600,
+                            fontWeight: FontWeight.w700,
+                            color: Color(0xfff85032),
+                          ),
+                        ),
+                        Text(
+                          latestMovie[currentIndex].tmdb.voteAverage
+                              .toStringAsFixed(1),
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w800,
                             color: Colors.white,
                           ),
                         ),
+                      ],
+                    ),
+                  ),
+                  _buildInforChip(
+                    isGadient: true,
+                    borderColor: Colors.transparent,
+                    child: Text(
+                      latestMovie[currentIndex].quality,
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white,
                       ),
+                    ),
+                  ),
+                  _buildInforChip(
+                    child: Text(
+                      latestMovie[currentIndex].year.toString(),
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                  _buildInforChip(
+                    child: Text(
+                      (latestMovie[currentIndex].episodeCurrent == 'Full')
+                          ? latestMovie[currentIndex].time.toFormatEpisode()
+                          : latestMovie[currentIndex].time,
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              Wrap(
+                spacing: 10,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  _buildInforChip(
+                    backgroundColor: Colors.white,
+                    child: Text(
+                      latestMovie[currentIndex].episodeCurrent,
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.black,
+                      ),
+                    ),
+                  ),
+                  // if (latestMovie[currentIndex].chieurap == false)
+                  //   _buildInforChip(
+                  //     isGadient: true,
+                  //     borderColor: Colors.transparent,
+                  //     child: const Text(
+                  //       'Chiếu Rạp',
+                  //       style: TextStyle(
+                  //         fontSize: 10,
+                  //         fontWeight: FontWeight.w600,
+                  //         color: Colors.white,
+                  //       ),
+                  //     ),
+                  //   ),
+                  if (latestMovie[currentIndex].subDocquyen == true)
                     _buildInforChip(
-                      child: Text(
-                        latestMovie[currentIndex].lang,
+                      isGadient: true,
+                      borderColor: Colors.transparent,
+                      child: const Text(
+                        'Sub Độc Quyền',
                         style: TextStyle(
                           fontSize: 10,
                           fontWeight: FontWeight.w600,
@@ -772,13 +783,22 @@ class _HomePageState extends State<HomePage>
                         ),
                       ),
                     ),
-                  ],
-                ),
-              ],
-            ),
+                  _buildInforChip(
+                    child: Text(
+                      latestMovie[currentIndex].lang,
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
@@ -998,44 +1018,41 @@ class _HomePageState extends State<HomePage>
   }
 
   Widget _buildDotIndicator(List<ItemEntity> latestMovie) {
-    return Skeletonizer(
-      enabled: _isLoading,
-      child: SizedBox(
-        height: 30,
-        child: SingleChildScrollView(
-          padding: EdgeInsets.only(left: 30),
-          scrollDirection: Axis.horizontal,
-          child: Row(
-            spacing: 10,
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: List.generate(itemCountStandart, (index) {
-              bool isSelected = currentIndex == index;
-              return GestureDetector(
-                onTap: () {
-                  // indexCarouselController.animateToPage(index);
-                  indexCarouselController.jumpToPage(index);
-                },
-                child: AnimatedContainer(
-                  curve: Curves.easeInOut,
-                  duration: Duration(milliseconds: 300),
-                  width: isSelected ? 30 : 25,
-                  height: isSelected ? 30 : 25,
-                  decoration: BoxDecoration(
-                    image: DecorationImage(
-                      image: CachedNetworkImageProvider(
-                        AppUrl.convertImageDirect(latestMovie[index].posterUrl),
-                      ),
-                      fit: BoxFit.cover,
+    return SizedBox(
+      height: 30,
+      child: SingleChildScrollView(
+        padding: EdgeInsets.only(left: 30),
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          spacing: 10,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: List.generate(itemCountStandart, (index) {
+            bool isSelected = currentIndex == index;
+            return GestureDetector(
+              onTap: () {
+                // indexCarouselController.animateToPage(index);
+                indexCarouselController.jumpToPage(index);
+              },
+              child: AnimatedContainer(
+                curve: Curves.easeInOut,
+                duration: Duration(milliseconds: 300),
+                width: isSelected ? 30 : 25,
+                height: isSelected ? 30 : 25,
+                decoration: BoxDecoration(
+                  image: DecorationImage(
+                    image: CachedNetworkImageProvider(
+                      AppUrl.convertImageDirect(latestMovie[index].posterUrl),
                     ),
-                    shape: BoxShape.circle,
-                    border: isSelected
-                        ? Border.all(color: Colors.white, width: 2)
-                        : null,
+                    fit: BoxFit.cover,
                   ),
+                  shape: BoxShape.circle,
+                  border: isSelected
+                      ? Border.all(color: Colors.white, width: 2)
+                      : null,
                 ),
-              );
-            }),
-          ),
+              ),
+            );
+          }),
         ),
       ),
     );
@@ -1108,113 +1125,125 @@ class _HomePageState extends State<HomePage>
   // }
 
   Widget _buildCarousel(double screenHeight, List<ItemEntity> latestMovie) {
-    return Skeletonizer(
-      enabled: _isLoading,
-      child: ClipRRect(
-        child: SizedBox(
-          height: screenHeight * 0.36, //chiều cao chứa carousel
-          child: CarouselSlider.builder(
-            carouselController: indexCarouselController,
-            options: CarouselOptions(
-              // autoPlayCurve: Curves.bounceInOut,
-              height: screenHeight * 0.35,
-              viewportFraction: .65,
-              // autoPlayCurve: Curves.easeInOut,
-              autoPlay: true,
-              animateToClosest: true,
+    final count = math.min(latestMovie.length, 20);
+    if (count == 0) return const SizedBox.shrink();
 
-              initialPage: 0,
-              enlargeCenterPage: true,
-              onPageChanged: (index, reason) {
-                setState(() {
-                  currentIndex = index;
-                });
-              },
-              onScrolled: (value) {
-                if (value == null) return;
-                final double count = itemCountStandart.toDouble();
-                final double normalize = value % count;
+    final carouselKey = latestMovie.take(count).map((e) => e.slug).join('|');
 
-                // không setState
-                _currentPageNotifier.value = normalize;
-              },
-            ),
-            itemCount: itemCountStandart,
-            itemBuilder: (BuildContext context, int index, int realiindex) {
-              // final double itemCount = itemCountStandart.toDouble();
-              // double diff = index - _currentPage;
-              // diff = diff - itemCount * (diff / itemCount).round();
-              // // Clamp để max angle cho item liền kề (±1)
-              // diff = diff.clamp(-1.0, 1.0);
-              // // Angle: - để khớp chiều (bạn có thể đảo nếu sai)
-              // final double angle = diff * (math.pi * 0.1);
-              return ValueListenableBuilder(
-                valueListenable: _currentPageNotifier,
-                builder: (context, currentPage, child) {
-                  final double itemCount = itemCountStandart.toDouble();
+    return ClipRRect(
+      child: SizedBox(
+        height: screenHeight * 0.36, //chiều cao chứa carousel
+        child: CarouselSlider.builder(
+          key: ValueKey(carouselKey), // ✅ data đổi => carousel reset sạch
+          carouselController: indexCarouselController,
+          options: CarouselOptions(
+            // autoPlayCurve: Curves.bounceInOut,
+            height: screenHeight * 0.35,
+            viewportFraction: .65,
+            // autoPlayCurve: Curves.easeInOut,
+            autoPlay: true,
+            animateToClosest: true,
 
-                  double diff = index - currentPage;
-                  diff = diff - itemCount * (diff / itemCount).round();
-                  diff = diff.clamp(-1.0, 1.0);
+            initialPage: 0,
+            enlargeCenterPage: true,
+            onPageChanged: (index, reason) {
+              setState(() {
+                currentIndex = index;
+              });
+            },
+            onScrolled: (value) {
+              if (value == null) return;
+              final double count = itemCountStandart.toDouble();
+              final double normalize = value % count;
 
-                  final double angle = diff * (math.pi * 0.1);
-                  return GestureDetector(
-                    onTap: () {
-                      AppNavigator.push(
-                        context,
-                        MovieDetailPage(slug: latestMovie[index].slug),
-                      );
-                    },
-                    onLongPress: () {
-                      HapticFeedback.mediumImpact();
-                      showAnimatedDialog(
-                        context: context,
-                        dialog: ShowDetailMovieDialog(
-                          slug: latestMovie[index].slug,
-                        ),
-                      );
-                    },
-                    child: Center(
-                      child: Transform.rotate(
-                        angle: angle,
-                        child: CachedImageContainer(
-                          imageUrl: AppUrl.convertImageDirect(
-                            latestMovie[index].posterUrl,
-                          ),
-                          boxFit: BoxFit.cover,
-                          margin: EdgeInsets.symmetric(horizontal: 27),
-                          border: Border.all(color: Colors.white, width: 3),
-                          borderRadius: BorderRadius.circular(15),
-                        ),
-                      ),
-                    ),
-                  );
-                },
-              );
+              // không setState
+              _currentPageNotifier.value = normalize;
             },
           ),
+          itemCount: itemCountStandart,
+          itemBuilder: (BuildContext context, int index, int realiindex) {
+            // final double itemCount = itemCountStandart.toDouble();
+            // double diff = index - _currentPage;
+            // diff = diff - itemCount * (diff / itemCount).round();
+            // // Clamp để max angle cho item liền kề (±1)
+            // diff = diff.clamp(-1.0, 1.0);
+            // // Angle: - để khớp chiều (bạn có thể đảo nếu sai)
+            // final double angle = diff * (math.pi * 0.1);
+            return ValueListenableBuilder(
+              valueListenable: _currentPageNotifier,
+              builder: (context, currentPage, child) {
+                final double itemCount = itemCountStandart.toDouble();
+
+                double diff = index - currentPage;
+                diff = diff - itemCount * (diff / itemCount).round();
+                diff = diff.clamp(-1.0, 1.0);
+
+                final double angle = diff * (math.pi * 0.1);
+                return GestureDetector(
+                  onTap: () {
+                    AppNavigator.push(
+                      context,
+                      MovieDetailPage(slug: latestMovie[index].slug),
+                    );
+                  },
+                  onLongPress: () {
+                    HapticFeedback.mediumImpact();
+                    showAnimatedDialog(
+                      context: context,
+                      dialog: ShowDetailMovieDialog(
+                        slug: latestMovie[index].slug,
+                      ),
+                    );
+                  },
+                  child: Center(
+                    child: Transform.rotate(
+                      angle: angle,
+                      child: CachedImageContainer(
+                        imageUrl: AppUrl.convertImageDirect(
+                          latestMovie[index].posterUrl,
+                        ),
+                        boxFit: BoxFit.cover,
+                        margin: EdgeInsets.symmetric(horizontal: 27),
+                        border: Border.all(color: Colors.white, width: 3),
+                        borderRadius: BorderRadius.circular(15),
+                      ),
+                    ),
+                  ),
+                );
+              },
+            );
+          },
         ),
       ),
     );
   }
+  Widget _buildVersionInfo() {
+    if (version.isEmpty) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+      child: Column(
+        children: [
+          Text(
+            'Version: $version ($buildNumber)',
+            style: TextStyle(
+              fontSize: 12,
+              color: Colors.white.withOpacity(0.5),
+            ),
+          ),
+          Text(
+            '$appName - $packageName',
+            style: TextStyle(
+              fontSize: 10,
+              color: Colors.white.withOpacity(0.3),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
-  // Widget _buildSkeletonForposter() {
-  //   // Bọc AspectRatio để đảm bảo nó luôn có hình dáng poster phim (2:3)
-  //   return AspectRatio(
-  //     aspectRatio: 2 / 3, // Tỉ lệ chuẩn poster phim
-  //     child: Shimmer.fromColors(
-  //       baseColor: Color(0xff272A39),
-  //       highlightColor: Color(0xff4A4E69), // Màu sáng hơn để thấy hiệu ứng
-  //       child: Container(
-  //         decoration: BoxDecoration(
-  //           color: Colors.black, // Bắt buộc phải có màu để Shimmer phủ lên
-  //           borderRadius: BorderRadius.circular(8),
-  //         ),
-  //       ),
-  //     ),
-  //   );
-  // }
 }
+
 
 class CountryMovieSection extends StatefulWidget {
   final String title;

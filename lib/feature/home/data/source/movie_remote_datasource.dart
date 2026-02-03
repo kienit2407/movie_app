@@ -38,7 +38,7 @@ class MovieRemoteDatasourceImpl implements MovieRemoteDatasource {
     try {
       final response = await dioClient.get(
         path: AppUrl.getLatestMovie,
-        queryParameters: {'page': page},
+        queryParameters: {'page': page, 'limit': 20},
       );
       if (response.data['status'] == true && response.data['msg'] == 'done') {
         return NewMovieModel.fromMap(response.data);
