@@ -2048,7 +2048,7 @@ class _MovieDetailPageContentState extends State<_MovieDetailPageContent>
   );
 
   Widget _buildButtons(MovieModel movie, List<EpisodesModel> episodes) {
-    // final movieType = movie.type.toLowerCase();
+    final isFullMovie = movie.episode_current == 'Full';
 
     if (episodes.isNotEmpty && _selectedEpisodeLink.isEmpty) {
       final firstEpisode = episodes.first;
@@ -2075,165 +2075,159 @@ class _MovieDetailPageContentState extends State<_MovieDetailPageContent>
       }
     }
 
-    debugPrint(
-      '=== _buildButtons: episodes=${episodes.length}, selectedLink=$_selectedEpisodeLink, currentIndex=$_currentEpisodeIndex ===',
-    );
-    return Row(
-      children: [
-        Expanded(
-          flex: 2,
-          child: GestureDetector(
-            onTap: () {
-              HapticFeedback.mediumImpact();
+    void navigateToPlayer(int serverIndex, int episodeIndex, String episodeLink) {
+      if (episodes.isEmpty) return;
+      Navigator.of(context).push(
+        NoBackSwipeRoute(
+          builder: (_) => MoviePlayerPage(
+            slug: movie.slug,
+            movieName: movie.name,
+            thumbnailUrl: movie.poster_url,
+            episodes: episodes,
+            movie: movie,
+            initialEpisodeLink: episodeLink,
+            initialEpisodeIndex: episodeIndex,
+            initialServer: episodes[serverIndex].server_name,
+            initialServerIndex: serverIndex,
+          ),
+        ),
+      );
+    }
 
-              if (episodes.isNotEmpty && _selectedEpisodeLink.isEmpty) {
-                final firstEpisode = episodes.first;
-                debugPrint(
-                  '=== Auto-select in onTap: server_name=${firstEpisode.server_name}, server_data.length=${firstEpisode.server_data.length} ===',
-                );
-                if (firstEpisode.server_data.isNotEmpty) {
-                  final firstData = firstEpisode.server_data.first;
-                  debugPrint(
-                    '=== First server data in onTap: m3u8="${firstData.link_m3u8}", embed="${firstData.link_embed}" ===',
-                  );
-                  final link = firstData.link_m3u8.isNotEmpty
-                      ? firstData.link_m3u8
-                      : firstData.link_embed;
-                  if (link.isNotEmpty) {
-                    debugPrint('=== Auto-selecting in onTap: $link ===');
-                    _currentEpisodeIndex = 0;
-                    _selectedEpisodeLink = link;
-                  } else {
-                    debugPrint(
-                      '=== ERROR in onTap: Both m3u8 and embed are empty! ===',
-                    );
-                  }
-                } else {
-                  debugPrint('=== ERROR in onTap: server_data is empty! ===');
-                }
+    void playFirstEpisode() {
+      if (episodes.isEmpty) return;
+      if (episodes[0].server_data.isEmpty) return;
+      int serverIndex = 0;
+      int episodeIndex = 0;
+      String episodeLink = episodes[0].server_data[0].link_m3u8.isNotEmpty
+          ? episodes[0].server_data[0].link_m3u8
+          : episodes[0].server_data[0].link_embed;
+      navigateToPlayer(serverIndex, episodeIndex, episodeLink);
+    }
+
+    void playLatestEpisode() {
+      if (episodes.isEmpty) return;
+
+      int? currentEpisodeNum;
+      final episodeCurrent = movie.episode_current;
+
+      if (episodeCurrent.toLowerCase().contains('hoàn tất')) {
+        final match = RegExp(r'\((\d+)').firstMatch(episodeCurrent);
+        if (match != null) {
+          currentEpisodeNum = int.tryParse(match.group(1)!);
+        }
+      } else {
+        final match = RegExp(r'(\d+)').firstMatch(episodeCurrent);
+        if (match != null) {
+          currentEpisodeNum = int.tryParse(match.group(1)!);
+        }
+      }
+
+      int serverIndex = 0;
+      int episodeIndex = 0;
+      String? episodeLink;
+
+      if (currentEpisodeNum != null) {
+        for (int s = 0; s < episodes.length; s++) {
+          final serverEpisodes = episodes[s].server_data;
+          for (int e = 0; e < serverEpisodes.length; e++) {
+            final ep = serverEpisodes[e];
+            final epMatch = RegExp(r'(\d+)').firstMatch(ep.name);
+            if (epMatch != null) {
+              final epNum = int.tryParse(epMatch.group(1)!);
+              if (epNum == currentEpisodeNum) {
+                serverIndex = s;
+                episodeIndex = e;
+                episodeLink = ep.link_m3u8;
+                break;
               }
+            }
+          }
+          if (episodeLink != null) break;
+        }
+      }
 
-              debugPrint(
-                '=== Button tapped: episodes=${episodes.length}, selectedLink=$_selectedEpisodeLink, currentIndex=$_currentEpisodeIndex ===',
-              );
+      if (episodeLink == null) {
+        playFirstEpisode();
+        return;
+      }
 
-              if (episodes.isNotEmpty && _selectedEpisodeLink.isNotEmpty) {
-                debugPrint(
-                  '=== Navigating to player with link: $_selectedEpisodeLink, index: $_currentEpisodeIndex ===',
-                );
+      navigateToPlayer(serverIndex, episodeIndex, episodeLink);
+    }
 
-                if (episodes.isEmpty) return;
-
-                int? currentEpisodeNum;
-                final episodeCurrent = movie.episode_current;
-
-                if (episodeCurrent.toLowerCase().contains('hoàn tất')) {
-                  final match = RegExp(r'\((\d+)').firstMatch(episodeCurrent);
-                  if (match != null) {
-                    currentEpisodeNum = int.tryParse(match.group(1)!);
-                  }
-                } else {
-                  final match = RegExp(r'(\d+)').firstMatch(episodeCurrent);
-                  if (match != null) {
-                    currentEpisodeNum = int.tryParse(match.group(1)!);
-                  }
-                }
-
-                int serverIndex = 0;
-                int episodeIndex = 0;
-                String? episodeLink;
-
-                if (currentEpisodeNum != null) {
-                  for (int s = 0; s < episodes.length; s++) {
-                    final serverEpisodes = episodes[s].server_data;
-                    for (int e = 0; e < serverEpisodes.length; e++) {
-                      final ep = serverEpisodes[e];
-                      final epMatch = RegExp(r'(\d+)').firstMatch(ep.name);
-                      if (epMatch != null) {
-                        final epNum = int.tryParse(epMatch.group(1)!);
-                        if (epNum == currentEpisodeNum) {
-                          serverIndex = s;
-                          episodeIndex = e;
-                          episodeLink = ep.link_m3u8;
-                          break;
-                        }
-                      }
-                    }
-                    if (episodeLink != null) break;
-                  }
-                }
-
-                if (episodeLink == null) {
-                  if (episodes.isNotEmpty &&
-                      episodes[0].server_data.isNotEmpty) {
-                    serverIndex = 0;
-                    episodeIndex = 0;
-                    episodeLink = episodes[0].server_data[0].link_m3u8;
-                  }
-                }
-
-                Navigator.of(context).push(
-                  NoBackSwipeRoute(
-                    builder: (_) => MoviePlayerPage(
-                      slug: movie.slug,
-                      movieName: movie.name,
-                      thumbnailUrl: movie.poster_url,
-                      episodes: episodes,
-                      movie: movie,
-                      initialEpisodeLink: episodeLink,
-                      initialEpisodeIndex: episodeIndex,
-                      initialServer: episodes[serverIndex].server_name,
-                      initialServerIndex: serverIndex,
-                    ),
+    Widget buildPlayButton({
+      required String text,
+      required VoidCallback onTap,
+      bool isPrimary = true,
+      int flex = 2,
+    }) {
+      return Expanded(
+        flex: flex,
+        child: GestureDetector(
+          onTap: () {
+            HapticFeedback.mediumImpact();
+            onTap();
+          },
+          child: Container(
+            padding: const EdgeInsets.symmetric(vertical: 11),
+            decoration: BoxDecoration(
+              gradient: isPrimary
+                  ? const LinearGradient(
+                      colors: [
+                        Color(0xFFC77DFF),
+                        Color(0xFFFF9E9E),
+                        Color(0xFFFFD275),
+                      ],
+                      begin: Alignment.topRight,
+                      end: Alignment.bottomLeft,
+                    )
+                  : null,
+              color: isPrimary ? null : Colors.white.withOpacity(0.1),
+              boxShadow: isPrimary
+                  ? const [
+                      BoxShadow(
+                        color: Color(0xFFC77DFF),
+                        blurRadius: 12,
+                        offset: Offset(0, 0),
+                        spreadRadius: -2,
+                      ),
+                    ]
+                  : null,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  text,
+                  style: TextStyle(
+                    color: isPrimary ? Colors.white : Colors.white.withOpacity(0.9),
+                    fontWeight: FontWeight.w600,
+                    fontSize: 12,
                   ),
-                );
-              } else {
-                debugPrint(
-                  '=== Cannot navigate: episodes empty or link empty ===',
-                );
-              }
-            },
-            child: Container(
-              padding: const EdgeInsets.symmetric(vertical: 11),
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [
-                    Color(0xFFC77DFF), // Tím
-                    Color(0xFFFF9E9E), // Hồng cam (ở giữa)
-                    Color(0xFFFFD275),
-                  ], // Vàng],
-                  begin: Alignment.topRight,
-                  end: Alignment.bottomLeft,
                 ),
-                boxShadow: const [
-                  BoxShadow(
-                    color: Color(0xFFC77DFF),
-                    blurRadius: 12,
-                    offset: Offset(0, 0),
-                    spreadRadius: -2,
-                  ),
-                ],
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: const Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Iconsax.play_circle, color: Colors.white, size: 20),
-                  SizedBox(width: 8),
-                  Text(
-                    'Xem Phim',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 13,
-                    ),
-                  ),
-                ],
-              ),
+              ],
             ),
           ),
         ),
-        const SizedBox(width: 12),
+      );
+    }
+
+    return Row(
+      spacing: 5,
+      children: [
+        if (!isFullMovie)
+          buildPlayButton(
+            text: 'Xem tập mới',
+            onTap: () => playLatestEpisode(),
+            flex: 1,
+          ),
+        buildPlayButton(
+          text: 'Xem phim',
+          onTap: () => playFirstEpisode(),
+          flex: isFullMovie ? 2 : 1,
+        ),
+        if (isFullMovie) const SizedBox(width: 12),
         Expanded(
           child: GestureDetector(
             onTap: () {
@@ -2249,17 +2243,17 @@ class _MovieDetailPageContentState extends State<_MovieDetailPageContent>
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(color: Colors.white.withOpacity(0.7)),
               ),
-              child: Row(
+              child: const Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(Iconsax.menu_1, color: Colors.white, size: 20),
-                  const SizedBox(width: 6),
+                  Icon(Iconsax.menu_1, color: Colors.white, size: 20),
+                  SizedBox(width: 6),
                   Text(
                     'Tập Phim',
-                    style: const TextStyle(
+                    style: TextStyle(
                       color: Colors.white,
                       fontWeight: FontWeight.w600,
-                      fontSize: 13,
+                      fontSize: 12,
                     ),
                   ),
                 ],
@@ -2270,6 +2264,7 @@ class _MovieDetailPageContentState extends State<_MovieDetailPageContent>
       ],
     );
   }
+
 
   String _cleanHtmlTags(String htmlString) {
     final RegExp exp = RegExp(r'<[^>]*>', multiLine: true, caseSensitive: true);

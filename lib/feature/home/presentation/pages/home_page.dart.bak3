@@ -86,7 +86,7 @@ class _HomePageState extends State<HomePage>
   int _carouselGen = 0; // ✅ token để ignore callback của carousel cũ
   bool _pendingResetToFirst = false; // ✅ trì hoãn reset cho tới khi jump xong
   String _lastCarouselKey = '';
-  bool _carouselReady = false;
+
   String appName = '';
   String packageName = '';
   String version = '';
@@ -415,7 +415,6 @@ class _HomePageState extends State<HomePage>
         if (state is CarouselSuccess) {
           _carouselGen++; // ✅ invalidate callback của carousel cũ
           final int gen = _carouselGen;
-          _carouselReady = false;
           _pendingResetToFirst = true;
           final oldController = indexCarouselController;
           indexCarouselController = CarouselSliderController();
@@ -429,13 +428,14 @@ class _HomePageState extends State<HomePage>
             indexCarouselController?.jumpToPage(0);
             // ✅ ĐỢI thêm 1 frame để đảm bảo carousel đã jump xong mới reset state
             WidgetsBinding.instance.addPostFrameCallback((_) {
+
               if (!mounted || gen != _carouselGen) return;
               setState(() {
                 currentIndex = 0;
               });
               _currentPageNotifier.value = 0.0;
               _pendingResetToFirst = false;
-              _carouselReady = true;
+
             });
           });
         }
@@ -1025,7 +1025,6 @@ class _HomePageState extends State<HomePage>
   Widget _buildCarousel(double screenHeight, List<ItemEntity> latestMovie) {
     final count = math.min(latestMovie.length, 20);
     if (count == 0) {
-      _carouselReady = false;
       return const SizedBox.shrink();
     }
 
@@ -1040,9 +1039,7 @@ class _HomePageState extends State<HomePage>
       }
     }
 
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted && buildGen == _carouselGen) _carouselReady = true;
-    });
+
 
     return ClipRRect(
       child: SizedBox(

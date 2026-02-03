@@ -429,6 +429,7 @@ class _HomePageState extends State<HomePage>
             indexCarouselController?.jumpToPage(0);
             // ✅ ĐỢI thêm 1 frame để đảm bảo carousel đã jump xong mới reset state
             WidgetsBinding.instance.addPostFrameCallback((_) {
+              _carouselReady = false;
               if (!mounted || gen != _carouselGen) return;
               setState(() {
                 currentIndex = 0;

@@ -308,7 +308,7 @@ class EpisodeDrawer extends StatelessWidget {
           final serverName = CoverMap.getConfigFromServerName(
             episodes[index].server_name,
           );
-          final isPlaying = currentEpisodeIndex == index;
+          final isPlaying = selectedServerIndex == index;
           final isCurrentServer = currentServer == episodes[index].server_name;
 
           return Material(

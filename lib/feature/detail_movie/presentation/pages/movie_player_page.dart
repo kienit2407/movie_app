@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:ui';
+import 'package:loading_animation_widget/loading_animation_widget.dart';
 import 'package:movie_app/core/config/utils/episode_drawer.dart';
 import 'package:movie_app/core/config/utils/support_rotate_screen.dart';
 import 'package:fast_cached_network_image/fast_cached_network_image.dart';
@@ -21,6 +22,7 @@ import 'package:movie_app/core/config/themes/app_color.dart';
 import 'package:movie_app/core/mini_player_manager.dart';
 import 'package:movie_app/feature/detail_movie/data/model/detail_movie_model.dart';
 import 'package:movie_app/common/helpers/watch_progress_storage.dart';
+import 'package:movie_app/common/helpers/watch_history_storage.dart';
 
 enum SeekDirection { forward, backward }
 
@@ -98,6 +100,7 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
   late final AnimationController _arrowCtrl;
   final MiniPlayerManager _miniPlayerManager = MiniPlayerManager();
   final WatchProgressStorage _watchProgressStorage = WatchProgressStorage();
+  final WatchHistoryStorage _watchHistoryStorage = WatchHistoryStorage();
   final TextEditingController _searchController = TextEditingController();
   bool _isExpandInfor = false;
   bool _isInMiniMode = false;
@@ -273,7 +276,7 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
 
   double get _minifyT => _isMinifyAnimating ? _minifyCtrl.value : _miniDragT;
 
-  void _saveWatchProgress() {
+  void _saveWatchProgress() async {
     if (_videoPlayerController != null &&
         _videoPlayerController!.value.isInitialized &&
         _currentEpisodeLink != null) {
@@ -281,7 +284,8 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
       final duration = _videoPlayerController!.value.duration;
 
       if (position.inSeconds > 5) {
-        _watchProgressStorage.saveProgressV2(
+        // Save to WatchProgressStorage
+        await _watchProgressStorage.saveProgressV2(
           movieId: widget.slug,
           serverIndex: _selectedServerIndex,
           episodeIndex: _currentEpisodeIndex,
@@ -289,6 +293,31 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
           positionMs: position.inMilliseconds,
           durationMs: duration.inMilliseconds,
         );
+        
+        debugPrint('[WatchProgress] Saved: slug=${widget.slug}, position=${position.inSeconds}s, duration=${duration.inSeconds}s');
+
+        // Save to WatchHistoryStorage (Hive)
+        await _watchHistoryStorage.addToHistory(
+          slug: widget.slug,
+          name: widget.movieName,
+          originName: widget.movie.origin_name,
+          posterUrl: widget.movie.poster_url,
+          thumbUrl: widget.movie.thumb_url,
+          episodeCurrent: widget.episodes.isNotEmpty 
+              ? widget.episodes[_selectedServerIndex].server_data[_currentEpisodeIndex].name 
+              : 'Full',
+          quality: null,
+          lang: widget.movie.lang,
+          year: widget.movie.year?.toString(),
+          rating: widget.movie.tmdb?.vote_average?.toDouble(),
+          positionMs: position.inMilliseconds,
+          durationMs: duration.inMilliseconds,
+          type: widget.movie.type,
+          categoryId: widget.movie.category?.first.id,
+          categoryName: widget.movie.category?.first.name,
+        );
+        
+        debugPrint('[WatchHistory] Saved to Hive: slug=${widget.slug}, name=${widget.movieName}, progress=${(position.inMilliseconds/duration.inMilliseconds*100).toStringAsFixed(1)}%');
       }
     }
   }
@@ -801,11 +830,10 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
                   ),
                 )
               else
-                const Center(
-                  child: CircularProgressIndicator.adaptive(
-                    valueColor: AlwaysStoppedAnimation<Color>(
-                      AppColor.secondColor,
-                    ),
+                Center(
+                  child: LoadingAnimationWidget.stretchedDots(
+                    color: AppColor.secondColor,
+                    size: 20,
                   ),
                 ),
 
@@ -857,7 +885,6 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
                             ),
                             onPressed: () => Navigator.pop(context),
                           ),
-                         
                         ],
                       ),
                     ),
@@ -1402,7 +1429,7 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
         controller: _scrollController,
         padding: const EdgeInsets.all(10),
         gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-          maxCrossAxisExtent: 250, // Một ô rộng tối đa 250px.
+          maxCrossAxisExtent: 260, // Một ô rộng tối đa 250px.
           mainAxisSpacing: 10,
           crossAxisSpacing: 10,
           childAspectRatio: 16 / 9,
@@ -1412,7 +1439,7 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
           final serverName = CoverMap.getConfigFromServerName(
             widget.episodes[index].server_name,
           );
-          final isPlaying = _currentEpisodeIndex == index;
+          final isPlaying = _selectedServerIndex == index;
           final isCurrentServer =
               _currentServer == widget.episodes[index].server_name;
           // Giả sử lấy dữ liệu từ CoverMap
@@ -1767,9 +1794,14 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
               data: SliderThemeData(
                 padding: EdgeInsets.zero,
                 trackHeight: _isScrubbing ? 4 : trackHeight ?? 2,
-                trackShape: BufferedSliderTrackShape(
+                trackShape: GradientBufferedSliderTrackShape(
                   buffered: buffered,
                   bufferedColor: Colors.white.withValues(alpha: 0.35),
+                  gradientColors: const [
+                    Color(0xFFC77DFF), // Tím
+                    Color(0xFFFF9E9E), // Hồng cam (ở giữa)
+                    Color(0xFFFFD275),
+                  ],
                 ),
                 activeTrackColor: AppColor.secondColor,
                 inactiveTrackColor: Colors.white.withValues(alpha: 0.15),
@@ -1934,9 +1966,14 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
           data: SliderThemeData(
             padding: EdgeInsets.zero,
             trackHeight: _isScrubbing ? 4 : 2,
-            trackShape: BufferedSliderTrackShape(
+            trackShape: GradientBufferedSliderTrackShape(
               buffered: buffered,
               bufferedColor: Colors.white.withValues(alpha: 0.35),
+              gradientColors: const [
+                Color(0xFFC77DFF), // Tím
+                Color(0xFFFF9E9E), // Hồng cam (ở giữa)
+                Color(0xFFFFD275),
+              ],
             ),
             activeTrackColor: _isScrubbing
                 ? AppColor.secondColor
@@ -2050,11 +2087,10 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
                 child: Chewie(controller: _chewieController!),
               )
             else
-              const Center(
-                child: CircularProgressIndicator.adaptive(
-                  valueColor: AlwaysStoppedAnimation<Color>(
-                    AppColor.secondColor,
-                  ),
+              Center(
+                child: LoadingAnimationWidget.stretchedDots(
+                  color: AppColor.secondColor,
+                  size: 20,
                 ),
               ),
             if (_showControls)
@@ -2102,10 +2138,12 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
                             fontWeight: FontWeight.bold,
                             size: 18,
                           ),
-                          onPressed: () => Scaffold.of(context).openEndDrawer(), //setting quality
+                          onPressed: () => Scaffold.of(
+                            context,
+                          ).openEndDrawer(), //setting quality
                         ),
                       );
-                    }
+                    },
                   ),
                 ),
               ),
@@ -2254,6 +2292,88 @@ class BufferedSliderTrackShape extends SliderTrackShape
     final playW = rect.width * played;
     if (playW > 0) {
       final playRect = Rect.fromLTWH(rect.left, rect.top, playW, rect.height);
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(playRect, Radius.circular(radius)),
+        activePaint,
+      );
+    }
+  }
+}
+
+class GradientBufferedSliderTrackShape extends SliderTrackShape
+    with BaseSliderTrackShape {
+  const GradientBufferedSliderTrackShape({
+    required this.buffered,
+    required this.bufferedColor,
+    required this.gradientColors,
+    this.radius = 999,
+  });
+
+  final double buffered;
+  final Color bufferedColor;
+  final List<Color> gradientColors;
+  final double radius;
+
+  @override
+  Rect getPreferredRect({
+    required RenderBox parentBox,
+    Offset offset = Offset.zero,
+    required SliderThemeData sliderTheme,
+    bool isEnabled = false,
+    bool isDiscrete = false,
+  }) {
+    final trackHeight = sliderTheme.trackHeight ?? 2;
+    final left = offset.dx;
+    final width = parentBox.size.width;
+    final top = offset.dy + (parentBox.size.height - trackHeight) / 2;
+    return Rect.fromLTWH(left, top, width, trackHeight);
+  }
+
+  @override
+  void paint(
+    PaintingContext context,
+    Offset offset, {
+    required RenderBox parentBox,
+    required SliderThemeData sliderTheme,
+    required Animation<double> enableAnimation,
+    required TextDirection textDirection,
+    required Offset thumbCenter,
+    Offset? secondaryOffset,
+    bool isDiscrete = false,
+    bool isEnabled = false,
+  }) {
+    final rect = getPreferredRect(
+      parentBox: parentBox,
+      offset: offset,
+      sliderTheme: sliderTheme,
+      isEnabled: isEnabled,
+      isDiscrete: isDiscrete,
+    );
+
+    final canvas = context.canvas;
+    final rrect = RRect.fromRectAndRadius(rect, Radius.circular(radius));
+
+    final inactivePaint = Paint()
+      ..color = sliderTheme.inactiveTrackColor ?? const Color(0x55FFFFFF);
+    final bufferedPaint = Paint()..color = bufferedColor;
+
+    canvas.drawRRect(rrect, inactivePaint);
+
+    final bufW = rect.width * buffered.clamp(0.0, 1.0);
+    if (bufW > 0) {
+      final bufRect = Rect.fromLTWH(rect.left, rect.top, bufW, rect.height);
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(bufRect, Radius.circular(radius)),
+        bufferedPaint,
+      );
+    }
+
+    final played = ((thumbCenter.dx - rect.left) / rect.width).clamp(0.0, 1.0);
+    final playW = rect.width * played;
+    if (playW > 0) {
+      final playRect = Rect.fromLTWH(rect.left, rect.top, playW, rect.height);
+      final gradient = LinearGradient(colors: gradientColors);
+      final activePaint = Paint()..shader = gradient.createShader(playRect);
       canvas.drawRRect(
         RRect.fromRectAndRadius(playRect, Radius.circular(radius)),
         activePaint,
