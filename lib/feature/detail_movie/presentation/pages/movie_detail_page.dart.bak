@@ -1,6 +1,4 @@
 import 'dart:ui';
-import 'package:go_router/go_router.dart';
-import 'package:movie_app/core/config/routes/app_router.dart';
 
 import 'package:fast_cached_network_image/fast_cached_network_image.dart';
 import 'package:flutter/material.dart';
@@ -13,7 +11,9 @@ import 'package:intl/intl.dart';
 import 'package:lottie/lottie.dart';
 import 'package:movie_app/common/components/alert_dialog/app_alert_dialog.dart';
 import 'package:movie_app/common/helpers/contants/app_url.dart';
-import 'package:movie_app/common/helpers/navigation/app_navigation.dart';
+import 'package:go_router/go_router.dart';
+import 'package:movie_app/core/config/routes/app_router.dart';
+import 'package:movie_app/core/config/utils/MoviePlayerArgs.dart';
 import 'package:movie_app/core/config/di/service_locator.dart';
 import 'package:movie_app/core/config/themes/app_color.dart';
 import 'package:movie_app/core/config/utils/animated_dialog.dart';
@@ -839,7 +839,7 @@ class _RecommendationItem extends StatelessWidget {
 
     return GestureDetector(
       onTap: () {
-        context.push(AppRoutes.movieDetail.replaceAll(':slug', itemEntity.slug));
+        AppNavigator.push(context, MovieDetailPage(slug: itemEntity.slug));
       },
       onLongPress: () {
         HapticFeedback.mediumImpact();
@@ -2077,7 +2077,11 @@ class _MovieDetailPageContentState extends State<_MovieDetailPageContent>
       }
     }
 
-    void navigateToPlayer(int serverIndex, int episodeIndex, String episodeLink) {
+    void navigateToPlayer(
+      int serverIndex,
+      int episodeIndex,
+      String episodeLink,
+    ) {
       if (episodes.isEmpty) return;
       Navigator.of(context).push(
         NoBackSwipeRoute(
@@ -2199,11 +2203,25 @@ class _MovieDetailPageContentState extends State<_MovieDetailPageContent>
             ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
+              spacing: 5,
+
               children: [
+                isFullMovie
+                    ? Icon(
+                        Iconsax.play_circle,
+                        color: isPrimary
+                            ? Colors.white
+                            : Colors.white.withOpacity(0.9),
+                        size: 20,
+                      )
+                    : SizedBox.shrink(),
+
                 Text(
                   text,
                   style: TextStyle(
-                    color: isPrimary ? Colors.white : Colors.white.withOpacity(0.9),
+                    color: isPrimary
+                        ? Colors.white
+                        : Colors.white.withOpacity(0.9),
                     fontWeight: FontWeight.w600,
                     fontSize: 12,
                   ),
@@ -2266,7 +2284,6 @@ class _MovieDetailPageContentState extends State<_MovieDetailPageContent>
       ],
     );
   }
-
 
   String _cleanHtmlTags(String htmlString) {
     final RegExp exp = RegExp(r'<[^>]*>', multiLine: true, caseSensitive: true);

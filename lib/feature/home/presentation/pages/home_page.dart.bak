@@ -316,7 +316,7 @@ class _HomePageState extends State<HomePage>
           child: Column(
             children: [
               _buildCarouselPoster(screenHeight, screenWidth),
-              const SizedBox(height: 10),
+              const SizedBox(height: 30),
               MovieSectionWithScroll(),
               const SizedBox(height: 30),
               //HISTORICAL MOVIE
@@ -446,6 +446,7 @@ class _HomePageState extends State<HomePage>
             height: screenHeight * .89,
             width: screenWidth,
             child: Stack(
+               clipBehavior: Clip.hardEdge, // (2) chặn vẽ tràn đè xuống dưới
               children: [
                 //background image
                 _buildBackgroundImage(data.latestMovie),

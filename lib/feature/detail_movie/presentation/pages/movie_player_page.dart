@@ -1,5 +1,11 @@
 import 'dart:async';
 import 'dart:ui';
+import 'package:go_router/go_router.dart';
+import 'package:movie_app/core/config/routes/app_router.dart';
+import 'package:movie_app/core/config/utils/movie_player_args.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:movie_app/feature/detail_movie/presentation/bloc/player_cubit.dart';
+import 'package:movie_app/feature/detail_movie/presentation/bloc/player_state.dart';
 import 'package:loading_animation_widget/loading_animation_widget.dart';
 import 'package:movie_app/core/config/utils/episode_drawer.dart';
 import 'package:movie_app/core/config/utils/support_rotate_screen.dart';
@@ -15,8 +21,10 @@ import 'package:movie_app/common/helpers/contants/app_url.dart';
 import 'package:movie_app/core/config/utils/animated_dialog.dart';
 import 'package:movie_app/core/config/utils/cover_map.dart';
 import 'package:movie_app/core/config/utils/format_episode.dart';
+import 'package:movie_app/feature/detail_movie/presentation/widgets/auto_switch.dart';
 import 'package:movie_app/feature/home/presentation/widgets/polk_effect.dart';
 import 'package:shimmer/shimmer.dart';
+import 'package:toastification/toastification.dart';
 import 'package:video_player/video_player.dart';
 import 'package:movie_app/core/config/themes/app_color.dart';
 import 'package:movie_app/core/mini_player_manager.dart';
@@ -72,6 +80,7 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
   bool _isScrubbing = false;
   bool _isExpanded = false;
   Duration? _lastPosition;
+  final _drawerKey = GlobalKey<EpisodeDrawerState>();
   int _selectedServerIndex = 0;
   final ScrollController _scrollController = ScrollController();
   final ScrollController _scrollMovie = ScrollController();
@@ -88,6 +97,7 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
   double _dragDy = 0;
   double _miniDragDy = 0;
   double _miniDragT = 0.0;
+  final List<GlobalKey> _episodeKeys = [];
   bool _isMinifyAnimating = false;
   late final AnimationController _minifyCtrl;
   static const double _panelAmbientH = 26;
@@ -102,12 +112,32 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
   final WatchProgressStorage _watchProgressStorage = WatchProgressStorage();
   final WatchHistoryStorage _watchHistoryStorage = WatchHistoryStorage();
   final TextEditingController _searchController = TextEditingController();
+  final ScrollController _episodeScrollController = ScrollController();
+  final ScrollController _landscapeEpisodeScrollController = ScrollController();
   bool _isExpandInfor = false;
   bool _isInMiniMode = false;
+  bool _autoPlayTriggered = false;
+  VoidCallback? _vpPositionListener;
+  Orientation? _lastOrientation;
+  Timer? _autoToastTimer;
+  bool _showAutoToast = false;
+  String _autoToastText = '';
+  VoidCallback? _vpEndListener;
   bool _enteringMiniPlayer = false;
+  late final PlayerCubit _playerCubit;
   @override
   void initState() {
     super.initState();
+
+    MiniPlayerManager.shouldRestorePlayer.addListener(_onRestorePlayer);
+    _playerCubit = context.read<PlayerCubit>();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _playerCubit.updateCurrentEpisode(
+        widget.slug,
+        _currentEpisodeIndex,
+        _selectedServerIndex,
+      );
+    });
 
     final handoffController = _miniPlayerManager.handoffController;
     final handoffLaunch = _miniPlayerManager.handoffLaunch;
@@ -151,6 +181,8 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
         if (!handoffController.isPlaying) {
           handoffController.play();
         }
+
+        _attachVpListeners();
       }
     } else {
       if (MiniPlayerManager.isVisible.value) {
@@ -176,7 +208,9 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
       });
     });
 
-    // Cho phép auto-rotate trong player
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _scrollToCurrentEpisode(animated: false);
+    });
     SupportRotateScreen.allowAll();
   }
 
@@ -188,25 +222,33 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
     MiniPlayerManager.shouldRestorePlayer.removeListener(_onRestorePlayer);
     _hideControlsTimer?.cancel();
     _seekOverlayTimer?.cancel();
+    _removeVpListeners();
+    _autoToastTimer?.cancel();
+
+    final controllerOwnedByMini =
+        MiniPlayerManager.isVisible.value &&
+        (_miniPlayerManager.chewieController != null);
+
+    if (!controllerOwnedByMini) {
+      try {
+        _chewieController?.pause();
+      } catch (_) {}
+      try {
+        _chewieController?.dispose();
+      } catch (_) {}
+      try {
+        _videoPlayerController?.dispose();
+      } catch (_) {}
+    }
+
+    _chewieController = null;
+    _videoPlayerController = null;
+
     _arrowCtrl.dispose();
     _minifyCtrl.dispose();
     _panelCtrl.dispose();
     _searchController.dispose();
 
-    // Dispose controllers to stop background playback
-    try {
-      _chewieController?.pause();
-    } catch (_) {}
-    try {
-      _chewieController?.dispose();
-    } catch (_) {}
-    try {
-      _videoPlayerController?.dispose();
-    } catch (_) {}
-    _chewieController = null;
-    _videoPlayerController = null;
-
-    // Về lại portrait khi thoát player
     SupportRotateScreen.onlyPotrait();
     super.dispose();
   }
@@ -293,8 +335,10 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
           positionMs: position.inMilliseconds,
           durationMs: duration.inMilliseconds,
         );
-        
-        debugPrint('[WatchProgress] Saved: slug=${widget.slug}, position=${position.inSeconds}s, duration=${duration.inSeconds}s');
+
+        debugPrint(
+          '[WatchProgress] Saved: slug=${widget.slug}, position=${position.inSeconds}s, duration=${duration.inSeconds}s',
+        );
 
         // Save to WatchHistoryStorage (Hive)
         await _watchHistoryStorage.addToHistory(
@@ -303,8 +347,11 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
           originName: widget.movie.origin_name,
           posterUrl: widget.movie.poster_url,
           thumbUrl: widget.movie.thumb_url,
-          episodeCurrent: widget.episodes.isNotEmpty 
-              ? widget.episodes[_selectedServerIndex].server_data[_currentEpisodeIndex].name 
+          episodeCurrent: widget.episodes.isNotEmpty
+              ? widget
+                    .episodes[_selectedServerIndex]
+                    .server_data[_currentEpisodeIndex]
+                    .name
               : 'Full',
           quality: null,
           lang: widget.movie.lang,
@@ -316,8 +363,10 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
           categoryId: widget.movie.category?.first.id,
           categoryName: widget.movie.category?.first.name,
         );
-        
-        debugPrint('[WatchHistory] Saved to Hive: slug=${widget.slug}, name=${widget.movieName}, progress=${(position.inMilliseconds/duration.inMilliseconds*100).toStringAsFixed(1)}%');
+
+        debugPrint(
+          '[WatchHistory] Saved to Hive: slug=${widget.slug}, name=${widget.movieName}, progress=${(position.inMilliseconds / duration.inMilliseconds * 100).toStringAsFixed(1)}%',
+        );
       }
     }
   }
@@ -357,13 +406,20 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
 
     if (savedProgress != null) {
       final savedPosition = Duration(milliseconds: savedProgress.positionMs);
-      _videoPlayerController!.seekTo(savedPosition);
+      await _videoPlayerController!.seekTo(savedPosition);
+      if (mounted) {
+        setState(() {});
+      }
       debugPrint(
         'Restored progress: ${savedPosition.inSeconds}s / ${savedProgress.progressPercent * 100}%',
       );
     }
 
     _startSaveProgressTimer();
+
+    // Setup video listeners after player is initialized
+    _attachVpListeners();
+
     setState(() {});
   }
 
@@ -433,7 +489,25 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
 
     _lastPosition = null;
     debugPrint('_disposeAndInitializePlayer: END, cleared _lastPosition');
+
+    // Setup video listeners after new episode is loaded
+    _attachVpListeners();
+
     setState(() {});
+  }
+
+  void _showAutoPlayToast(bool enabled) {
+    _autoToastTimer?.cancel();
+
+    setState(() {
+      _autoToastText = enabled ? 'Đã bật tự động phát' : 'Đã tắt tự động phát';
+      _showAutoToast = true;
+    });
+
+    _autoToastTimer = Timer(const Duration(milliseconds: 1200), () {
+      if (!mounted) return;
+      setState(() => _showAutoToast = false);
+    });
   }
 
   void _playEpisode(int index, EpisodesModel episode) {
@@ -459,9 +533,129 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
       _currentEpisodeLink = link;
       _videoHeight = _minVideoHeight;
     });
-
+    _scrollToCurrentEpisode();
     _lastPosition = null; // <<< quan trọng: không carry qua tập mới
     _disposeAndInitializePlayer(link, restoreLastPosition: false);
+  }
+
+  void _removeVpListeners() {
+    final vp = _videoPlayerController;
+    if (vp == null) return;
+
+    if (_vpPositionListener != null) vp.removeListener(_vpPositionListener!);
+    if (_vpEndListener != null) vp.removeListener(_vpEndListener!);
+
+    _vpPositionListener = null;
+    _vpEndListener = null;
+  }
+
+  void _attachVpListeners() {
+    final vp = _videoPlayerController;
+    if (vp == null) return;
+
+    _removeVpListeners();
+
+    _vpPositionListener = () {
+      if (!mounted) return;
+      setState(() {});
+    };
+    vp.addListener(_vpPositionListener!);
+
+    _autoPlayTriggered = false;
+    _vpEndListener = () {
+      final value = vp.value;
+      if (value.isInitialized &&
+          !value.isPlaying &&
+          value.duration > Duration.zero &&
+          value.position >= value.duration - const Duration(seconds: 1) &&
+          !_autoPlayTriggered) {
+        final state = _playerCubit.state;
+        if (state is PlayerLoadedState &&
+            state.autoPlayNextEpisode &&
+            widget.movie.episode_current != 'Full') {
+          _autoPlayTriggered = true;
+          _playNextEpisode();
+        }
+      }
+      if (value.isPlaying) {
+        _autoPlayTriggered = false;
+      }
+    };
+    vp.addListener(_vpEndListener!);
+  }
+
+  void _playNextEpisode() {
+    final currentServer = widget.episodes[_selectedServerIndex];
+    final serverData = currentServer.server_data;
+
+    if (_currentEpisodeIndex < serverData.length - 1) {
+      _playEpisode(_currentEpisodeIndex + 1, currentServer);
+
+      _playerCubit.updateCurrentEpisode(
+        widget.slug,
+        _currentEpisodeIndex,
+        _selectedServerIndex,
+      );
+
+      // if (mounted) {
+      //   toastification.show(
+
+      //     context: context, // optional if you use ToastificationWrapper
+      //     title: Text(
+      //       'Đang chuyển sang tập \ ${_currentEpisodeIndex + 1}',
+      //       style: const TextStyle(color: Colors.black),
+      //     ),
+      //     autoCloseDuration: const Duration(seconds: 2),
+      //   );
+      //   // ScaffoldMessenger.of(context).showSnackBar(
+      //   //   SnackBar(
+      //   //     content: Text(
+      //   //       'Đang chuyển sang tập \ $_currentEpisodeIndex + 1}',
+      //   //       style: const TextStyle(color: Colors.black),
+      //   //     ),
+      //   //     backgroundColor: const Color(0xFFC77DFF),
+      //   //     duration: const Duration(seconds: 2),
+      //   //   ),
+      //   // );
+      // }
+    } else {
+      if (mounted) {
+        toastification.show(
+          context: context, // optional if you use ToastificationWrapper
+          title: Text(
+            'Đã hết tập phim',
+            style: const TextStyle(color: Colors.black),
+          ),
+          autoCloseDuration: const Duration(seconds: 5),
+        );
+      }
+    }
+  }
+
+  void _scrollToCurrentEpisode({bool animated = true}) {
+    // đợi layout xong
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+
+      // list hiện tại
+      final serverData = widget.episodes[_selectedServerIndex].server_data;
+      if (serverData.isEmpty) return;
+
+      final idx = _currentEpisodeIndex.clamp(0, serverData.length - 1);
+
+      // nếu key chưa sẵn thì thôi
+      if (_episodeKeys.length <= idx) return;
+
+      final ctx = _episodeKeys[idx].currentContext;
+      if (ctx == null) return;
+
+      Scrollable.ensureVisible(
+        ctx,
+        duration: animated ? const Duration(milliseconds: 350) : Duration.zero,
+        curve: Curves.easeInOutCubic,
+        alignment: 0.5, // 0.0=top, 0.5=center, 1.0=bottom
+      );
+    });
   }
 
   int _findEpisodeIndexByNumber(List<ServerData> list, int targetEp) {
@@ -550,7 +744,7 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
       _currentEpisodeIndex = safeEpisodeIndex;
       _currentEpisodeLink = link;
     });
-
+    _scrollToCurrentEpisode();
     _disposeAndInitializePlayer(
       link,
       restoreLastPosition: shouldRestorePosition,
@@ -598,6 +792,8 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
     final controller = _chewieController;
     if (controller == null) return;
 
+    _removeVpListeners();
+
     final launchData = MiniPlayerLaunchData(
       slug: widget.slug,
       movieName: widget.movieName,
@@ -621,7 +817,7 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
 
     SupportRotateScreen.onlyPotrait();
 
-    Navigator.pop(context);
+    context.pop();
   }
 
   void _seekTo(double position) {
@@ -635,11 +831,11 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
     controller.seekTo(newPosition);
   }
 
-  void _commitSeek() {
-    _resetHideControlsTimer();
-    if (_isScrubbing) {
-      setState(() => _isScrubbing = false);
-    }
+  void _ensureEpisodeKeys(int count) {
+    if (_episodeKeys.length == count) return;
+    _episodeKeys
+      ..clear()
+      ..addAll(List.generate(count, (_) => GlobalKey()));
   }
 
   void _handleYoutubeSeek(SeekDirection dir) {
@@ -748,13 +944,73 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
       backgroundColor: AppColor.bgApp,
       body: OrientationBuilder(
         builder: (context, orientation) {
-          if (orientation == Orientation.landscape) {
-            return _buildLandscapePlayer();
-          } else {
-            return _buildPortraitPlayer();
+          final rotated =
+              _lastOrientation != null && _lastOrientation != orientation;
+          _lastOrientation = orientation;
+
+          if (rotated) {
+            _scrollToCurrentEpisode(animated: false);
           }
+
+          return orientation == Orientation.landscape
+              ? _buildLandscapePlayer()
+              : _buildPortraitPlayer();
         },
       ),
+    );
+  }
+
+  Widget _buildAutoPlayToggleButton() {
+    return BlocBuilder<PlayerCubit, PlayerState>(
+      builder: (context, state) {
+        final autoPlay = state is PlayerLoadedState
+            ? state.autoPlayNextEpisode
+            : true;
+
+        return SizedBox(
+          width: 38, // chỉnh nhỏ theo ý
+          height: 30,
+          child: FittedBox(
+            fit: BoxFit.contain,
+            child: Switch(
+              padding: EdgeInsets.zero,
+              value: autoPlay,
+              onChanged: (v) {
+                HapticFeedback.lightImpact();
+                final newValue = !autoPlay;
+                _playerCubit.setAutoPlayNextEpisode(newValue);
+                _showAutoPlayToast(newValue);
+              },
+
+              // màu track
+              activeTrackColor: Colors.white24,
+              inactiveTrackColor: Colors.black54,
+
+              // màu thumb
+              activeColor: Colors.white,
+              inactiveThumbColor: Colors.white24,
+              trackOutlineColor: WidgetStatePropertyAll(Colors.transparent),
+              // // viền track (Material 3)
+              // trackOutlineColor: WidgetStateProperty.resolveWith((states) {
+              //   if (states.contains(WidgetState.selected)) {
+              //     return const Color(0xFFC77DFF);
+              //   }
+              //   return Colors.white24;
+              // }),
+
+              // icon nằm trong thumb (Flutter mới)
+              thumbIcon: WidgetStateProperty.resolveWith<Icon?>((states) {
+                final selected = states.contains(WidgetState.selected);
+                return Icon(
+                  selected ? Icons.play_arrow : Icons.pause,
+                  size: 13,
+                  color: selected ? Colors.black : Colors.white,
+                );
+              }),
+            ),
+          ),
+        );
+      },
     );
   }
 
@@ -837,29 +1093,6 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
                   ),
                 ),
 
-              if (_showControls)
-                Align(
-                  alignment: Alignment.topCenter,
-                  child: Container(
-                    height: 150,
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [
-                          AppColor.bgApp,
-                          AppColor.bgApp.withValues(alpha: .8),
-                          AppColor.bgApp.withValues(alpha: .6),
-                          AppColor.bgApp.withValues(alpha: .4),
-                          AppColor.bgApp.withValues(alpha: .2),
-                          AppColor.bgApp.withValues(alpha: .1),
-                          AppColor.bgApp.withValues(alpha: .05),
-                          Colors.transparent,
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
               if (_showControls && _chewieController != null)
                 _buildPlayPauseOverlay(),
               if (_showSeekOverlay && _seekDir != null) _buildSeekOverlay(50),
@@ -883,9 +1116,43 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
                               color: Colors.white,
                               size: 18,
                             ),
-                            onPressed: () => Navigator.pop(context),
+                            onPressed: () => context.pop(),
                           ),
+                          const Spacer(),
+                          if (widget.movie.episode_current != 'Full')
+                            _buildAutoPlayToggleButton(),
                         ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              Positioned(
+                top: 50,
+                child: IgnorePointer(
+                  child: Center(
+                    child: AnimatedOpacity(
+                      opacity: _showAutoToast ? 1 : 0,
+                      duration: const Duration(milliseconds: 250),
+                      child: AnimatedScale(
+                        scale: _showAutoToast ? 1.0 : 0.95,
+                        duration: const Duration(milliseconds: 250),
+                        child: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: Colors.black26,
+                            borderRadius: BorderRadius.circular(30),
+                          ),
+                          child: Text(
+                            _autoToastText,
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ),
                       ),
                     ),
                   ),
@@ -1193,6 +1460,8 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
 
   Widget _buidlListEpisodeForSeriesMovie() {
     final serverData = widget.episodes[_selectedServerIndex].server_data;
+    _ensureEpisodeKeys(serverData.length); //  BẮT BUỘC
+
     return Container(
       decoration: BoxDecoration(
         border: Border(
@@ -1200,6 +1469,7 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
         ),
       ),
       child: GridView.builder(
+        controller: _episodeScrollController,
         padding: EdgeInsets.only(
           left: 10,
           right: 10,
@@ -1210,10 +1480,12 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
           maxCrossAxisExtent: 120, // Một ô rộng tối đa 250px.
           mainAxisSpacing: 5,
           crossAxisSpacing: 5,
+          mainAxisExtent: 40,
           childAspectRatio: 16 / 9,
         ),
         itemCount: serverData.length,
         itemBuilder: (context, index) {
+          final key = _episodeKeys[index];
           final episode = serverData[index];
 
           // Kiểm tra đang phát: Đúng tập index VÀ đúng Server name
@@ -1222,74 +1494,79 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
           // bất kể bạn đang nhấn xem ở Server nào.
           final bool isActive = _currentEpisodeIndex == index;
           final currentServer = widget.episodes[_selectedServerIndex];
-          return InkWell(
-            onTap: () => {_playEpisode(index, currentServer)},
-            child: Container(
-              padding: const EdgeInsets.all(5),
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                color: const Color(0xff272A39),
-                borderRadius: BorderRadius.circular(5),
-                border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
-                gradient: isActive
-                    ? LinearGradient(
-                        colors: [
-                          Color(0xFFC77DFF), // Tím
-                          Color(0xFFFF9E9E), // Hồng cam (ở giữa)
-                          Color(0xFFFFD275),
-                        ], // Vàng],
-                        begin: Alignment.topRight,
-                        end: Alignment.bottomLeft,
-                      )
-                    : null,
-                boxShadow: isActive
-                    ? [
-                        BoxShadow(
-                          color: Color(0xFFC77DFF),
-                          blurRadius: 12,
-                          offset: Offset(0, 0),
-                          spreadRadius: -2,
+          return KeyedSubtree(
+            key: key,
+            child: InkWell(
+              onTap: () => {_playEpisode(index, currentServer)},
+              child: Container(
+                padding: const EdgeInsets.all(2),
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: const Color(0xff272A39),
+                  borderRadius: BorderRadius.circular(5),
+                  border: Border.all(
+                    color: Colors.white.withValues(alpha: 0.05),
+                  ),
+                  gradient: isActive
+                      ? LinearGradient(
+                          colors: [
+                            Color(0xFFC77DFF), // Tím
+                            Color(0xFFFF9E9E), // Hồng cam (ở giữa)
+                            Color(0xFFFFD275),
+                          ], // Vàng],
+                          begin: Alignment.topRight,
+                          end: Alignment.bottomLeft,
+                        )
+                      : null,
+                  boxShadow: isActive
+                      ? [
+                          BoxShadow(
+                            color: Color(0xFFC77DFF),
+                            blurRadius: 12,
+                            offset: Offset(0, 0),
+                            spreadRadius: -2,
+                          ),
+                        ]
+                      : null,
+                ),
+                child: Row(
+                  spacing: 3,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    if (isActive) ...[
+                      const SizedBox(width: 3),
+                      SizedBox(
+                        width: 13,
+                        height: 13,
+                        child: Lottie.asset(
+                          'assets/icons/now_playing.json',
+                          delegates: LottieDelegates(
+                            values: [
+                              ValueDelegate.color(const [
+                                '**',
+                              ], value: Colors.white),
+                            ],
+                          ),
                         ),
-                      ]
-                    : null,
-              ),
-              child: Row(
-                spacing: 3,
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  if (isActive) ...[
-                    const SizedBox(width: 3),
-                    SizedBox(
-                      width: 13,
-                      height: 13,
-                      child: Lottie.asset(
-                        'assets/icons/now_playing.json',
-                        delegates: LottieDelegates(
-                          values: [
-                            ValueDelegate.color(const [
-                              '**',
-                            ], value: Colors.white),
-                          ],
+                      ),
+                    ],
+                    Flexible(
+                      child: Text(
+                        episode.name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        softWrap: false,
+                        style: TextStyle(
+                          color: isActive ? Colors.white : Colors.white70,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12,
                         ),
+                        textAlign: TextAlign.center,
                       ),
                     ),
                   ],
-                  Flexible(
-                    child: Text(
-                      episode.name,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      softWrap: false,
-                      style: TextStyle(
-                        color: isActive ? Colors.white : Colors.white70,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 12,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                  ),
-                ],
+                ),
               ),
             ),
           );
@@ -2044,6 +2321,7 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
         width: MediaQuery.of(context).size.width * 0.5,
         backgroundColor: AppColor.bgApp,
         child: EpisodeDrawer(
+          key: _drawerKey,
           movie: widget.movie,
           movieName: widget.movieName,
           episodes: widget.episodes,
@@ -2093,29 +2371,7 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
                   size: 20,
                 ),
               ),
-            if (_showControls)
-              Align(
-                alignment: Alignment.topCenter,
-                child: Container(
-                  height: 50,
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [
-                        AppColor.bgApp.withValues(alpha: .8),
-                        AppColor.bgApp.withValues(alpha: .7),
-                        AppColor.bgApp.withValues(alpha: .6),
-                        AppColor.bgApp.withValues(alpha: .4),
-                        AppColor.bgApp.withValues(alpha: .2),
-                        AppColor.bgApp.withValues(alpha: .1),
-                        AppColor.bgApp.withValues(alpha: .05),
-                        Colors.transparent,
-                      ],
-                    ),
-                  ),
-                ),
-              ),
+
             if (_showControls && _chewieController != null)
               _buildPlayPauseOverlay(),
             Positioned(
@@ -2131,19 +2387,66 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
                     builder: (context) {
                       return Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 50),
-                        child: IconButton(
-                          icon: const Icon(
-                            Iconsax.menu,
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                            size: 18,
-                          ),
-                          onPressed: () => Scaffold.of(
-                            context,
-                          ).openEndDrawer(), //setting quality
+                        child: Row(
+                          children: [
+                            if (widget.movie.episode_current != 'Full')
+                              _buildAutoPlayToggleButton(),
+                            IconButton(
+                              icon: const Icon(
+                                Iconsax.menu,
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                size: 18,
+                              ),
+                              onPressed: () {
+                                Scaffold.of(context).openEndDrawer();
+
+                                Future.delayed(
+                                  const Duration(milliseconds: 250),
+                                  () {
+                                    _drawerKey.currentState
+                                        ?.scrollToCurrentEpisode(
+                                          animated: false,
+                                        );
+                                  },
+                                );
+                              },
+                            ),
+                          ],
                         ),
                       );
                     },
+                  ),
+                ),
+              ),
+            ),
+            Positioned(
+              top: 50,
+              child: IgnorePointer(
+                child: Center(
+                  child: AnimatedOpacity(
+                    opacity: _showAutoToast ? 1 : 0,
+                    duration: const Duration(milliseconds: 250),
+                    child: AnimatedScale(
+                      scale: _showAutoToast ? 1.0 : 0.95,
+                      duration: const Duration(milliseconds: 250),
+                      child: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Colors.black26,
+                          borderRadius: BorderRadius.circular(30),
+                        ),
+                        child: Text(
+                          _autoToastText,
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ),
+                    ),
                   ),
                 ),
               ),

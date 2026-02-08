@@ -7,7 +7,7 @@ import 'package:movie_app/core/config/utils/cover_map.dart';
 import 'package:movie_app/feature/detail_movie/data/model/detail_movie_model.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
 
-class EpisodeDrawer extends StatelessWidget {
+class EpisodeDrawer extends StatefulWidget {
   final MovieModel movie;
   final String movieName;
   final List<EpisodesModel> episodes;
@@ -18,8 +18,10 @@ class EpisodeDrawer extends StatelessWidget {
   final Function(int, EpisodesModel) onPlayEpisode;
   final VoidCallback onSubmitEpisode;
   final Function(int) onSwitchServer;
+  ScrollController? scrollController;
+  final VoidCallback? onDrawerOpened;
 
-  const EpisodeDrawer({
+  EpisodeDrawer({
     super.key,
     required this.movie,
     required this.movieName,
@@ -31,11 +33,64 @@ class EpisodeDrawer extends StatelessWidget {
     required this.onPlayEpisode,
     required this.onSubmitEpisode,
     required this.onSwitchServer,
+    this.scrollController, this.onDrawerOpened,
   });
 
   @override
+  State<EpisodeDrawer> createState() => EpisodeDrawerState();
+}
+
+class EpisodeDrawerState extends State<EpisodeDrawer> {
+  final List<GlobalKey> _episodeKeys = [];
+  late final ScrollController _gridCtrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _gridCtrl = widget.scrollController ?? ScrollController();
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _scrollToCurrentEpisode(animated: false);
+    });
+  }
+
+  @override
+  void dispose() {
+    if (widget.scrollController == null) _gridCtrl.dispose();
+    super.dispose();
+  }
+
+  void _ensureEpisodeKeys(int count) {
+    if (_episodeKeys.length == count) return;
+    _episodeKeys
+      ..clear()
+      ..addAll(List.generate(count, (_) => GlobalKey()));
+  }
+  void scrollToCurrentEpisode({bool animated = true}) => _scrollToCurrentEpisode(animated: animated);
+  void _scrollToCurrentEpisode({bool animated = true}) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final serverData =
+          widget.episodes[widget.selectedServerIndex].server_data;
+      if (serverData.isEmpty) return;
+
+      _ensureEpisodeKeys(serverData.length); // đảm bảo đủ keys
+
+      final idx = widget.currentEpisodeIndex.clamp(0, serverData.length - 1);
+      final ctx = _episodeKeys[idx].currentContext;
+      if (ctx == null) return;
+
+      Scrollable.ensureVisible(
+        ctx,
+        duration: animated ? const Duration(milliseconds: 350) : Duration.zero,
+        curve: Curves.easeInOutCubic,
+        alignment: 0.5,
+      );
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final isSeriesMovie = movie.episode_current != 'Full';
+    final isSeriesMovie = widget.movie.episode_current != 'Full';
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -71,7 +126,7 @@ class EpisodeDrawer extends StatelessWidget {
               Expanded(
                 flex: 1,
                 child: Text(
-                  'Tập 1 - ${episodes[selectedServerIndex].server_data.length}',
+                  'Tập 1 - ${widget.episodes[widget.selectedServerIndex].server_data.length}',
                   style: const TextStyle(
                     color: Color(0xff707070),
                     fontSize: 12,
@@ -90,8 +145,8 @@ class EpisodeDrawer extends StatelessWidget {
                 child: SizedBox(
                   height: 36,
                   child: TextField(
-                    onSubmitted: (_) => onSubmitEpisode(),
-                    controller: searchController,
+                    onSubmitted: (_) => widget.onSubmitEpisode(),
+                    controller: widget.searchController,
                     textInputAction: TextInputAction.search,
                     textAlignVertical: TextAlignVertical.center,
                     style: const TextStyle(color: Colors.white, fontSize: 12),
@@ -122,7 +177,7 @@ class EpisodeDrawer extends StatelessWidget {
                           color: Colors.white,
                           size: 16,
                         ),
-                        onPressed: onSubmitEpisode,
+                        onPressed: widget.onSubmitEpisode,
                       ),
                       contentPadding: const EdgeInsets.symmetric(vertical: 0),
                     ),
@@ -137,8 +192,8 @@ class EpisodeDrawer extends StatelessWidget {
   }
 
   Widget _buildListEpisodeForSeriesMovie() {
-    final serverData = episodes[selectedServerIndex].server_data;
-
+    final serverData = widget.episodes[widget.selectedServerIndex].server_data;
+    _ensureEpisodeKeys(serverData.length); //  BẮT BUỘC
     return Container(
       decoration: BoxDecoration(
         border: Border(
@@ -147,84 +202,90 @@ class EpisodeDrawer extends StatelessWidget {
       ),
       child: SafeArea(
         child: GridView.builder(
+          controller: widget.scrollController,
           padding: const EdgeInsets.all(12),
           gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
             maxCrossAxisExtent: 100,
             mainAxisSpacing: 8,
+            mainAxisExtent: 40,
             crossAxisSpacing: 8,
             childAspectRatio: 14 / 9,
           ),
           itemCount: serverData.length,
           itemBuilder: (context, index) {
+            final key = _episodeKeys[index];
             final episode = serverData[index];
-            final bool isActive = currentEpisodeIndex == index;
-            final currentServer = episodes[selectedServerIndex];
+            final bool isActive = widget.currentEpisodeIndex == index;
+            final currentServer = widget.episodes[widget.selectedServerIndex];
 
-            return Material(
-              color: Colors.transparent,
-              child: InkWell(
-                onTap: () => onPlayEpisode(index, currentServer),
-                borderRadius: BorderRadius.circular(6),
-                child: Container(
-                  padding: const EdgeInsets.all(6),
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    color: const Color(0xff272A39),
-                    borderRadius: BorderRadius.circular(6),
-                    border: Border.all(
-                      color: Colors.white.withValues(alpha: 0.05),
-                    ),
-                    gradient: isActive
-                        ? const LinearGradient(
-                            colors: [
-                              Color(0xFFC77DFF),
-                              Color(0xFFFF9E9E),
-                              Color(0xFFFFD275),
-                            ],
-                            begin: Alignment.topRight,
-                            end: Alignment.bottomLeft,
-                          )
-                        : null,
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      if (isActive) ...[
-                        const SizedBox(width: 3),
-                        SizedBox(
-                          width: 13,
-                          height: 13,
-                          child: Lottie.asset(
-                            'assets/icons/now_playing.json',
-                            delegates: LottieDelegates(
-                              values: [
-                                ValueDelegate.color(const [
-                                  '**',
-                                ], value: Colors.white),
+            return KeyedSubtree(
+              key: key,
+              child: Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: () => widget.onPlayEpisode(index, currentServer),
+                  borderRadius: BorderRadius.circular(6),
+                  child: Container(
+                    padding: const EdgeInsets.all(6),
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: const Color(0xff272A39),
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(
+                        color: Colors.white.withValues(alpha: 0.05),
+                      ),
+                      gradient: isActive
+                          ? const LinearGradient(
+                              colors: [
+                                Color(0xFFC77DFF),
+                                Color(0xFFFF9E9E),
+                                Color(0xFFFFD275),
                               ],
+                              begin: Alignment.topRight,
+                              end: Alignment.bottomLeft,
+                            )
+                          : null,
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        if (isActive) ...[
+                          const SizedBox(width: 3),
+                          SizedBox(
+                            width: 13,
+                            height: 13,
+                            child: Lottie.asset(
+                              'assets/icons/now_playing.json',
+                              delegates: LottieDelegates(
+                                values: [
+                                  ValueDelegate.color(const [
+                                    '**',
+                                  ], value: Colors.white),
+                                ],
+                              ),
                             ),
+                          ),
+                        ],
+                        const SizedBox(width: 4),
+                        Flexible(
+                          child: Text(
+                            episode.name,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              color: isActive
+                                  ? Colors.white
+                                  : const Color(0xff707070),
+                              fontWeight: FontWeight.bold,
+                              fontSize: 11,
+                            ),
+                            textAlign: TextAlign.center,
                           ),
                         ),
                       ],
-                      const SizedBox(width: 4),
-                      Flexible(
-                        child: Text(
-                          episode.name,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            color: isActive
-                                ? Colors.white
-                                : const Color(0xff707070),
-                            fontWeight: FontWeight.bold,
-                            fontSize: 11,
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                      ),
-                    ],
+                    ),
                   ),
                 ),
               ),
@@ -252,17 +313,17 @@ class EpisodeDrawer extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         separatorBuilder: (context, index) => const SizedBox(width: 8),
         scrollDirection: Axis.horizontal,
-        itemCount: episodes.length,
+        itemCount: widget.episodes.length,
         itemBuilder: (context, index) {
           final serverInfo = CoverMap.getConfigFromServerName(
-            episodes[index].server_name,
+            widget.episodes[index].server_name,
           );
-          final isSelected = selectedServerIndex == index;
-    
+          final isSelected = widget.selectedServerIndex == index;
+
           return Material(
             color: Colors.transparent,
             child: InkWell(
-              onTap: () => onSwitchServer(index),
+              onTap: () => widget.onSwitchServer(index),
               borderRadius: BorderRadius.circular(8),
               child: Container(
                 padding: const EdgeInsets.symmetric(
@@ -296,6 +357,7 @@ class EpisodeDrawer extends StatelessWidget {
   Widget _buildEpisodeListForSingle() {
     return SafeArea(
       child: GridView.builder(
+        controller: _gridCtrl,
         padding: const EdgeInsets.all(10),
         gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
           maxCrossAxisExtent: 250,
@@ -303,20 +365,21 @@ class EpisodeDrawer extends StatelessWidget {
           crossAxisSpacing: 10,
           childAspectRatio: 16 / 9,
         ),
-        itemCount: episodes.length,
+        itemCount: widget.episodes.length,
         itemBuilder: (context, index) {
           final serverName = CoverMap.getConfigFromServerName(
-            episodes[index].server_name,
+            widget.episodes[index].server_name,
           );
-          final isPlaying = selectedServerIndex == index;
-          final isCurrentServer = currentServer == episodes[index].server_name;
+          final isPlaying = widget.selectedServerIndex == index;
+          final isCurrentServer =
+              widget.currentServer == widget.episodes[index].server_name;
 
           return Material(
             color: Colors.transparent,
             elevation: 1,
             child: InkWell(
               borderRadius: BorderRadius.circular(10),
-              onTap: () => onSwitchServer(index),
+              onTap: () => widget.onSwitchServer(index),
               child: Ink(
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(10),
@@ -330,7 +393,9 @@ class EpisodeDrawer extends StatelessWidget {
                           right: Radius.circular(10),
                         ),
                         child: FastCachedImage(
-                          url: AppUrl.convertImageDirect(movie.poster_url),
+                          url: AppUrl.convertImageDirect(
+                            widget.movie.poster_url,
+                          ),
                           fit: BoxFit.cover,
                           loadingBuilder: (context, loadingProgress) {
                             return _buildSkeletonForposter();
@@ -385,7 +450,7 @@ class EpisodeDrawer extends StatelessWidget {
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              movieName,
+                              widget.movieName,
                               maxLines: 2,
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(

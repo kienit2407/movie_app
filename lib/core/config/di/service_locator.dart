@@ -1,4 +1,5 @@
 import 'package:get_it/get_it.dart';
+import 'package:movie_app/feature/detail_movie/presentation/bloc/player_cubit.dart';
 import 'package:movie_app/core/config/network/dio_client.dart';
 import 'package:movie_app/feature/auth/data/repositoryImpl/auth_repository_Impl.dart';
 import 'package:movie_app/feature/auth/data/sources/auth_supabase_service.dart';
@@ -6,10 +7,10 @@ import 'package:movie_app/feature/auth/domain/repositories/auth_repository.dart'
 import 'package:movie_app/feature/auth/domain/usecases/confirm_with_token.dart';
 import 'package:movie_app/feature/auth/domain/usecases/req_reset_password.dart';
 import 'package:movie_app/feature/auth/domain/usecases/sigin_with_facebook.dart';
-import 'package:movie_app/feature/auth/domain/usecases/sigin_with_google.dart';
+import 'package:movie_app/feature/auth/domain/usecases/sign_up.dart';
 import 'package:movie_app/feature/auth/domain/usecases/sign_in.dart';
 import 'package:movie_app/feature/auth/domain/usecases/sign_out.dart';
-import 'package:movie_app/feature/auth/domain/usecases/sign_up.dart';
+import 'package:movie_app/feature/auth/domain/usecases/sigin_with_google.dart';
 import 'package:movie_app/feature/home/data/repository/movie_repository_impl.dart';
 import 'package:movie_app/feature/home/data/source/movie_remote_datasource.dart';
 import 'package:movie_app/feature/home/domain/repository/movie_repository.dart';
@@ -106,5 +107,8 @@ Future<void> initializeGetit() async {
   );
   sl.registerFactory<SearchCubit>(
     () => SearchCubit(searchUseCase: sl<SearchMoviesUseCase>()),
+  );
+  sl.registerLazySingleton<PlayerCubit>(
+    () => PlayerCubit(),
   );
 }

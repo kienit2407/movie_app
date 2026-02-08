@@ -1,9 +1,6 @@
 import 'package:movie_app/feature/detail_movie/data/model/detail_movie_model.dart';
 
 class MoviePlayerArgs {
-  // final String slug;
-
-  // nếu đi từ Detail (đã có đủ)
   final String slug;
   final String movieName;
   final String? thumbnailUrl;
@@ -12,10 +9,10 @@ class MoviePlayerArgs {
   final String? initialEpisodeLink;
   final int initialEpisodeIndex;
   final String initialServer;
+  final int initialServerIndex;
 
-  // nếu đi từ Home (chỉ có ít)
-  final int? initialEpisodeNo; // vd 23
-  final String? initialEpisodeSlug; // vd tap-23
+  final int? initialEpisodeNo;
+  final String? initialEpisodeSlug;
   final String? initialServerName;
 
   const MoviePlayerArgs(
@@ -27,12 +24,12 @@ class MoviePlayerArgs {
     this.movieName,
     this.episodes,
     this.movie, {
-
+    this.initialServerIndex = 0,
     this.initialEpisodeNo,
     this.initialEpisodeSlug,
     this.initialServerName,
   });
 
   bool get hasFullData =>
-      movie != null && episodes != null && episodes!.isNotEmpty;
+      movie != null && episodes.isNotEmpty;
 }

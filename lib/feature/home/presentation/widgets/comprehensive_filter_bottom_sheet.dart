@@ -50,8 +50,12 @@ class _ComprehensiveFilterBottomSheetState
   String? selectedCountry;
   String? selectedYear;
   final ScrollController _scrollController = ScrollController();
+  final ScrollController _yearScrollController = ScrollController();
+  final ScrollController _languageScrollController = ScrollController();
+  final ScrollController _sortFieldScrollController = ScrollController();
+  final ScrollController _genreScrollController = ScrollController();
+  final ScrollController _countryScrollController = ScrollController();
 
-  // expansions
   bool expandCountry = false;
   bool expandYear = false;
   bool expandLanguage = false;
@@ -77,6 +81,11 @@ class _ComprehensiveFilterBottomSheetState
   @override
   void dispose() {
     _scrollController.dispose();
+    _yearScrollController.dispose();
+    _languageScrollController.dispose();
+    _sortFieldScrollController.dispose();
+    _genreScrollController.dispose();
+    _countryScrollController.dispose();
     super.dispose();
   }
 
@@ -418,13 +427,6 @@ class _ComprehensiveFilterBottomSheetState
     );
   }
 
-  // COMMENT: Tại sao sai trước đây:
-  // 1. Toggle handle được đặt trực tiếp trong Column với crossAxisAlignment: CrossAxisAlignment.start
-  // 2. Điều này khiến toggle handle nằm bên trái thay vì nằm ở giữa ngang
-  // 3. Column có crossAxisAlignment: start sẽ kéo tất cả con về bên trái
-  // 4. Đã sửa: Bọc _buildToggle() trong Align(alignment: Alignment.topCenter)
-  //    để toggle handle nằm ở giữa ngang mà không thay đổi layout của Column
-
   Widget _buildTypeFilter() {
     return SizedBox(
       width: double.infinity,
@@ -481,43 +483,49 @@ class _ComprehensiveFilterBottomSheetState
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 10),
       height: expandYear ? MediaQuery.of(context).size.height * .25 : 0,
-      child: SingleChildScrollView(
-        child: Wrap(
-          spacing: 5,
-          runSpacing: 5,
-          children: years.map((year) {
-            final bool isSelected = selectedYear == year;
+      child: Scrollbar(
+        thickness: 4,
+        thumbVisibility: true,
+        controller: _yearScrollController,
+        child: SingleChildScrollView(
+          controller: _yearScrollController,
+          child: Wrap(
+            spacing: 5,
+            runSpacing: 5,
+            children: years.map((year) {
+              final bool isSelected = selectedYear == year;
 
-            return ChoiceChip(
-              showCheckmark: false,
-              side: BorderSide(
-                color: isSelected
-                    ? const Color(0xffF1D775)
-                    : const Color(0xff5E6070),
-              ),
-              backgroundColor: const Color(0xff2F3345),
-              selectedColor: const Color(0xff2F3345),
-              label: Text(
-                year,
-                style: TextStyle(
-                  color: isSelected ? const Color(0xffF1D775) : Colors.white,
-                  fontSize: 10,
+              return ChoiceChip(
+                showCheckmark: false,
+                side: BorderSide(
+                  color: isSelected
+                      ? const Color(0xffF1D775)
+                      : const Color(0xff5E6070),
                 ),
-              ),
-              labelPadding: const EdgeInsets.symmetric(horizontal: 2),
-              pressElevation: 2.0,
-              visualDensity: VisualDensity.compact,
-              selected: isSelected,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(20),
-              ),
-              onSelected: (value) {
-                setState(() {
-                  selectedYear = isSelected ? null : year;
-                });
-              },
-            );
-          }).toList(),
+                backgroundColor: const Color(0xff2F3345),
+                selectedColor: const Color(0xff2F3345),
+                label: Text(
+                  year,
+                  style: TextStyle(
+                    color: isSelected ? const Color(0xffF1D775) : Colors.white,
+                    fontSize: 10,
+                  ),
+                ),
+                labelPadding: const EdgeInsets.symmetric(horizontal: 2),
+                pressElevation: 2.0,
+                visualDensity: VisualDensity.compact,
+                selected: isSelected,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                onSelected: (value) {
+                  setState(() {
+                    selectedYear = isSelected ? null : year;
+                  });
+                },
+              );
+            }).toList(),
+          ),
         ),
       ),
     );
@@ -530,44 +538,50 @@ class _ComprehensiveFilterBottomSheetState
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 10),
       height: expandLanguage ? 50 : 0,
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 10),
-        child: Wrap(
-          spacing: 10,
-          alignment: WrapAlignment.start,
-          children: List.generate(SortMap.sortLangMap.length, (index) {
-            final slug = SortMap.sortLangMap[index].keys.single;
-            final bool isSelected = selectedLanguage == slug;
-            return ChoiceChip(
-              showCheckmark: false,
-              side: BorderSide(
-                color: isSelected
-                    ? const Color(0xffF1D775)
-                    : const Color(0xff5E6070),
-              ),
-              backgroundColor: const Color(0xff2F3345),
-              selectedColor: const Color(0xff2F3345),
-              label: Text(
-                SortMap.sortLangMap[index].values.single,
-                style: TextStyle(
-                  color: isSelected ? const Color(0xffF1D775) : Colors.white,
-                  fontSize: 10,
+      child: Scrollbar(
+        thickness: 4,
+        thumbVisibility: true,
+        controller: _languageScrollController,
+        child: SingleChildScrollView(
+          controller: _languageScrollController,
+          padding: const EdgeInsets.symmetric(horizontal: 10),
+          child: Wrap(
+            spacing: 10,
+            alignment: WrapAlignment.start,
+            children: List.generate(SortMap.sortLangMap.length, (index) {
+              final slug = SortMap.sortLangMap[index].keys.single;
+              final bool isSelected = selectedLanguage == slug;
+              return ChoiceChip(
+                showCheckmark: false,
+                side: BorderSide(
+                  color: isSelected
+                      ? const Color(0xffF1D775)
+                      : const Color(0xff5E6070),
                 ),
-              ),
-              labelPadding: const EdgeInsets.symmetric(horizontal: 2),
-              pressElevation: 2.0,
-              visualDensity: VisualDensity.comfortable,
-              selected: true,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(20),
-              ),
-              onSelected: (value) {
-                setState(() {
-                  selectedLanguage = isSelected ? null : slug;
-                });
-              },
-            );
-          }),
+                backgroundColor: const Color(0xff2F3345),
+                selectedColor: const Color(0xff2F3345),
+                label: Text(
+                  SortMap.sortLangMap[index].values.single,
+                  style: TextStyle(
+                    color: isSelected ? const Color(0xffF1D775) : Colors.white,
+                    fontSize: 10,
+                  ),
+                ),
+                labelPadding: const EdgeInsets.symmetric(horizontal: 2),
+                pressElevation: 2.0,
+                visualDensity: VisualDensity.comfortable,
+                selected: true,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                onSelected: (value) {
+                  setState(() {
+                    selectedLanguage = isSelected ? null : slug;
+                  });
+                },
+              );
+            }),
+          ),
         ),
       ),
     );
@@ -580,45 +594,51 @@ class _ComprehensiveFilterBottomSheetState
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 10),
       height: expandSort ? 50 : 0,
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 10),
-        child: Wrap(
-          spacing: 10,
-          runSpacing: 10,
-          alignment: WrapAlignment.start,
-          children: List.generate(SortMap.sortFieldMap.length, (index) {
-            final slug = SortMap.sortFieldMap[index].keys.single;
-            final bool isSelected = selectedSortField == slug;
-            return ChoiceChip(
-              showCheckmark: false,
-              side: BorderSide(
-                color: isSelected
-                    ? const Color(0xffF1D775)
-                    : const Color(0xff5E6070),
-              ),
-              backgroundColor: const Color(0xff2F3345),
-              selectedColor: const Color(0xff2F3345),
-              label: Text(
-                SortMap.sortFieldMap[index].values.single,
-                style: TextStyle(
-                  color: isSelected ? const Color(0xffF1D775) : Colors.white,
-                  fontSize: 10,
+      child: Scrollbar(
+        thickness: 4,
+        thumbVisibility: true,
+        controller: _sortFieldScrollController,
+        child: SingleChildScrollView(
+          controller: _sortFieldScrollController,
+          padding: const EdgeInsets.symmetric(horizontal: 10),
+          child: Wrap(
+            spacing: 10,
+            runSpacing: 10,
+            alignment: WrapAlignment.start,
+            children: List.generate(SortMap.sortFieldMap.length, (index) {
+              final slug = SortMap.sortFieldMap[index].keys.single;
+              final bool isSelected = selectedSortField == slug;
+              return ChoiceChip(
+                showCheckmark: false,
+                side: BorderSide(
+                  color: isSelected
+                      ? const Color(0xffF1D775)
+                      : const Color(0xff5E6070),
                 ),
-              ),
-              labelPadding: const EdgeInsets.symmetric(horizontal: 2),
-              pressElevation: 2.0,
-              visualDensity: VisualDensity.comfortable,
-              selected: true,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(20),
-              ),
-              onSelected: (value) {
-                setState(() {
-                  selectedSortField = isSelected ? null : slug;
-                });
-              },
-            );
-          }),
+                backgroundColor: const Color(0xff2F3345),
+                selectedColor: const Color(0xff2F3345),
+                label: Text(
+                  SortMap.sortFieldMap[index].values.single,
+                  style: TextStyle(
+                    color: isSelected ? const Color(0xffF1D775) : Colors.white,
+                    fontSize: 10,
+                  ),
+                ),
+                labelPadding: const EdgeInsets.symmetric(horizontal: 2),
+                pressElevation: 2.0,
+                visualDensity: VisualDensity.comfortable,
+                selected: true,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                onSelected: (value) {
+                  setState(() {
+                    selectedSortField = isSelected ? null : slug;
+                  });
+                },
+              );
+            }),
+          ),
         ),
       ),
     );
@@ -647,43 +667,49 @@ class _ComprehensiveFilterBottomSheetState
   }
 
   Widget _buildGenreList(GenreMovieSuccess state) {
-    return SingleChildScrollView(
-      child: Wrap(
-        spacing: 8,
-        alignment: WrapAlignment.start,
-        children: List.generate(state.genreMovie.length, (index) {
-          final slug = state.genreMovie[index].slug;
-          final bool isSelected = selectedGenre == slug;
-          return ChoiceChip(
-            showCheckmark: false,
-            side: BorderSide(
-              color: isSelected
-                  ? const Color(0xffF1D775)
-                  : const Color(0xff5E6070),
-            ),
-            backgroundColor: const Color(0xff2F3345),
-            selectedColor: const Color(0xff2F3345),
-            label: Text(
-              state.genreMovie[index].name,
-              style: TextStyle(
-                color: isSelected ? const Color(0xffF1D775) : Colors.white,
-                fontSize: 10,
+    return Scrollbar(
+      thickness: 4,
+      thumbVisibility: true,
+      controller: _genreScrollController,
+      child: SingleChildScrollView(
+        controller: _genreScrollController,
+        child: Wrap(
+          spacing: 8,
+          alignment: WrapAlignment.start,
+          children: List.generate(state.genreMovie.length, (index) {
+            final slug = state.genreMovie[index].slug;
+            final bool isSelected = selectedGenre == slug;
+            return ChoiceChip(
+              showCheckmark: false,
+              side: BorderSide(
+                color: isSelected
+                    ? const Color(0xffF1D775)
+                    : const Color(0xff5E6070),
               ),
-            ),
-            labelPadding: const EdgeInsets.symmetric(horizontal: 2),
-            pressElevation: 2.0,
-            visualDensity: VisualDensity.comfortable,
-            selected: true,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(20),
-            ),
-            onSelected: (value) {
-              setState(() {
-                selectedGenre = isSelected ? null : slug;
-              });
-            },
-          );
-        }),
+              backgroundColor: const Color(0xff2F3345),
+              selectedColor: const Color(0xff2F3345),
+              label: Text(
+                state.genreMovie[index].name,
+                style: TextStyle(
+                  color: isSelected ? const Color(0xffF1D775) : Colors.white,
+                  fontSize: 10,
+                ),
+              ),
+              labelPadding: const EdgeInsets.symmetric(horizontal: 2),
+              pressElevation: 2.0,
+              visualDensity: VisualDensity.comfortable,
+              selected: true,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
+              onSelected: (value) {
+                setState(() {
+                  selectedGenre = isSelected ? null : slug;
+                });
+              },
+            );
+          }),
+        ),
       ),
     );
   }
@@ -716,43 +742,49 @@ class _ComprehensiveFilterBottomSheetState
   }
 
   Widget _buildCountryItem(CountryMovieSuccess state) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(horizontal: 10),
-      child: Wrap(
-        spacing: 5,
-        children: List.generate(state.countryMovie.length, (index) {
-          final slug = state.countryMovie[index].slug;
-          final bool isSelected = selectedCountry == slug;
-          return ChoiceChip(
-            showCheckmark: false,
-            side: BorderSide(
-              color: isSelected
-                  ? const Color(0xffF1D775)
-                  : const Color(0xff5E6070),
-            ),
-            backgroundColor: const Color(0xff2F3345),
-            selectedColor: const Color(0xff2F3345),
-            label: Text(
-              state.countryMovie[index].name,
-              style: TextStyle(
-                color: isSelected ? const Color(0xffF1D775) : Colors.white,
-                fontSize: 10,
+    return Scrollbar(
+      thickness: 4,
+      thumbVisibility: true,
+      controller: _countryScrollController,
+      child: SingleChildScrollView(
+        controller: _countryScrollController,
+        padding: const EdgeInsets.symmetric(horizontal: 10),
+        child: Wrap(
+          spacing: 5,
+          children: List.generate(state.countryMovie.length, (index) {
+            final slug = state.countryMovie[index].slug;
+            final bool isSelected = selectedCountry == slug;
+            return ChoiceChip(
+              showCheckmark: false,
+              side: BorderSide(
+                color: isSelected
+                    ? const Color(0xffF1D775)
+                    : const Color(0xff5E6070),
               ),
-            ),
-            labelPadding: const EdgeInsets.symmetric(horizontal: 2),
-            pressElevation: 2.0,
-            visualDensity: VisualDensity.comfortable,
-            selected: true,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(20),
-            ),
-            onSelected: (value) {
-              setState(() {
-                selectedCountry = isSelected ? null : slug;
-              });
-            },
-          );
-        }),
+              backgroundColor: const Color(0xff2F3345),
+              selectedColor: const Color(0xff2F3345),
+              label: Text(
+                state.countryMovie[index].name,
+                style: TextStyle(
+                  color: isSelected ? const Color(0xffF1D775) : Colors.white,
+                  fontSize: 10,
+                ),
+              ),
+              labelPadding: const EdgeInsets.symmetric(horizontal: 2),
+              pressElevation: 2.0,
+              visualDensity: VisualDensity.comfortable,
+              selected: true,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
+              onSelected: (value) {
+                setState(() {
+                  selectedCountry = isSelected ? null : slug;
+                });
+              },
+            );
+          }),
+        ),
       ),
     );
   }

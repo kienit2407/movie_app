@@ -120,6 +120,15 @@ class MovieRemoteDatasourceImpl implements MovieRemoteDatasource {
       if (filterReq.sortLang != null) {
         queryParams['sort_lang'] = filterReq.sortLang;
       }
+      if (filterReq.country != null) {
+        queryParams['country'] = filterReq.country;
+      }
+      if (filterReq.category != null) {
+        queryParams['category'] = filterReq.category;
+      }
+      if (filterReq.year != null) {
+        queryParams['year'] = filterReq.year;
+      }
 
       final response = await dioClient.get(
         path: path,

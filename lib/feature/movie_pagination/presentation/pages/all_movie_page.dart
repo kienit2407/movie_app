@@ -79,7 +79,6 @@ class _AllMoviePageState extends State<AllMoviePage> {
       _fetchMovies(isLoadMore: true);
     }
 
-    // Check if large title is scrolled out of view
     _checkLargeTitleVisibility();
   }
 
@@ -92,11 +91,9 @@ class _AllMoviePageState extends State<AllMoviePage> {
     final Offset position = renderBox.localToGlobal(Offset.zero);
     final double largeTitleBottom = position.dy + renderBox.size.height;
 
-    // AppBar height (status bar + toolbar)
     final double appBarHeight =
         MediaQuery.of(context).padding.top + kToolbarHeight;
 
-    // Show small title when large title scrolls behind the app bar
     final bool shouldShowSmall = largeTitleBottom < appBarHeight + 10;
 
     if (shouldShowSmall != _showSmallTitle) {
@@ -127,7 +124,6 @@ class _AllMoviePageState extends State<AllMoviePage> {
     return Scaffold(
       body: Stack(
         children: [
-          // Background gradient
           Container(
             width: double.infinity,
             height: double.infinity,
@@ -155,12 +151,11 @@ class _AllMoviePageState extends State<AllMoviePage> {
           cacheExtent: 1500.0,
           controller: _scrollController,
           slivers: [
-            // iOS-style AppBar - only shows small title when scrolled
             SliverAppBar(
               pinned: true,
               backgroundColor: Colors.transparent,
               elevation: 0,
-              scrolledUnderElevation: 0, // Fix lỗi ám đen khi cuộn
+              scrolledUnderElevation: 0,
 
               systemOverlayStyle: SystemUiOverlayStyle.light,
               toolbarHeight: kToolbarHeight,
@@ -171,7 +166,6 @@ class _AllMoviePageState extends State<AllMoviePage> {
                 ),
                 onPressed: () => AppNavigator.pop(context),
               ),
-              // Blur background when scrolled
               flexibleSpace: ClipRect(
                 child: BackdropFilter(
                   filter: ImageFilter.blur(
@@ -191,7 +185,6 @@ class _AllMoviePageState extends State<AllMoviePage> {
                   ),
                 ),
               ),
-              // Small title - only visible when large title is scrolled away
               title: AnimatedOpacity(
                 duration: const Duration(milliseconds: 200),
                 opacity: _showSmallTitle ? 1.0 : 0.0,
@@ -214,7 +207,6 @@ class _AllMoviePageState extends State<AllMoviePage> {
               centerTitle: true,
             ),
 
-            // Large Title - scrolls with content (iOS Settings style)
             SliverToBoxAdapter(
               child: Padding(
                 key: _largeTitleKey,
@@ -228,14 +220,12 @@ class _AllMoviePageState extends State<AllMoviePage> {
                   builder: (context, state) {
                     if (state is FetchFillterLoading) {
                       return Align(
-                        // widget giúp k bị ép size từ parent
                         alignment: Alignment.centerLeft,
                         child: Shimmer.fromColors(
                           baseColor: Color(0xff272A39).withOpacity(.2),
                           highlightColor: Color(0xff191A24).withOpacity(.2),
                           child: Container(
-                            width:
-                                150, //để giữ đúng kích thước của title k bị ép sai  của sliverBoxAdapter
+                            width: 150,
                             height: 34,
                             decoration: BoxDecoration(
                               gradient: LinearGradient(
@@ -269,7 +259,6 @@ class _AllMoviePageState extends State<AllMoviePage> {
                           fontSize: 34,
                           fontWeight: FontWeight.bold,
                           fontFamily: 'Inter',
-                          // color: Colors.black,
                         ),
                       ),
                     );
@@ -278,7 +267,6 @@ class _AllMoviePageState extends State<AllMoviePage> {
               ),
             ),
 
-            // Content Grid
             SliverPadding(
               padding: const EdgeInsets.symmetric(horizontal: 10),
               sliver: BlocBuilder<FetchFillterCubit, FetchFillterState>(
@@ -303,6 +291,37 @@ class _AllMoviePageState extends State<AllMoviePage> {
                   }
 
                   if (state is FetchFillterLoaded) {
+                    if (state.items.isEmpty) {
+                      return SliverToBoxAdapter(
+                        child: SizedBox(
+                          height: MediaQuery.of(context).size.height * 0.5,
+                          child: Center(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Text(
+                                  'Không có phim',
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.white.withOpacity(0.8),
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  'Thử lại với bộ lọc khác',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    color: Colors.white.withOpacity(0.6),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      );
+                    }
+
                     return MultiSliver(
                       children: [
                         const SliverToBoxAdapter(child: SizedBox(height: 10)),
@@ -370,8 +389,15 @@ class _AllMoviePageState extends State<AllMoviePage> {
       padding: const EdgeInsets.all(8.0),
       margin: EdgeInsets.only(bottom: 100),
       child: Row(
+        spacing: 5,
         mainAxisAlignment: MainAxisAlignment.center,
-        children: [CircularProgressIndicator.adaptive(), Text('Loading')],
+        children: [
+          CupertinoActivityIndicator(
+           // Bạn có thể chỉnh độ lớn nhỏ ở đây
+            color: Colors.grey, // Màu sắc của loading
+          ),
+          Text('Loading'),
+        ],
       ),
     );
   }
@@ -421,13 +447,13 @@ class _AllMoviePageState extends State<AllMoviePage> {
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 0),
       decoration: BoxDecoration(
         color: color,
-        border: Border.all(color: color), // Viền đậm cùng tông
+        border: Border.all(color: color),
         borderRadius: BorderRadius.circular(10),
       ),
       child: Text(
         text,
         style: TextStyle(
-          color: Colors.white, // Chữ đậm cùng tông
+          color: Colors.white,
           fontSize: 9,
           fontWeight: FontWeight.bold,
         ),
@@ -436,17 +462,14 @@ class _AllMoviePageState extends State<AllMoviePage> {
   }
 
   Widget _buildItem(ItemEntity itemEntity) {
-    // 1. Parse chuỗi ngôn ngữ sang List các Enum
     final List<MediaTagType> langTags = itemEntity.lang.toMediaTags();
 
-    // 2. Lấy tập hiện tại (Check null an toàn)
     final String? currentEp = itemEntity.episodeCurrent;
     return GestureDetector(
       onTap: () {
         AppNavigator.push(context, MovieDetailPage(slug: itemEntity.slug));
       },
       onLongPress: () {
-        // Long press also shows preview with haptic feedback
         HapticFeedback.mediumImpact();
         showAnimatedDialog(
           context: context,
@@ -471,6 +494,7 @@ class _AllMoviePageState extends State<AllMoviePage> {
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(8),
                       child: FastCachedImage(
+                        filterQuality: FilterQuality.medium,
                         url: AppUrl.convertImageAddition(itemEntity.posterUrl),
                         fit: BoxFit.cover,
                       ),
@@ -482,14 +506,13 @@ class _AllMoviePageState extends State<AllMoviePage> {
                       margin: EdgeInsets.only(top: 5, left: 5),
                       padding: EdgeInsets.symmetric(vertical: 5, horizontal: 8),
                       decoration: BoxDecoration(
-                        // color: AppColor.secondColor,
                         borderRadius: BorderRadius.circular(8),
                         gradient: const LinearGradient(
                           colors: [
-                            Color(0xFFC77DFF), // Tím
-                            Color(0xFFFF9E9E), // Hồng cam (ở giữa)
+                            Color(0xFFC77DFF),
+                            Color(0xFFFF9E9E),
                             Color(0xFFFFD275),
-                          ], // Vàng],
+                          ],
                           begin: Alignment.topRight,
                           end: Alignment.bottomLeft,
                         ),
@@ -516,8 +539,7 @@ class _AllMoviePageState extends State<AllMoviePage> {
                     left: 5,
                     child: Column(
                       spacing: 3,
-                      crossAxisAlignment:
-                          CrossAxisAlignment.start, // Căn lề phải
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       verticalDirection: VerticalDirection.up,
                       children: [
                         ...langTags.map(
@@ -557,39 +579,4 @@ class _AllMoviePageState extends State<AllMoviePage> {
       ),
     );
   }
-
-  // Widget _itemChip({
-  //   required String content,
-  //   bool isGadient = false,
-  //   double? size,
-  //   bool isLeft = false,
-  // }) {
-  //   return Container(
-  //     padding: EdgeInsets.all(5),
-  //     decoration: BoxDecoration(
-  //       color: isGadient ? null : Colors.white,
-  //       borderRadius: isLeft
-  //           ? BorderRadius.only(topLeft: Radius.circular(5))
-  //           : BorderRadius.only(topRight: Radius.circular(5)),
-  //       gradient: isGadient
-  //           ? LinearGradient(
-  //               colors: [Color(0xffe73827), Color.fromARGB(255, 254, 136, 115)],
-  //               begin: Alignment.topRight,
-  //               end: Alignment.bottomLeft,
-  //             )
-  //           : null,
-  //     ),
-  //     child: Center(
-  //       child: Text(
-  //         content,
-  //         style: TextStyle(
-  //           fontSize: size ?? 8,
-  //           fontWeight: FontWeight.w600,
-  //           color: AppColor.bgApp,
-  //           decoration: TextDecoration.none,
-  //         ),
-  //       ),
-  //     ),
-  //   );
-  // }
 }

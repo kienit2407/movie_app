@@ -53,6 +53,7 @@ class _MovieSectionWithScrollState extends State<MovieSectionWithScroll> {
   @override
   Widget build(BuildContext context) {
     return Column(
+      mainAxisSize: MainAxisSize.min,
       spacing: 10,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [

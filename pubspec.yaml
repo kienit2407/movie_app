@@ -89,7 +89,10 @@ dependencies:
   liquid_glass_renderer: ^0.2.0-dev.4
   flutter_launcher_icons: ^0.14.4
   loading_animation_widget: ^1.3.0
-  
+  wakelock_plus: ^1.4.0
+  go_router: ^17.1.0
+  hydrated_bloc: ^9.1.5
+  toastification: ^3.0.3
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -124,7 +127,7 @@ flutter_launcher_icons:
   image_path: "assets/images/icon_app.png"
   min_sdk_android: 21
   remove_alpha_ios: true
-  image_path_ios: "assets/images/icon_app.png"
+  # image_path_ios: "assets/images/icon_app.png"
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images
   # For details regarding adding assets from package dependencies, see

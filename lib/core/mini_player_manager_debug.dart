@@ -80,6 +80,10 @@ class MiniPlayerManager extends ChangeNotifier {
     required MiniPlayerLaunchData launchData,
     Offset? initialPosition,
   }) {
+    print('[MiniPlayerManager] showMiniPlayer called');
+    print('[MiniPlayerManager] isVisible before: ${isVisible.value}');
+    print('[MiniPlayerManager] _chewieController before: ${_chewieController != null}');
+    
     _handoffController = null;
     _handoffLaunch = null;
     _handoffPos = null;
@@ -97,6 +101,9 @@ class MiniPlayerManager extends ChangeNotifier {
     shouldRestorePlayer.value = false;
     isVisible.value = true;
     notifyListeners();
+    
+    print('[MiniPlayerManager] isVisible after: ${isVisible.value}');
+    print('[MiniPlayerManager] _chewieController after: ${_chewieController != null}');
   }
 
   void updateMiniPosition(Offset p) {
@@ -105,6 +112,9 @@ class MiniPlayerManager extends ChangeNotifier {
   }
 
   MiniDetachResult takeHandoff() {
+    print('[MiniPlayerManager] takeHandoff called');
+    print('[MiniPlayerManager] _handoffController before: ${_handoffController != null}');
+    
     final res = MiniDetachResult(
       controller: _handoffController,
       launch: _handoffLaunch,
@@ -115,10 +125,17 @@ class MiniPlayerManager extends ChangeNotifier {
     _handoffLaunch = null;
     _handoffPos = null;
 
+    print('[MiniPlayerManager] _handoffController after: ${_handoffController != null}');
+    print('[MiniPlayerManager] returning controller: ${res.controller != null}');
+
     return res;
   }
 
   MiniDetachResult detachForOpen() {
+    print('[MiniPlayerManager] detachForOpen called');
+    print('[MiniPlayerManager] _chewieController before: ${_chewieController != null}');
+    print('[MiniPlayerManager] _launch before: ${_launch != null}');
+    
     final c = _chewieController;
     final l = _launch;
     final p = _currentPos;
@@ -135,12 +152,16 @@ class MiniPlayerManager extends ChangeNotifier {
     isVisible.value = false;
     shouldRestorePlayer.value = true;
     notifyListeners();
+    
+    print('[MiniPlayerManager] _handoffController after: ${_handoffController != null}');
+    print('[MiniPlayerManager] isVisible after: ${isVisible.value}');
 
     return MiniDetachResult(controller: c, launch: l, pos: p);
   }
 
   void _safeDisposeController(ChewieController? controller) {
     if (controller == null) return;
+    print('[MiniPlayerManager] _safeDisposeController called');
     try {
       controller.pause();
     } catch (_) {}
@@ -153,6 +174,9 @@ class MiniPlayerManager extends ChangeNotifier {
   }
 
   void disposeMiniPlayer({bool notify = true}) {
+    print('[MiniPlayerManager] disposeMiniPlayer called');
+    print('[MiniPlayerManager] isVisible before: ${isVisible.value}');
+    
     final oldMain = _chewieController;
     final oldHandoff = _handoffController;
 
@@ -176,6 +200,8 @@ class MiniPlayerManager extends ChangeNotifier {
       _safeDisposeController(oldMain);
       _safeDisposeController(oldHandoff);
     });
+    
+    print('[MiniPlayerManager] isVisible after: ${isVisible.value}');
   }
 
   void hideMiniPlayer() {

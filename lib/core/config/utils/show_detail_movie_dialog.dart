@@ -11,6 +11,7 @@ import 'package:movie_app/common/helpers/navigation/app_navigation.dart';
 import 'package:movie_app/core/config/di/service_locator.dart';
 import 'package:movie_app/core/config/themes/app_color.dart';
 import 'package:movie_app/core/config/utils/animated_dialog.dart';
+import 'package:movie_app/core/config/utils/blocking_back_page.dart';
 import 'package:movie_app/core/config/utils/format_episode.dart';
 import 'package:movie_app/feature/detail_movie/data/model/detail_movie_model.dart';
 import 'package:movie_app/feature/detail_movie/domain/usecase/get_detail_movie_usecase.dart';
@@ -689,10 +690,11 @@ class _DialogContentState extends State<_DialogContent> {
                 Navigator.pop(context);
                 Navigator.push(
                   context,
-                  MaterialPageRoute(
-                    builder: (context) => MoviePlayerPage(
+                  NoBackSwipeRoute(
+                    builder: (_) => MoviePlayerPage(
                       slug: movie.slug,
                       movieName: movie.name,
+                      thumbnailUrl: movie.poster_url,
                       episodes: episodes,
                       movie: movie,
                       initialServerIndex: 0,

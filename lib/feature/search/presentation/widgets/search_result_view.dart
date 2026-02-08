@@ -61,20 +61,24 @@ class SearchResultView extends StatelessWidget {
 
           final movie = movies[index];
 
-          return AnimationLimiter(
-            child: AnimationConfiguration.staggeredGrid(
-              position: index,
-              columnCount: 3,
-              duration: const Duration(milliseconds: 400),
-              child: ScaleAnimation(
-                curve: Curves.easeOut,
-                child: SlideAnimation(
-                  verticalOffset: 50,
-                  child: FadeInAnimation(child: _buildItem(movie, context)),
+          if (index < 10) {
+            return AnimationLimiter(
+              child: AnimationConfiguration.staggeredGrid(
+                position: index,
+                columnCount: 3,
+                duration: const Duration(milliseconds: 400),
+                child: ScaleAnimation(
+                  curve: Curves.easeOut,
+                  child: SlideAnimation(
+                    verticalOffset: 50,
+                    child: FadeInAnimation(child: _buildItem(movie, context)),
+                  ),
                 ),
               ),
-            ),
-          );
+            );
+          } else {
+            return _buildItem(movie, context);
+          }
         },
       ),
     );
@@ -111,6 +115,7 @@ class SearchResultView extends StatelessWidget {
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(8),
                       child: FastCachedImage(
+                        filterQuality: FilterQuality.medium,
                         url: AppUrl.convertImageAddition(movie.poster_url),
                         fit: BoxFit.cover,
                         loadingBuilder: (context, loadingProgress) {

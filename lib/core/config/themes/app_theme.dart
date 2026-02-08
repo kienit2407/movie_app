@@ -4,6 +4,10 @@ import 'package:movie_app/core/config/themes/app_color.dart';
 
 class AppTheme {
   static final appTheme = ThemeData(
+    scrollbarTheme: ScrollbarThemeData(
+      radius: Radius.circular(30)
+      
+    ),
     chipTheme: ChipThemeData(
       backgroundColor: Colors.transparent,
       selectedColor: Colors.transparent,

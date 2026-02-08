@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:chewie/chewie.dart';
 import 'package:fast_cached_network_image/fast_cached_network_image.dart';
+import 'package:go_router/go_router.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
-import 'package:movie_app/core/config/themes/app_color.dart';
+import 'package:movie_app/core/config/routes/app_router.dart';
+import 'package:movie_app/core/config/utils/movie_player_args.dart';
 import 'package:movie_app/core/mini_player_manager.dart';
-import 'package:movie_app/feature/detail_movie/presentation/pages/movie_player_page.dart';
-import 'package:movie_app/common/helpers/navigation/app_navigation.dart';
 import 'package:video_player/video_player.dart';
 
 class MiniPlayerOverlay extends StatefulWidget {
@@ -18,130 +18,155 @@ class MiniPlayerOverlay extends StatefulWidget {
 class _MiniPlayerOverlayState extends State<MiniPlayerOverlay> {
   final MiniPlayerManager mgr = MiniPlayerManager();
   Offset? _pos;
+  bool _wasInactive = true;
+  static const double _margin = 16.0;
+  bool _draggingMini = false;
+  Future<bool> _handleBackPress() async {
+    if (mgr.isMiniPlayerActive) {
+      mgr.disposeMiniPlayer();
+      return false;
+    }
+    return true;
+  }
+
+  @override
+  void initState() {
+    super.initState();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+  }
 
   @override
   Widget build(BuildContext context) {
     return AnimatedBuilder(
       animation: mgr,
       builder: (context, _) {
-        if (!mgr.isMiniPlayerActive) return const SizedBox.shrink();
+        final isActive = mgr.isMiniPlayerActive;
+
+        if (!isActive) {
+          _pos = null;
+          _wasInactive = true;
+          return const SizedBox.shrink();
+        }
 
         final size = MediaQuery.sizeOf(context);
         final bottomInset = MediaQuery.paddingOf(context).bottom;
 
-        final miniW = size.width * 0.56;
+        final miniW = size.width * 0.55;
         final miniH = miniW * 9 / 16;
-
-        _pos ??=
-            mgr.initialPos ??
-            Offset(
-              size.width - miniW - 16,
-              size.height - miniH - 16 - bottomInset,
-            );
+        final stored = mgr.currentPos;
+        if ((_wasInactive || _pos == null) && stored != null) {
+          _pos = stored;
+          _wasInactive = false;
+        }
+        if (_wasInactive || _pos == null) {
+          _pos = Offset(
+            size.width - miniW - 16,
+            size.height - miniH - 16 - bottomInset,
+          );
+          _wasInactive = false;
+        }
 
         Offset clampPos(Offset p) => Offset(
-          p.dx.clamp(0.0, size.width - miniW),
-          p.dy.clamp(0.0, size.height - miniH - bottomInset),
+          p.dx.clamp(_margin, size.width - miniW - _margin),
+          p.dy.clamp(_margin, size.height - miniH - bottomInset - _margin),
         );
+        final currentPos = clampPos(_pos!);
+        _pos = currentPos;
 
-        _pos = clampPos(_pos!);
+        return WillPopScope(
+          onWillPop: _handleBackPress,
+          child: Positioned(
+            left: currentPos.dx,
+            top: currentPos.dy,
+            child: GestureDetector(
+              onPanUpdate: (d) {
+                final newPos = clampPos(_pos! + d.delta);
+                setState(() {
+                  _pos = newPos;
+                  mgr.updateMiniPosition(newPos);
+                });
+              },
+              onPanStart: (_) => setState(() => _draggingMini = true),
+              onPanEnd: (d) {
+                setState(() => _draggingMini = false);
+                final vy = d.velocity.pixelsPerSecond.dy;
+                if (vy > 1200) {
+                  mgr.disposeMiniPlayer();
+                  return;
+                }
 
-        return Positioned(
-          left: _pos!.dx,
-          top: _pos!.dy,
-          child: GestureDetector(
-            onPanUpdate: (d) =>
-                setState(() => _pos = clampPos(_pos! + d.delta)),
-            onPanEnd: (d) {
-              final vy = d.velocity.pixelsPerSecond.dy;
-              if (vy > 1200) {
-                mgr.disposeMiniPlayer();
-                return;
-              }
+                // Không snap nữa, chỉ clamp cho chắc
+                final clamped = clampPos(_pos!);
+                setState(() {
+                  _pos = clamped;
+                  mgr.updateMiniPosition(clamped);
+                });
+              },
 
-              final toRight = (_pos!.dx + miniW / 2) > size.width / 2;
-              final target = Offset(
-                toRight ? size.width - miniW - 16 : 16,
-                size.height - miniH - 16 - bottomInset,
-              );
-
-              setState(() => _pos = target);
-            },
-            onTap: () {
-              final handoff = mgr.detachForOpen();
-              if (handoff.launch != null && handoff.controller != null) {
-                AppNavigator.push(
-                  context,
-                  MoviePlayerPage(
-                    movie: handoff.launch!.movie,
-                    episodes: handoff.launch!.episodes,
-                    movieName: handoff.launch!.movieName,
-                    slug: handoff.launch!.slug,
-                    initialEpisodeIndex: handoff.launch!.initialEpisodeIndex,
-                    initialServer: handoff.launch!.initialServer,
-                    thumbnailUrl: handoff.launch!.thumbnailUrl,
-                    initialEpisodeLink: handoff.launch!.initialEpisodeLink,
-                    initialServerIndex: handoff.launch!.initialServerIndex,
-                  ),
-                );
-              }
-            },
-            child: Container(
-              width: miniW,
-              height: miniH,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(12),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.5),
-                    blurRadius: 10,
-                    offset: const Offset(0, 5),
-                  ),
-                ],
-              ),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(12),
-                child: Stack(
-                  fit: StackFit.expand,
-                  children: [
-                    if (mgr.chewieController != null)
-                      Chewie(controller: mgr.chewieController!)
-                    else if (mgr.launch?.thumbnailUrl != null)
-                      _buildThumbnail(mgr.launch!.thumbnailUrl!),
-
-                    Positioned(
-                      top: 6,
-                      right: 6,
-                      left: 6,
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Center(child: _buildPlayPauseOverlay()),
-                          GestureDetector(
-                            onTap: () => mgr.disposeMiniPlayer(),
-                            child: Container(
-                              padding: const EdgeInsets.all(4),
-                              decoration: BoxDecoration(
-                                color: Colors.black.withValues(alpha: 0.3),
-                                shape: BoxShape.circle,
-                              ),
-                              child: Icon(
-                                Icons.close,
-                                color: Colors.white,
-                                size: 20,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    Positioned(
-                      bottom: -2,
-                      left: 0,
-                      right: 0,
-                      child: _buildSeekBar(),
+              onTap: () {
+                _openPlayer();
+              },
+              child: Container(
+                width: miniW,
+                height: miniH,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.5),
+                      blurRadius: 10,
+                      offset: const Offset(0, 5),
                     ),
                   ],
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      if (mgr.chewieController != null)
+                        Chewie(controller: mgr.chewieController!)
+                      else if (mgr.launch?.thumbnailUrl != null)
+                        _buildThumbnail(mgr.launch!.thumbnailUrl!),
+
+                      Positioned(
+                        top: 6,
+                        right: 6,
+                        left: 6,
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Center(child: _buildPlayPauseOverlay()),
+                            GestureDetector(
+                              onTap: () => mgr.disposeMiniPlayer(),
+                              child: Container(
+                                padding: const EdgeInsets.all(4),
+                                decoration: BoxDecoration(
+                                  color: Colors.black.withValues(alpha: 0.3),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: Icon(
+                                  Icons.close,
+                                  color: Colors.white,
+                                  size: 20,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Positioned(
+                        bottom: -3,
+                        left: 0,
+                        right: 0,
+                        child: _buildSeekBar(),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -153,55 +178,78 @@ class _MiniPlayerOverlayState extends State<MiniPlayerOverlay> {
 
   double _bufferedFraction(VideoPlayerValue v) {
     if (!v.isInitialized) return 0;
-    if (v.duration.inMilliseconds == 0) return 0;
+    final dur = v.duration.inMilliseconds;
+    if (dur <= 0) return 0;
     if (v.buffered.isEmpty) return 0;
     final end = v.buffered.last.end.inMilliseconds;
-    return end / v.duration.inMilliseconds;
+    return (end / dur).clamp(0.0, 1.0);
   }
 
   Widget _buildSeekBar() {
-    final controller = mgr.chewieController;
-    if (controller == null) return const SizedBox.shrink();
+    final chewie = mgr.chewieController;
+    if (chewie == null) return const SizedBox.shrink();
+
+    final vp = chewie.videoPlayerController;
 
     return Material(
       color: Colors.transparent,
-      child: ValueListenableBuilder(
-        valueListenable: controller.videoPlayerController,
-        builder: (context, VideoPlayerValue value, child) {
-          final buffered = _bufferedFraction(value);
+      child: ValueListenableBuilder<VideoPlayerValue>(
+        valueListenable: vp,
+        builder: (context, value, child) {
+          if (!value.isInitialized) return const SizedBox(height: 8);
+
+          final durMs = value.duration.inMilliseconds;
+          if (durMs <= 0) return const SizedBox(height: 8);
+
+          final max = durMs.toDouble();
+          var v = value.position.inMilliseconds.toDouble();
+          if (v < 0) v = 0;
+          if (v > max) v = max;
+
+          if (!max.isFinite || !v.isFinite || max <= 0) {
+            return const SizedBox(height: 8);
+          }
+
+          final buffered = _bufferedFraction(value).clamp(0.0, 1.0);
+
           return SizedBox(
             height: 8,
             child: SliderTheme(
               data: SliderThemeData(
                 trackHeight: 2,
-                // Ẩn thumb + overlay
                 thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 0),
                 overlayShape: const RoundSliderOverlayShape(overlayRadius: 0),
-
-                // (tuỳ chọn) ẩn tick nếu có
                 tickMarkShape: const RoundSliderTickMarkShape(
                   tickMarkRadius: 0,
                 ),
                 inactiveTrackColor: const Color(0x55FFFFFF),
                 trackShape: GradientBufferedSliderTrackShape(
                   buffered: buffered,
-                  bufferedColor: Colors.white.withValues(alpha: 0.35),
+                  bufferedColor: Colors.white.withOpacity(0.35),
                   gradientColors: const [
-                    Color(0xFFC77DFF), // Tím
-                    Color(0xFFFF9E9E), // Hồng cam (ở giữa)
+                    Color(0xFFC77DFF),
+                    Color(0xFFFF9E9E),
                     Color(0xFFFFD275),
                   ],
                 ),
               ),
               child: Slider(
-                value: value.isInitialized
-                    ? value.position.inMilliseconds.toDouble()
-                    : 0,
-                max: value.isInitialized
-                    ? value.duration.inMilliseconds.toDouble()
-                    : 1,
-                onChanged: (v) {
-                  controller.seekTo(Duration(milliseconds: v.toInt()));
+                min: 0,
+                max: max,
+                value: v,
+                // KHÔNG seek liên tục trong onChanged
+                onChanged: (_) {},
+                onChangeEnd: (nv) {
+                  final current = mgr.chewieController; // lấy lại mới nhất
+                  if (current == null) return;
+
+                  final val = current.videoPlayerController.value;
+                  if (!val.isInitialized) return;
+                  if (val.duration.inMilliseconds <= 0) return;
+
+                  try {
+                    current.seekTo(Duration(milliseconds: nv.toInt()));
+                  } catch (_) {}
                 },
               ),
             ),
@@ -209,6 +257,34 @@ class _MiniPlayerOverlayState extends State<MiniPlayerOverlay> {
         },
       ),
     );
+  }
+
+  void _openPlayer() {
+    final handoff = mgr.detachForOpen();
+    final launch = handoff.launch;
+    if (launch == null) return;
+
+    final args = MoviePlayerArgs(
+      launch.slug,
+      launch.thumbnailUrl,
+      launch.initialEpisodeLink,
+      launch.initialEpisodeIndex,
+      launch.initialServer,
+      launch.movieName,
+      launch.episodes,
+      launch.movie,
+      initialServerIndex: launch.initialServerIndex,
+    );
+
+    final navContext = AppRoutes.navigatorKey.currentContext;
+    if (navContext == null) return;
+
+    // Nếu đang ở player rồi thì thôi (tránh push chồng)
+    final router = GoRouter.of(navContext);
+    final loc = router.routeInformationProvider.value.uri.toString();
+    if (loc.startsWith(AppRoutes.player)) return;
+
+    router.pushNamed('player', extra: args);
   }
 
   Widget _buildThumbnail(String url) {
@@ -257,13 +333,13 @@ class _MiniPlayerOverlayState extends State<MiniPlayerOverlay> {
           child: controller.isPlaying
               ? Icon(
                   Iconsax.pause_copy,
-                  key: ValueKey('pause'),
+                  key: const ValueKey('pause'),
                   color: Colors.white,
                   size: 20,
                 )
               : Icon(
                   Iconsax.play_copy,
-                  key: ValueKey('play'),
+                  key: const ValueKey('play'),
                   color: Colors.white,
                   size: 20,
                 ),
