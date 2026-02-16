@@ -10,6 +10,7 @@ abstract class SearchState extends Equatable {
 class SearchInitial extends SearchState {
   final List<String> history;
   const SearchInitial(this.history);
+
   @override
   List<Object?> get props => [history];
 }
@@ -22,11 +23,15 @@ class SearchLoaded extends SearchState {
   final int page;
   final String currentKeyword;
 
+  // ✅ NEW
+  final bool isLoadingMore;
+
   const SearchLoaded({
     required this.movies,
     this.hasMore = true,
     required this.page,
     required this.currentKeyword,
+    this.isLoadingMore = false,
   });
 
   SearchLoaded copyWith({
@@ -34,22 +39,25 @@ class SearchLoaded extends SearchState {
     bool? hasMore,
     int? page,
     String? currentKeyword,
+    bool? isLoadingMore,
   }) {
     return SearchLoaded(
       movies: movies ?? this.movies,
       hasMore: hasMore ?? this.hasMore,
       page: page ?? this.page,
       currentKeyword: currentKeyword ?? this.currentKeyword,
+      isLoadingMore: isLoadingMore ?? this.isLoadingMore,
     );
   }
 
   @override
-  List<Object?> get props => [movies, hasMore, page, currentKeyword];
+  List<Object?> get props => [movies, hasMore, page, currentKeyword, isLoadingMore];
 }
 
 class SearchError extends SearchState {
   final String message;
   const SearchError(this.message);
+
   @override
   List<Object?> get props => [message];
 }

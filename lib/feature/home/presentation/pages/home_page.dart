@@ -1769,49 +1769,6 @@ Widget _buildBadge({required String text, required Color color}) {
   );
 }
 
-// class _ItemChip extends StatelessWidget {
-//   final String content;
-//   final bool isGadient;
-//   final double? size;
-//   final bool isLeft;
-
-//   const _ItemChip({
-//     required this.content,
-//     this.isGadient = false,
-//     this.size,
-//     this.isLeft = false,
-//   });
-
-//   @override
-//   Widget build(BuildContext context) {
-//     return Container(
-//       padding: EdgeInsets.all(5),
-//       decoration: BoxDecoration(
-//         color: isGadient ? null : Colors.white,
-//         borderRadius: isLeft
-//             ? BorderRadius.only(topLeft: Radius.circular(5))
-//             : BorderRadius.only(topRight: Radius.circular(5)),
-//         gradient: isGadient
-//             ? LinearGradient(
-//                 colors: [Color(0xffe73827), Color.fromARGB(255, 254, 136, 115)],
-//                 begin: Alignment.topRight,
-//                 end: Alignment.bottomLeft,
-//               )
-//             : null,
-//       ),
-//       child: Center(
-//         child: Text(
-//           content,
-//           style: TextStyle(
-//             fontSize: size ?? 10,
-//             fontWeight: FontWeight.w600,
-//             color: AppColor.bgApp,
-//           ),
-//         ),
-//       ),
-//     );
-//   }
-// }
 
 class _CountrySkeletonList extends StatelessWidget {
   const _CountrySkeletonList();

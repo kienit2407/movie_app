@@ -67,6 +67,15 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
   VideoPlayerController? _videoPlayerController;
   ChewieController? _chewieController;
   String? _currentEpisodeLink;
+  static const double _seekbarHitHeight = 28; // vùng chạm dày
+  static const double _seekbarVisualHeight = 2; // thanh mỏng
+  int _episodeCrossAxisCount = 1;
+  static const double _episodeMaxExtent = 120;
+  static const double _episodeMainExtent = 40;
+  static const double _episodeMainSpacing = 5;
+  static const double _episodeCrossSpacing = 5;
+  static const double _episodePaddingTop = 10;
+  static const double _episodePaddingH = 10;
   int _currentEpisodeIndex = 0;
   String _currentServer = '';
   bool _isFullscreen = false;
@@ -87,8 +96,7 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
   double _scrubValue = 0.0;
   int _seekCount = 0;
   final int _seekStepSeconds = 10;
-  static const double _seekbarHitHeight = 24;
-  static const double _seekbarVisualHeight = 8;
+
   static const double _thumbRadius = 6;
   final DraggableScrollableController _panelCtrl =
       DraggableScrollableController();
@@ -99,6 +107,10 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
   double _miniDragT = 0.0;
   final List<GlobalKey> _episodeKeys = [];
   bool _isMinifyAnimating = false;
+  bool _wasPlayingBeforeScrub = false;
+  Timer? _seekThrottle;
+  Duration _previewPosition = Duration.zero;
+  String? _previewThumbUrl; // nếu có storyboard từ server
   late final AnimationController _minifyCtrl;
   static const double _panelAmbientH = 26;
   bool _showSeekOverlay = false;
@@ -251,6 +263,14 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
 
     SupportRotateScreen.onlyPotrait();
     super.dispose();
+  }
+
+  void _seekToThrottled(Duration target, {int ms = 80}) {
+    _seekThrottle?.cancel();
+    _seekThrottle = Timer(Duration(milliseconds: ms), () {
+      if (!mounted) return;
+      _videoPlayerController?.seekTo(target);
+    });
   }
 
   void _onRestorePlayer() {
@@ -555,11 +575,11 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
 
     _removeVpListeners();
 
-    _vpPositionListener = () {
-      if (!mounted) return;
-      setState(() {});
-    };
-    vp.addListener(_vpPositionListener!);
+    // _vpPositionListener = () {
+    //   if (!mounted) return;
+    //   setState(() {});
+    // };
+    // vp.addListener(_vpPositionListener!);
 
     _autoPlayTriggered = false;
     _vpEndListener = () {
@@ -968,8 +988,8 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
             : true;
 
         return SizedBox(
-          width: 38, // chỉnh nhỏ theo ý
-          height: 30,
+          width: 40, // chỉnh nhỏ theo ý
+          height: 50,
           child: FittedBox(
             fit: BoxFit.contain,
             child: Switch(
@@ -1640,38 +1660,44 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
     return IgnorePointer(
       ignoring: !_showControls, // controls ẩn thì nút không bắt sự kiện
       child: Center(
-        child: AnimatedOpacity(
-          opacity: _showControls ? 1.0 : 0.0,
-          duration: const Duration(milliseconds: 250),
-          child: GestureDetector(
-            // QUAN TRỌNG: chỉ vùng nút bắt tap
-            onTap: _togglePlayPause,
-            child: Container(
-              padding: const EdgeInsets.all(13),
-              decoration: BoxDecoration(
-                color: Colors.black.withValues(alpha: 0.3),
-                shape: BoxShape.circle,
-              ),
-              child: AnimatedSwitcher(
-                duration: const Duration(milliseconds: 80),
-                transitionBuilder: (child, anim) =>
-                    ScaleTransition(scale: anim, child: child),
-                child: _chewieController!.isPlaying
-                    ? const Icon(
-                        Iconsax.pause_copy,
-                        key: ValueKey('pause'),
-                        color: Colors.white,
-                        size: 35,
-                      )
-                    : const Padding(
-                        padding: EdgeInsets.only(left: 3.0),
-                        child: Icon(
-                          Iconsax.play_copy,
-                          key: ValueKey('play'),
-                          color: Colors.white,
-                          size: 35,
-                        ),
-                      ),
+        child: ClipRSuperellipse(
+          borderRadius: BorderRadiusGeometry.circular(999),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+            child: AnimatedOpacity(
+              opacity: _showControls ? 1.0 : 0.0,
+              duration: const Duration(milliseconds: 250),
+              child: GestureDetector(
+                // QUAN TRỌNG: chỉ vùng nút bắt tap
+                onTap: _togglePlayPause,
+                child: Container(
+                  padding: const EdgeInsets.all(13),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withValues(alpha: 0.3),
+                    shape: BoxShape.circle,
+                  ),
+                  child: AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 80),
+                    transitionBuilder: (child, anim) =>
+                        ScaleTransition(scale: anim, child: child),
+                    child: _chewieController!.isPlaying
+                        ? const Icon(
+                            Iconsax.pause_copy,
+                            key: ValueKey('pause'),
+                            color: Colors.white,
+                            size: 35,
+                          )
+                        : const Padding(
+                            padding: EdgeInsets.only(left: 3.0),
+                            child: Icon(
+                              Iconsax.play_copy,
+                              key: ValueKey('play'),
+                              color: Colors.white,
+                              size: 35,
+                            ),
+                          ),
+                  ),
+                ),
               ),
             ),
           ),
@@ -2002,46 +2028,52 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
                 ),
                 child: Row(
                   children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 5,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.black.withValues(alpha: 0.2),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Row(
-                        spacing: 5,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            _formatDuration(value.position),
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 11,
-                              fontWeight: FontWeight.bold,
-                            ),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(20),
+                      child: BackdropFilter(
+                        filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 5,
                           ),
-                          // const SizedBox(width: 6),
-                          const Text(
-                            '/',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 11,
-                              fontWeight: FontWeight.bold,
-                            ),
+                          decoration: BoxDecoration(
+                            color: Colors.black.withValues(alpha: 0.2),
+                            borderRadius: BorderRadius.circular(20),
                           ),
-                          // const SizedBox(width: 6),
-                          Text(
-                            _formatDuration(value.duration),
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 11,
-                              fontWeight: FontWeight.bold,
-                            ),
+                          child: Row(
+                            spacing: 5,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                _formatDuration(value.position),
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              // const SizedBox(width: 6),
+                              const Text(
+                                '/',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              // const SizedBox(width: 6),
+                              Text(
+                                _formatDuration(value.duration),
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
                           ),
-                        ],
+                        ),
                       ),
                     ),
                     const Spacer(),
@@ -2154,43 +2186,49 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
           padding: const EdgeInsets.symmetric(horizontal: 10),
           child: Row(
             children: [
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 5,
-                ),
-                decoration: BoxDecoration(
-                  color: Colors.black.withValues(alpha: 0.3),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      _formatDuration(value.position),
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 11,
-                        fontWeight: FontWeight.bold,
-                      ),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(20),
+                child: BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 5,
                     ),
-                    const Text(
-                      ' / ',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 11,
-                        fontWeight: FontWeight.bold,
-                      ),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withValues(alpha: 0.3),
+                      borderRadius: BorderRadius.circular(20),
                     ),
-                    Text(
-                      _formatDuration(value.duration),
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 11,
-                        fontWeight: FontWeight.bold,
-                      ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          _formatDuration(value.position),
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const Text(
+                          ' / ',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        Text(
+                          _formatDuration(value.duration),
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
                     ),
-                  ],
+                  ),
                 ),
               ),
               const Spacer(),
@@ -2266,47 +2304,96 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
             overlayColor: AppColor.secondColor.withValues(alpha: 0.2),
             showValueIndicator: ShowValueIndicator.never,
           ),
-          child: GestureDetector(
-            behavior: HitTestBehavior.opaque,
-            onPanDown: (_) {
-              setState(() => _isScrubbing = true);
-              _hideControlsTimer?.cancel();
-              _showControlsWithAutoHide();
-            },
-            onPanUpdate: (d) {
-              final box = context.findRenderObject() as RenderBox?;
-              if (box == null) return;
+          child: SizedBox(
+            height: 10,
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onPanDown: (_) {
+                final vp = _videoPlayerController;
+                if (vp == null || !vp.value.isInitialized) return;
 
-              final local = box.globalToLocal(d.globalPosition);
-              final w = box.size.width;
-              final v = (local.dx / w).clamp(0.0, 1.0);
+                _hideControlsTimer?.cancel();
+                // ✅ Không bật _showControls
+                setState(() {
+                  _isScrubbing = true;
+                  _wasPlayingBeforeScrub = vp.value.isPlaying;
+                });
 
-              setState(() => _scrubValue = v);
-              _seekTo(v);
-            },
-            onPanEnd: (_) {
-              setState(() => _isScrubbing = false);
-              _showControlsWithAutoHide();
-            },
-            child: SizedBox(
-              height: lerpDouble(
-                _thumbRadius * 2,
-                28,
-                _expandT,
-              )!, // tăng hit area khi expand
-              child: Slider(
-                value: sliderValue.clamp(0.0, 1.0),
-                onChanged: (v) {
-                  setState(() {
-                    _isScrubbing = true;
-                    _scrubValue = v;
-                  });
-                  _seekTo(v);
-                },
-                onChangeEnd: (_) {
-                  setState(() => _isScrubbing = false);
-                  _showControlsWithAutoHide();
-                },
+                // Giống YouTube: kéo thì pause để mượt + đỡ decode
+                // if (_wasPlayingBeforeScrub) vp.pause();
+              },
+
+              onPanUpdate: (d) {
+                final vp = _videoPlayerController;
+                if (vp == null || !vp.value.isInitialized) return;
+
+                final box = context.findRenderObject() as RenderBox?;
+                if (box == null) return;
+
+                final local = box.globalToLocal(d.globalPosition);
+                final w = box.size.width;
+                final v = (local.dx / w).clamp(0.0, 1.0);
+
+                final dur = vp.value.duration;
+                final target = Duration(
+                  milliseconds: (dur.inMilliseconds * v).round(),
+                );
+
+                setState(() {
+                  _scrubValue = v;
+                  _previewPosition = target;
+                });
+
+                // ✅ lựa chọn A: throttle seek (mượt hơn seek mỗi pixel)
+                _seekToThrottled(target, ms: 90);
+
+                // ✅ nếu có storyboard: cập nhật url thumbnail theo target
+                // _previewThumbUrl = AppUrl.storyboardThumb(widget.slug, target.inSeconds);
+              },
+
+              onPanEnd: (_) async {
+                final vp = _videoPlayerController;
+                if (vp == null || !vp.value.isInitialized) return;
+
+                final dur = vp.value.duration;
+                final target = Duration(
+                  milliseconds: (dur.inMilliseconds * _scrubValue).round(),
+                );
+
+                _seekThrottle?.cancel();
+                await vp.seekTo(target);
+
+                if (_wasPlayingBeforeScrub) {
+                  await vp.play();
+                }
+
+                if (!mounted) return;
+                setState(() => _isScrubbing = false);
+
+                // YouTube: thả tay xong mới auto-hide controls (nếu bạn muốn)
+                // _showControlsWithAutoHide();
+              },
+
+              child: SizedBox(
+                height: lerpDouble(
+                  _thumbRadius * 2,
+                  28,
+                  _expandT,
+                )!, // tăng hit area khi expand
+                child: Slider(
+                  value: sliderValue.clamp(0.0, 1.0),
+                  onChanged: (v) {
+                    setState(() {
+                      _isScrubbing = true;
+                      _scrubValue = v;
+                    });
+                    _seekTo(v);
+                  },
+                  onChangeEnd: (_) {
+                    setState(() => _isScrubbing = false);
+                    _showControlsWithAutoHide();
+                  },
+                ),
               ),
             ),
           ),
@@ -2756,5 +2843,45 @@ class _LowPositionOverlayShape extends SliderComponentShape {
 
     final adjustedCenter = Offset(center.dx, center.dy + offsetY);
     canvas.drawCircle(adjustedCenter, radius, paint);
+  }
+}
+
+class ScrubPreview extends StatelessWidget {
+  final String timeText;
+  final String? thumbUrl;
+  const ScrubPreview({super.key, required this.timeText, this.thumbUrl});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        if (thumbUrl != null)
+          ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: SizedBox(
+              width: 140,
+              height: 80,
+              child: FastCachedImage(url: thumbUrl!, fit: BoxFit.cover),
+            ),
+          ),
+        const SizedBox(height: 6),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+          decoration: BoxDecoration(
+            color: Colors.black87,
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Text(
+            timeText,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ),
+      ],
+    );
   }
 }

@@ -82,7 +82,7 @@ Future<void> main() async {
   debugPrint('=== [5/8] HydratedBloc storage initialized ===');
 
   await FastCachedImageConfig.init(
-    clearCacheAfter: const Duration(hours: 10),
+    clearCacheAfter: const Duration(days: 30),
   );
   debugPrint('=== [6/8] FastCachedImage initialized ===');
 

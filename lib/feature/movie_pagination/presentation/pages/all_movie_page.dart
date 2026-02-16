@@ -326,6 +326,7 @@ class _AllMoviePageState extends State<AllMoviePage> {
                       children: [
                         const SliverToBoxAdapter(child: SizedBox(height: 10)),
                         SliverGrid(
+                        
                           delegate: SliverChildBuilderDelegate((
                             context,
                             index,
@@ -351,6 +352,7 @@ class _AllMoviePageState extends State<AllMoviePage> {
 
                             return _buildItem(item);
                           }, childCount: state.items.length),
+                          
                           gridDelegate:
                               const SliverGridDelegateWithMaxCrossAxisExtent(
                                 mainAxisSpacing: 20,
@@ -396,7 +398,7 @@ class _AllMoviePageState extends State<AllMoviePage> {
            // Bạn có thể chỉnh độ lớn nhỏ ở đây
             color: Colors.grey, // Màu sắc của loading
           ),
-          Text('Loading'),
+          Text('Loading...'),
         ],
       ),
     );
@@ -493,10 +495,28 @@ class _AllMoviePageState extends State<AllMoviePage> {
                     ),
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(8),
-                      child: FastCachedImage(
-                        filterQuality: FilterQuality.medium,
-                        url: AppUrl.convertImageAddition(itemEntity.posterUrl),
-                        fit: BoxFit.cover,
+                      child: LayoutBuilder(
+                        builder: (context, c) {
+                          final dpr = MediaQuery.of(context).devicePixelRatio;
+
+                          final displayPxW = c.maxWidth * dpr; // ✅ px thật
+                          const quality = 1; // 0.8–0.95 tuỳ bạn
+
+                          final cw = (displayPxW * quality).round();
+                          final ch = (cw * 3 / 2).round();
+
+                          return FastCachedImage(
+                            key: ValueKey(itemEntity.slug), // ✅ ổn định widget
+                            url: AppUrl.convertImageAddition(itemEntity.posterUrl),
+                            fit: BoxFit.cover,
+                            // cacheWidth: cw,
+                            // cacheHeight: ch,
+                            // filterQuality: FilterQuality
+                            //     .low, // đừng none nếu muốn đỡ “xấu”
+                            // gaplessPlayback: true,
+                            fadeInDuration: const Duration(milliseconds: 120),
+                          );
+                        },
                       ),
                     ),
                   ),

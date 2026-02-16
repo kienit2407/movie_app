@@ -41,31 +41,37 @@ class _SearchPageViewState extends State<_SearchPageView> {
   void initState() {
     super.initState();
     _scrollCtrl.addListener(_onScroll);
-    // WidgetsBinding.instance.addPostFrameCallback((_) {
-    //   FocusScope.of(context).requestFocus(_focusNode);
-    // });
   }
 
   void _onScroll() {
+    if (!_scrollCtrl.hasClients) return;
+
+    // gần đáy thì load more
     if (_scrollCtrl.position.pixels >=
-        _scrollCtrl.position.maxScrollExtent - 100) {
+        _scrollCtrl.position.maxScrollExtent - 200) {
       final cubit = context.read<SearchCubit>();
       final state = cubit.state;
-      if (state is SearchLoaded && state.hasMore) {
-        cubit.search(state.currentKeyword, isLoadMore: true);
+
+      if (state is SearchLoaded) {
+        // ✅ còn trang + không đang load more mới gọi
+        if (state.hasMore && !state.isLoadingMore) {
+          cubit.search(state.currentKeyword, isLoadMore: true);
+        }
       }
     }
   }
 
   void _onSearchChanged(String query) {
-    if (_debounce?.isActive ?? false) _debounce!.cancel();
+    _debounce?.cancel();
 
-    _debounce = Timer(const Duration(milliseconds: 1000), () {
+    _debounce = Timer(const Duration(milliseconds: 600), () {
       final cubit = context.read<SearchCubit>();
-      if (query.trim().isEmpty) {
+      final q = query.trim();
+
+      if (q.isEmpty) {
         cubit.clearSearch();
       } else {
-        cubit.search(query);
+        cubit.search(q);
       }
     });
   }
@@ -98,7 +104,6 @@ class _SearchPageViewState extends State<_SearchPageView> {
                         colors: [
                           AppColor.firstColor.withOpacity(.4),
                           AppColor.firstColor.withOpacity(.02),
-                          // Colors.transparent
                         ],
                       ),
                     ),
@@ -145,7 +150,7 @@ class _SearchPageViewState extends State<_SearchPageView> {
                               ),
                               focusedBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12),
-                                borderSide: BorderSide(
+                                borderSide: const BorderSide(
                                   color: AppColor.firstColor,
                                 ),
                               ),
@@ -154,40 +159,45 @@ class _SearchPageViewState extends State<_SearchPageView> {
                               ),
                               isDense: true,
                               suffixIcon: AnimatedSwitcher(
-                                duration: Duration(milliseconds: 300),
-                                switchInCurve: Curves.elasticInOut,
-                                transitionBuilder:
-                                    (
-                                      Widget child,
-                                      Animation<double> animation,
-                                    ) {
-                                      return ScaleTransition(
-                                        scale: animation,
-                                        child: child,
-                                      ); // Hiệu ứng scale
-                                    },
-                                child: (_hideClear)
+                                duration: const Duration(milliseconds: 250),
+                                switchInCurve: Curves.easeOutBack,
+                                transitionBuilder: (child, animation) =>
+                                    ScaleTransition(
+                                      scale: animation,
+                                      child: child,
+                                    ),
+                                child: _hideClear
                                     ? IconButton(
+                                        key: const ValueKey('clear'),
                                         color: Colors.white,
                                         onPressed: () {
                                           setState(() {
                                             _searchCtrl.clear();
                                             _hideClear = false;
                                           });
+                                          context
+                                              .read<SearchCubit>()
+                                              .clearSearch();
                                         },
-                                        icon: Icon(Iconsax.tag_cross_copy),
+                                        icon: const Icon(
+                                          Iconsax.tag_cross_copy,
+                                        ),
                                       )
-                                    : null,
+                                    : const SizedBox.shrink(
+                                        key: ValueKey('empty'),
+                                      ),
                               ),
                             ),
                             onChanged: (val) {
-                              setState(() {
-                                _hideClear = val.isNotEmpty;
-                              });
-                              _onSearchChanged(val); // debounce search như cũ
+                              setState(() => _hideClear = val.isNotEmpty);
+                              _onSearchChanged(val);
                             },
-                            onSubmitted: (val) =>
-                                context.read<SearchCubit>().search(val),
+                            onSubmitted: (val) {
+                              final q = val.trim();
+                              if (q.isNotEmpty) {
+                                context.read<SearchCubit>().search(q);
+                              }
+                            },
                           ),
                         ),
                       ],
@@ -201,7 +211,7 @@ class _SearchPageViewState extends State<_SearchPageView> {
                         } else if (state is SearchLoaded) {
                           return SearchResultView(
                             movies: state.movies,
-                            hasMore: state.hasMore,
+                            isLoadingMore: state.isLoadingMore, // ✅ mới
                             scrollController: _scrollCtrl,
                           );
                         } else if (state is SearchInitial) {
@@ -213,14 +223,15 @@ class _SearchPageViewState extends State<_SearchPageView> {
                                   TextSelection.fromPosition(
                                     TextPosition(offset: keyword.length),
                                   );
+                              setState(() => _hideClear = keyword.isNotEmpty);
                               context.read<SearchCubit>().search(keyword);
                             },
                           );
                         } else if (state is SearchError) {
-                          return Center(
+                          return const Center(
                             child: Text(
                               "Không tìm thấy",
-                              style: const TextStyle(color: Colors.white),
+                              style: TextStyle(color: Colors.white),
                             ),
                           );
                         }

@@ -93,6 +93,7 @@ dependencies:
   go_router: ^17.1.0
   hydrated_bloc: ^9.1.5
   toastification: ^3.0.3
+  flutter_native_splash: ^2.4.7
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -121,12 +122,31 @@ flutter:
     - assets/fonts/
     - assets/.env
   #   - images/a_dot_ham.jpeg
+
+flutter_native_splash:
+  color: "#000000"                  # fallback
+  background_image: assets/images/bg.png
+
+  android_12:
+    color: "#000000"
+    background_image: assets/images/bg.png
+
+
+  ios: true
+  android: true
+  web: false
+
+
 flutter_launcher_icons:
   android: "launcher_icon"
   ios: true
   image_path: "assets/images/icon_app.png"
+  adaptive_icon_background: "#FFFFFF"
+  adaptive_icon_foreground: "assets/images/icon_app.png"
   min_sdk_android: 21
   remove_alpha_ios: true
+
+
   # image_path_ios: "assets/images/icon_app.png"
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images
@@ -137,6 +157,7 @@ flutter_launcher_icons:
   # "family" key with the font family name, and a "fonts" key with a
   # list giving the asset and other descriptors for the font. For
   # example:
+
   fonts:
     - family: Inter
       fonts:

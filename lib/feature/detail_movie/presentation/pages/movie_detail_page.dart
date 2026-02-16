@@ -2162,7 +2162,9 @@ class _MovieDetailPageContentState extends State<_MovieDetailPageContent>
       required VoidCallback onTap,
       bool isPrimary = true,
       int flex = 2,
-    }) {
+    }
+    
+    ) {
       return Expanded(
         flex: flex,
         child: GestureDetector(
@@ -2198,8 +2200,12 @@ class _MovieDetailPageContentState extends State<_MovieDetailPageContent>
               borderRadius: BorderRadius.circular(12),
             ),
             child: Row(
+              spacing: 5,
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
+                isFullMovie 
+                ? Icon(Iconsax.play_circle)
+                : SizedBox.shrink(),
                 Text(
                   text,
                   style: TextStyle(

@@ -1,4 +1,5 @@
 import 'dart:math';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
@@ -15,21 +16,41 @@ import 'package:movie_app/feature/detail_movie/presentation/pages/movie_detail_p
 import 'package:movie_app/feature/search/presentation/widgets/search_shimmer_loading.dart';
 import 'package:shimmer/shimmer.dart';
 
-class SearchResultView extends StatelessWidget {
+class SearchResultView extends StatefulWidget {
   final List<MovieModel> movies;
-  final bool hasMore;
+  final bool isLoadingMore; // ✅ thêm flag loading more
   final ScrollController scrollController;
 
   const SearchResultView({
     super.key,
     required this.movies,
-    required this.hasMore,
+    required this.isLoadingMore,
     required this.scrollController,
   });
 
   @override
+  State<SearchResultView> createState() => _SearchResultViewState();
+}
+
+class _SearchResultViewState extends State<SearchResultView> {
+  final Set<String> _animatedOnce = <String>{};
+  String _sig = '';
+
+  @override
+  void didUpdateWidget(covariant SearchResultView oldWidget) {
+    super.didUpdateWidget(oldWidget);
+
+    // nếu data search thay đổi (query mới), reset danh sách đã animate
+    final newSig = widget.movies.take(10).map((e) => e.slug).join('|');
+    if (newSig != _sig) {
+      _sig = newSig;
+      _animatedOnce.clear();
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    if (movies.isEmpty) {
+    if (widget.movies.isEmpty) {
       return const Center(
         child: Text(
           'Không tìm thấy kết quả nào',
@@ -38,53 +59,95 @@ class SearchResultView extends StatelessWidget {
       );
     }
 
-    return PrimaryScrollController(
-      controller: scrollController,
-      child: GridView.builder(
-        controller: scrollController,
-        padding: EdgeInsets.only(
-          left: 10,
-          right: 10,
-          bottom: MediaQuery.of(context).padding.bottom,
-        ),
-        gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-          mainAxisSpacing: 20,
-          crossAxisSpacing: 10,
-          maxCrossAxisExtent: 150,
-          childAspectRatio: 0.55,
-        ),
-        itemCount: movies.length + (hasMore ? 3 : 0),
-        itemBuilder: (context, index) {
-          if (index >= movies.length) {
-            return const SizedBox(height: 100, width: 100, child: SizedBox());
-          }
-
-          final movie = movies[index];
-
-          if (index < 10) {
-            return AnimationLimiter(
-              child: AnimationConfiguration.staggeredGrid(
-                position: index,
-                columnCount: 3,
-                duration: const Duration(milliseconds: 400),
-                child: ScaleAnimation(
-                  curve: Curves.easeOut,
-                  child: SlideAnimation(
-                    verticalOffset: 50,
-                    child: FadeInAnimation(child: _buildItem(movie, context)),
-                  ),
+    //  dùng CustomScrollView để có indicator full width phía dưới grid
+    return Scrollbar(
+      controller: widget.scrollController,
+      child: CustomScrollView(
+        controller: widget.scrollController,
+        cacheExtent: 1500,
+        slivers: [
+          SliverPadding(
+            padding: EdgeInsets.only(
+              left: 10,
+              right: 10,
+              bottom: MediaQuery.of(context).padding.bottom,
+            ),
+            sliver: AnimationLimiter(
+              // ✅ bọc 1 lần ở đây, không bọc từng item
+              child: SliverGrid(
+                delegate: SliverChildBuilderDelegate((context, index) {
+                  final movie = widget.movies[index];
+      
+                  final firstTime = _animatedOnce.add(
+                    movie.slug,
+                  ); // true nếu lần đầu gặp
+                  final shouldAnimate = firstTime && _animatedOnce.length <= 10;
+      
+                  final child = _buildItem(movie, context);
+      
+                  if (!shouldAnimate) return child;
+      
+                  return AnimationConfiguration.staggeredGrid(
+                    position: index,
+                    columnCount: 3,
+                    duration: const Duration(milliseconds: 400),
+                    child: ScaleAnimation(
+                      curve: Curves.easeOut,
+                      child: SlideAnimation(
+                        verticalOffset: 50,
+                        child: FadeInAnimation(child: child),
+                      ),
+                    ),
+                  );
+                }, childCount: widget.movies.length),
+                gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                  mainAxisSpacing: 20,
+                  crossAxisSpacing: 10,
+                  maxCrossAxisExtent: 150,
+                  childAspectRatio: 0.55,
                 ),
               ),
-            );
-          } else {
-            return _buildItem(movie, context);
-          }
-        },
+            ),
+          ),
+      
+          if (widget.isLoadingMore)
+            SliverToBoxAdapter(child: _buildLoadingMoreIndicator()),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLoadingMoreIndicator() {
+    return Padding(
+      padding: const EdgeInsets.only(top: 16, bottom: 120),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: const [
+          SizedBox(
+            width: 18,
+            height: 18,
+            child: CupertinoActivityIndicator(
+              // Bạn có thể chỉnh độ lớn nhỏ ở đây
+              color: Colors.grey, // Màu sắc của loading
+            ),
+          ),
+          SizedBox(width: 10),
+          Text('Loading...', style: TextStyle(color: Colors.white70)),
+        ],
       ),
     );
   }
 
   Widget _buildItem(MovieModel movie, BuildContext context) {
+    final dpr = MediaQuery.of(context).devicePixelRatio;
+
+    // “Đủ nét” nhưng nhẹ: nhân dpr
+    final cw = (140 * dpr).round();
+    final ch = (cw * 3 / 2).round();
+
+    // “Cố tình bớt nét để nhẹ hơn”: dùng dpr thấp hơn (vd 1.5)
+    final cwLow = (140 * 1.5).round();
+    final chLow = (cwLow * 3 / 2).round();
     final List<MediaTagType> langTags = movie.lang.toMediaTags();
     final String? currentEp = movie.episode_current;
     return GestureDetector(
@@ -114,12 +177,29 @@ class SearchResultView extends StatelessWidget {
                     ),
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(8),
-                      child: FastCachedImage(
-                        filterQuality: FilterQuality.medium,
-                        url: AppUrl.convertImageAddition(movie.poster_url),
-                        fit: BoxFit.cover,
-                        loadingBuilder: (context, loadingProgress) {
-                          return _buildSkeletonForposter();
+                      child: LayoutBuilder(
+                        builder: (context, c) {
+                          final dpr = MediaQuery.of(context).devicePixelRatio;
+
+                          final displayPxW = c.maxWidth * dpr; //  px thật
+                          const quality = 1; // 0.8–0.95 tuỳ bạn
+
+                          final cw = (displayPxW * quality).round();
+                          final ch = (cw * 3 / 2).round();
+
+                          return FastCachedImage(
+                            key: ValueKey(movie.slug), //  ổn định widget
+                            url: AppUrl.convertImageAddition(movie.poster_url),
+                            fit: BoxFit.cover,
+                            // cacheWidth: cw,
+                            // cacheHeight: ch,
+                            // filterQuality: FilterQuality
+                            //     .low, // đừng none nếu muốn đỡ “xấu”
+                            // gaplessPlayback: true,
+                            fadeInDuration: const Duration(milliseconds: 120),
+                            loadingBuilder: (_, __) =>
+                                _buildSkeletonForposter(), // xem phần 2
+                          );
                         },
                       ),
                     ),

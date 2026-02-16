@@ -30,9 +30,23 @@ class SearchShimmerLoading extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 6),
-            Container(height: 12, width: double.infinity,decoration: BoxDecoration(borderRadius: BorderRadius.circular(8), color: Colors.black, ),),
+            Container(
+              height: 12,
+              width: double.infinity,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(8),
+                color: Colors.black,
+              ),
+            ),
             const SizedBox(height: 6),
-            Container(height: 8, width: double.infinity,decoration: BoxDecoration(borderRadius: BorderRadius.circular(8), color: Colors.black, ),),
+            Container(
+              height: 8,
+              width: double.infinity,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(8),
+                color: Colors.black,
+              ),
+            ),
           ],
         ),
       ),

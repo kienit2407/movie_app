@@ -8,7 +8,7 @@ class SearchCubit extends Cubit<SearchState> {
   late Box<String> _historyBox;
   static const String _historyBoxName = 'search_history';
 
-  SearchCubit({required this.searchUseCase}) : super( SearchLoading()) {
+  SearchCubit({required this.searchUseCase}) : super(SearchLoading()) {
     _initHive();
   }
 
@@ -24,77 +24,95 @@ class SearchCubit extends Cubit<SearchState> {
 
   Future<void> addToHistory(String keyword) async {
     if (keyword.trim().isEmpty) return;
-    
+
     final map = _historyBox.toMap();
     final duplicateKeys = map.entries
         .where((e) => e.value.toLowerCase() == keyword.toLowerCase())
         .map((e) => e.key)
         .toList();
-        
+
     for (var key in duplicateKeys) {
       await _historyBox.delete(key);
     }
-    
+
     await _historyBox.add(keyword);
   }
 
   Future<void> deleteHistoryItem(int index) async {
     final realIndex = _historyBox.length - 1 - index;
     await _historyBox.deleteAt(realIndex);
-    
+
     if (state is SearchInitial) {
       _loadHistory();
     }
   }
 
   Future<void> search(String keyword, {bool isLoadMore = false}) async {
-    if (keyword.isEmpty) {
+    final kw = keyword.trim();
+    if (kw.isEmpty) {
       _loadHistory();
       return;
     }
 
     int page = 1;
-    final int limit = 21;
-    
-    if (state is SearchLoaded && isLoadMore) {
-      final currentState = state as SearchLoaded;
-      if (!currentState.hasMore) return;
-      page = currentState.page + 1;
+    const int limit = 21;
+
+    // ✅ LOAD MORE FLOW
+    if (isLoadMore && state is SearchLoaded) {
+      final current = state as SearchLoaded;
+
+      // chặn gọi trùng / hết trang
+      if (!current.hasMore || current.isLoadingMore) return;
+
+      page = current.page + 1;
+
+      // ✅ bật indicator load more (giữ list hiện tại)
+      emit(current.copyWith(isLoadingMore: true));
     } else {
+      // ✅ SEARCH MỚI
       emit(SearchLoading());
-      addToHistory(keyword);
+      addToHistory(kw);
     }
 
     final result = await searchUseCase.call(
-      keyword: keyword, 
-      limit: limit, 
-      page: page
+      keyword: kw,
+      limit: limit,
+      page: page,
     );
 
     result.fold(
       (error) {
-        if (!isLoadMore) emit(SearchError(error));
+        if (isLoadMore && state is SearchLoaded) {
+          // ✅ lỗi load more: giữ list, tắt indicator
+          final current = state as SearchLoaded;
+          emit(current.copyWith(isLoadingMore: false));
+        } else {
+          emit(SearchError(error));
+        }
       },
       (movies) {
         if (isLoadMore && state is SearchLoaded) {
-          final currentState = state as SearchLoaded;
-          emit(currentState.copyWith(
-            movies: [...currentState.movies, ...movies],
+          final current = state as SearchLoaded;
+
+          emit(current.copyWith(
+            movies: [...current.movies, ...movies],
             page: page,
             hasMore: movies.length == limit,
+            isLoadingMore: false, // ✅ tắt indicator
           ));
         } else {
           emit(SearchLoaded(
             movies: movies,
             page: page,
             hasMore: movies.length == limit,
-            currentKeyword: keyword,
+            currentKeyword: kw,
+            isLoadingMore: false,
           ));
         }
       },
     );
   }
-  
+
   void clearSearch() {
     _loadHistory();
   }
