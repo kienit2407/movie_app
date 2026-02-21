@@ -362,7 +362,7 @@ class EpisodeDrawerState extends State<EpisodeDrawer> {
         gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
           maxCrossAxisExtent: 250,
           mainAxisSpacing: 10,
-          crossAxisSpacing: 10,
+          crossAxisSpacing: 5,
           childAspectRatio: 16 / 9,
         ),
         itemCount: widget.episodes.length,

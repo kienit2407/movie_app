@@ -14,10 +14,8 @@ import 'package:movie_app/common/models/watch_history_entry.dart';
 import 'package:movie_app/common/bloc/AuthWithSocial/auth_with_social_cubit.dart';
 import 'package:movie_app/core/config/routes/app_router.dart';
 import 'package:movie_app/core/config/di/service_locator.dart';
-import 'package:movie_app/core/config/network/init_supabase.dart';
 import 'package:movie_app/core/config/themes/app_theme.dart';
 import 'package:movie_app/core/mini_player_overlay.dart';
-import 'package:movie_app/core/mini_player_manager.dart';
 import 'package:movie_app/feature/auth/domain/usecases/confirm_with_token.dart';
 import 'package:movie_app/feature/auth/domain/usecases/req_reset_password.dart';
 import 'package:movie_app/feature/auth/domain/usecases/sigin_with_facebook.dart';
@@ -37,9 +35,7 @@ import 'package:movie_app/feature/home/domain/usecase/get_latest_usecase.dart';
 import 'package:movie_app/feature/home/presentation/bloc/carousel_display_cubit.dart';
 import 'package:movie_app/feature/home/presentation/bloc/country_movie_cubit.dart';
 import 'package:movie_app/feature/home/presentation/bloc/genre_cubit.dart';
-import 'package:movie_app/feature/home/presentation/pages/home_page.dart';
 import 'package:movie_app/feature/intro/presentation/splash/bloc/splash_cubit.dart';
-import 'package:movie_app/feature/intro/presentation/splash/pages/splash.dart';
 import 'package:movie_app/feature/movie_pagination/presentation/bloc/fetch_fillter_cubit.dart';
 import 'package:movie_app/feature/search/presentation/bloc/search_cubit.dart';
 import 'package:path_provider/path_provider.dart';
@@ -82,7 +78,7 @@ Future<void> main() async {
   debugPrint('=== [5/8] HydratedBloc storage initialized ===');
 
   await FastCachedImageConfig.init(
-    clearCacheAfter: const Duration(days: 30),
+    clearCacheAfter: const Duration(days: 1),
   );
   debugPrint('=== [6/8] FastCachedImage initialized ===');
 

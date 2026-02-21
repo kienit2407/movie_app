@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:ui';
+import 'package:flutter/rendering.dart' show ScrollDirection;
 import 'package:go_router/go_router.dart';
 import 'package:movie_app/core/config/routes/app_router.dart';
 import 'package:movie_app/core/config/utils/movie_player_args.dart';
@@ -20,9 +21,6 @@ import 'package:movie_app/common/components/alert_dialog/app_alert_dialog.dart';
 import 'package:movie_app/common/helpers/contants/app_url.dart';
 import 'package:movie_app/core/config/utils/animated_dialog.dart';
 import 'package:movie_app/core/config/utils/cover_map.dart';
-import 'package:movie_app/core/config/utils/format_episode.dart';
-import 'package:movie_app/feature/detail_movie/presentation/widgets/auto_switch.dart';
-import 'package:movie_app/feature/home/presentation/widgets/polk_effect.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:toastification/toastification.dart';
 import 'package:video_player/video_player.dart';
@@ -33,6 +31,8 @@ import 'package:movie_app/common/helpers/watch_progress_storage.dart';
 import 'package:movie_app/common/helpers/watch_history_storage.dart';
 
 enum SeekDirection { forward, backward }
+
+enum _VideoDragMode { resize, mini }
 
 class MoviePlayerPage extends StatefulWidget {
   final String slug;
@@ -76,9 +76,12 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
   static const double _episodeCrossSpacing = 5;
   static const double _episodePaddingTop = 10;
   static const double _episodePaddingH = 10;
+
   int _currentEpisodeIndex = 0;
   String _currentServer = '';
   bool _isFullscreen = false;
+  static const double kMinPanelHFull = 120; // title + handle (tối thiểu)
+  static const double kMinPanelHRich = 260; // title + server list + TextField
   double _videoHeight = 0;
   double _minVideoHeight = 0;
   double _maxVideoHeight = 0;
@@ -107,6 +110,7 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
   double _miniDragT = 0.0;
   final List<GlobalKey> _episodeKeys = [];
   bool _isMinifyAnimating = false;
+  bool get _isExpandedPortrait => _expandT >= 0.97;
   bool _wasPlayingBeforeScrub = false;
   Timer? _seekThrottle;
   Duration _previewPosition = Duration.zero;
@@ -117,6 +121,7 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
   SeekDirection? _seekDir;
   Timer? _hideControlsTimer;
   Timer? _seekOverlayTimer;
+  bool _panelDragging = false;
   Timer? _saveProgressTimer;
   DateTime? _lastSeekTapTime;
   late final AnimationController _arrowCtrl;
@@ -127,9 +132,20 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
   final ScrollController _episodeScrollController = ScrollController();
   final ScrollController _landscapeEpisodeScrollController = ScrollController();
   bool _isExpandInfor = false;
+  _VideoDragMode? _videoDragMode; // null = undecided
+  double _videoGestureDragDy = 0;
   bool _isInMiniMode = false;
   bool _autoPlayTriggered = false;
   VoidCallback? _vpPositionListener;
+  bool _panelResizingFromOverscroll = false;
+  late final AnimationController _videoSnapCtrl;
+  Animation<double>? _videoSnapAnim;
+  double _panelDragDy = 0;
+  double _videoResizeDragDy = 0;
+
+  double? _videoSnapTarget;
+  AnimationStatusListener? _snapStatusListener;
+  double _dragStartHeight = 0;
   Orientation? _lastOrientation;
   Timer? _autoToastTimer;
   bool _showAutoToast = false;
@@ -168,6 +184,10 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
     _arrowCtrl = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 450),
+    );
+    _videoSnapCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 220),
     );
     _minifyCtrl = AnimationController(
       vsync: this,
@@ -257,6 +277,7 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
     _videoPlayerController = null;
 
     _arrowCtrl.dispose();
+    _videoSnapCtrl.dispose();
     _minifyCtrl.dispose();
     _panelCtrl.dispose();
     _searchController.dispose();
@@ -302,6 +323,18 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
     }
   }
 
+  double get _seekbarHPad {
+    // 0 -> 12 khi expand (tự mượt theo _expandT)
+    final t = Curves.easeOut.transform(_expandT);
+    return lerpDouble(0, 12, t)!;
+  }
+
+  double get _seekbarExtraLift {
+    // nâng thêm một chút khi expand
+    final t = Curves.easeOut.transform(_expandT);
+    return lerpDouble(0, 10, t)!;
+  }
+
   void _showControlsWithAutoHide() {
     _hideControlsTimer?.cancel();
     setState(() => _showControls = true);
@@ -323,6 +356,32 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
       _hideControlsNow();
     } else {
       _showControlsWithAutoHide();
+    }
+  }
+
+  // 2) icon theo trạng thái
+  IconData get _portraitExpandIcon {
+    if (_isFullscreen)
+      return Icons.fullscreen_exit; // đang landscape fullscreen
+    if (_isExpandedPortrait)
+      return Icons.screen_rotation; // đang fullscreen dọc -> chuyển sang ngang
+    return Icons.open_in_full; // chưa fullscreen dọc -> expand dọc
+  }
+
+  // 3) hành vi theo trạng thái
+  void _onPortraitExpandPressed() {
+    if (_isFullscreen) {
+      _toggleFullscreen(); // thoát landscape
+      return;
+    }
+
+    if (_isExpandedPortrait) {
+      _toggleFullscreen(); // đang fullscreen dọc -> xoay ngang
+    } else {
+      _animateVideoHeightTo(
+        _maxVideoHeight,
+      ); // chưa fullscreen dọc -> expand dọc
+      _resetHideControlsTimer();
     }
   }
 
@@ -567,6 +626,72 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
 
     _vpPositionListener = null;
     _vpEndListener = null;
+  }
+
+  void _animateVideoHeightTo(double target) {
+    _videoSnapTarget = target;
+
+    _videoSnapCtrl.stop();
+    _videoSnapAnim?.removeListener(_onSnapTick);
+
+    if (_snapStatusListener != null) {
+      _videoSnapCtrl.removeStatusListener(_snapStatusListener!);
+    }
+
+    _videoSnapAnim = Tween<double>(begin: _videoHeight, end: target).animate(
+      CurvedAnimation(parent: _videoSnapCtrl, curve: Curves.easeOutCubic),
+    )..addListener(_onSnapTick);
+
+    _snapStatusListener = (status) {
+      if (status == AnimationStatus.completed &&
+          mounted &&
+          _videoSnapTarget != null) {
+        setState(() => _videoHeight = _videoSnapTarget!); // chốt tuyệt đối
+      }
+    };
+    _videoSnapCtrl.addStatusListener(_snapStatusListener!);
+
+    _videoSnapCtrl.forward(from: 0);
+  }
+
+  void _onSnapTick() {
+    if (!mounted) return;
+    setState(() {
+      _videoHeight = _videoSnapAnim!.value;
+    });
+  }
+
+  void _panelResizeByDy(double dy) {
+    // dy > 0: kéo xuống -> tăng videoHeight (expand)
+    final next = (_videoHeight + dy).clamp(_minVideoHeight, _maxVideoHeight);
+    if (next == _videoHeight) return;
+    setState(() => _videoHeight = next);
+  }
+
+  void _panelResizeEnd({double velocity = 0, double dragDy = 0}) {
+    const snapT = 0.55; // ngưỡng theo vị trí
+    const dragGate = 60.0; // ngưỡng theo quãng kéo
+
+    // fling mạnh -> theo velocity
+    if (velocity.abs() > 900) {
+      _animateVideoHeightTo(velocity > 0 ? _maxVideoHeight : _minVideoHeight);
+      return;
+    }
+
+    // kéo đủ xa -> theo hướng kéo
+    if (dragDy > dragGate) {
+      _animateVideoHeightTo(_maxVideoHeight); // kéo xuống => expand
+      return;
+    }
+    if (dragDy < -dragGate) {
+      _animateVideoHeightTo(_minVideoHeight); // kéo lên => collapse
+      return;
+    }
+
+    // không đủ xa -> theo vị trí hiện tại
+    _animateVideoHeightTo(
+      _expandT >= snapT ? _maxVideoHeight : _minVideoHeight,
+    );
   }
 
   void _attachVpListeners() {
@@ -858,6 +983,11 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
       ..addAll(List.generate(count, (_) => GlobalKey()));
   }
 
+  double get _seekbarLift {
+    final t = Curves.easeOut.transform(_expandT);
+    return lerpDouble(0, 24, t)!; // 12 -> 24
+  }
+
   void _handleYoutubeSeek(SeekDirection dir) {
     final chewie = _chewieController;
     if (chewie == null) return;
@@ -953,10 +1083,10 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
     return ((_videoHeight - _minVideoHeight) / denom).clamp(0.0, 1.0);
   }
 
-  double get _seekbarLift {
-    final t = Curves.easeOut.transform(_expandT);
-    return lerpDouble(0, 12, t)!; // nhích lên tối đa 12px
-  }
+  // double get _seekbarLift {
+  //   final t = Curves.easeOut.transform(_expandT);
+  //   return lerpDouble(0, 12, t)!; // nhích lên tối đa 12px
+  // }
 
   @override
   Widget build(BuildContext context) {
@@ -1034,143 +1164,255 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
     );
   }
 
-  Widget _buildVideoAreaWithoutSeekbar() {
-    // Check xem có đang expand không để điều chỉnh hit area
-    final isVideoExpanded = _videoHeight >= _maxVideoHeight - 100;
+  Widget _wrapPanelHeaderDrag({required Widget child}) {
     return GestureDetector(
-      // Kéo video để chuyển thành mini player (giống YouTube)
-      // Chỉ khi video chưa expand full mới có thể kéo vào mini player
+      behavior: HitTestBehavior.translucent,
       onVerticalDragStart: (_) {
-        if (isVideoExpanded) return;
-        _minifyCtrl.stop();
-        _isMinifyAnimating = false;
-        setState(() {
-          _miniDragDy = 0;
-          _miniDragT = 0;
-        });
+        _panelDragDy = 0;
+        _panelDragging =
+            true; // không cần setState nếu bạn không dùng để render
+        _videoSnapCtrl.stop();
+        _hideControlsNow();
       },
       onVerticalDragUpdate: (d) {
-        // Chỉ cho phép kéo xuống khi video chưa expand
-        if (isVideoExpanded) return;
+        _panelDragDy += d.delta.dy;
+
+        final ctrl = (widget.movie.episode_current == 'Full')
+            ? _scrollController
+            : _episodeScrollController;
+
+        final atTop = !ctrl.hasClients || ctrl.offset <= 0.5;
+
+        if (atTop || _videoHeight > _minVideoHeight + 1) {
+          _panelResizeByDy(d.delta.dy);
+        }
+      },
+      onVerticalDragEnd: (d) => _panelResizeEnd(
+        velocity: d.primaryVelocity ?? 0,
+        dragDy: _panelDragDy,
+      ),
+      child: child,
+    );
+  }
+
+  Widget _wrapOverscrollToResize({
+    required ScrollController controller,
+    required Widget child,
+  }) {
+    return NotificationListener<ScrollNotification>(
+      onNotification: (n) {
+        final isLandscape =
+            MediaQuery.of(context).orientation == Orientation.landscape;
+        if (_isFullscreen || isLandscape) return false;
+
+        final m = n.metrics;
+        final atTop = m.pixels <= m.minScrollExtent + 0.5;
+
+        // 1) Overscroll kéo xuống ở TOP => resize
+        if (n is OverscrollNotification && atTop && n.overscroll < 0) {
+          final dy = -n.overscroll;
+
+          if (!_panelResizingFromOverscroll) {
+            _panelResizingFromOverscroll = true;
+            _panelDragDy = 0;
+            _videoSnapCtrl.stop();
+            _hideControlsNow();
+          }
+
+          _panelDragDy += dy;
+          _panelResizeByDy(dy);
+          return false;
+        }
+
+        // 2) Nếu đang resize mà user kéo NGƯỢC lên (scrollDelta > 0) => trả scroll bình thường
+        if (n is ScrollUpdateNotification &&
+            _panelResizingFromOverscroll &&
+            (n.scrollDelta ?? 0) > 0) {
+          _panelResizingFromOverscroll = false;
+          _panelDragDy = 0;
+        }
+
+        // 3) Thả tay / dừng scroll => snap
+        final isReleaseOrIdle =
+            (n is ScrollEndNotification) ||
+            (n is UserScrollNotification &&
+                n.direction == ScrollDirection.idle);
+
+        if (isReleaseOrIdle && _panelResizingFromOverscroll) {
+          _panelResizingFromOverscroll = false;
+          _panelResizeEnd(dragDy: _panelDragDy, velocity: 0);
+          _panelDragDy = 0;
+        }
+
+        return false;
+      },
+      child: child,
+    );
+  }
+
+  Widget _buildVideoAreaWithoutSeekbar() {
+    final isExpanded = _videoHeight >= _maxVideoHeight - 100;
+    return GestureDetector(
+      behavior: HitTestBehavior.translucent,
+
+      // Tap/double tap vẫn hoạt động trên cả vùng black bar
+      onTap: _toggleControls,
+      onDoubleTapDown: _handleDoubleTap,
+
+      onVerticalDragStart: (_) {
+        _minifyCtrl.stop();
+        _isMinifyAnimating = false;
+
+        _miniDragDy = 0;
+        _videoGestureDragDy = 0;
+
+        _videoSnapCtrl.stop();
+        _hideControlsNow();
+
+        _videoDragMode = null; // undecided
+      },
+
+      onVerticalDragUpdate: (d) {
+        // quyết định mode ở lần update đầu tiên
+        if (_videoDragMode == null) {
+          if (_videoHeight > _minVideoHeight + 1) {
+            _videoDragMode = _VideoDragMode.resize;
+          } else {
+            // ở min: kéo LÊN => expand, kéo XUỐNG => mini
+            _videoDragMode = (d.delta.dy < 0)
+                ? _VideoDragMode.resize
+                : _VideoDragMode.mini;
+          }
+        }
+
+        if (_videoDragMode == _VideoDragMode.resize) {
+          // drag up => d.delta.dy âm => -delta => dy dương => tăng height
+          final dy = d.delta.dy;
+          _videoGestureDragDy += dy;
+          _panelResizeByDy(dy); // dy âm => collapse, dy dương => expand
+          return;
+        }
+
+        // mini mode (kéo xuống)
         _miniDragDy += d.delta.dy;
       },
-      onVerticalDragEnd: (d) {
-        // Chỉ cho phép vào mini player khi video chưa expand
-        if (isVideoExpanded) return;
 
+      onVerticalDragEnd: (d) {
         final v = d.primaryVelocity ?? 0;
-        // Kéo xuống đủ 80px hoặc có velocity lớn sẽ vào mini player
+
+        if (_videoDragMode == _VideoDragMode.resize) {
+          // vì mình đảo dấu dy, velocity cũng đảo để snap đúng
+          _panelResizeEnd(velocity: v, dragDy: _videoGestureDragDy);
+          return;
+        }
+
+        // mini mode
         if (_miniDragDy > 80 || v > 800) {
           _enterMiniPlayer();
         }
       },
-      child: GestureDetector(
-        onTap: () {
-          if (isVideoExpanded) {
-            _collapseVideo();
-          } else {
-            _toggleControls();
-          }
-        },
-        onDoubleTapDown: _handleDoubleTap,
-        child: Container(
-          height: _videoHeight,
-          color: Colors.black,
-          child: Stack(
-            alignment: Alignment.center,
-            fit: StackFit.expand,
-            children: [
-              if (_videoPlayerController != null &&
-                  _videoPlayerController!.value.isInitialized)
-                Positioned.fill(
-                  child: Opacity(
-                    opacity: 0.5,
-                    child: ImageFiltered(
-                      imageFilter: ImageFilter.blur(sigmaX: 50, sigmaY: 30),
-                      child: FittedBox(
-                        fit: BoxFit.cover,
-                        child: SizedBox(
-                          width: _videoPlayerController!.value.size.width,
-                          height: _videoPlayerController!.value.size.height,
-                          child: VideoPlayer(_videoPlayerController!),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              if (_chewieController != null)
-                Center(
-                  child: AspectRatio(
-                    aspectRatio: 16 / 9,
-                    child: Chewie(controller: _chewieController!),
-                  ),
-                )
-              else
-                Center(
-                  child: LoadingAnimationWidget.stretchedDots(
-                    color: AppColor.secondColor,
-                    size: 20,
-                  ),
-                ),
 
-              if (_showControls && _chewieController != null)
-                _buildPlayPauseOverlay(),
-              if (_showSeekOverlay && _seekDir != null) _buildSeekOverlay(50),
-              Positioned(
-                top: 8,
-                left: 8,
-                right: 0,
-                child: IgnorePointer(
-                  ignoring: !_showControls,
-                  child: AnimatedOpacity(
-                    opacity: _showControls ? 1 : 0,
-                    duration: const Duration(milliseconds: 200),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 10),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.start,
-                        children: [
-                          IconButton(
-                            icon: const Icon(
-                              Iconsax.arrow_down_1_copy,
-                              color: Colors.white,
-                              size: 18,
-                            ),
-                            onPressed: () => context.pop(),
-                          ),
-                          const Spacer(),
-                          if (widget.movie.episode_current != 'Full')
-                            _buildAutoPlayToggleButton(),
-                        ],
+      child: Container(
+        height: _videoHeight,
+        color: Colors.black,
+        child: Stack(
+          alignment: Alignment.center,
+          fit: StackFit.expand,
+          children: [
+            if (_videoPlayerController != null &&
+                _videoPlayerController!.value.isInitialized)
+              Positioned.fill(
+                child: Opacity(
+                  opacity: 0.8,
+                  child: ImageFiltered(
+                    imageFilter: ImageFilter.blur(sigmaX: 50, sigmaY: 30),
+                    child: FittedBox(
+                      fit: BoxFit.cover,
+                      child: SizedBox(
+                        width: _videoPlayerController!.value.size.width,
+                        height: _videoPlayerController!.value.size.height,
+                        child: VideoPlayer(_videoPlayerController!),
                       ),
                     ),
                   ),
                 ),
               ),
-              Positioned(
-                top: 50,
-                child: IgnorePointer(
-                  child: Center(
-                    child: AnimatedOpacity(
-                      opacity: _showAutoToast ? 1 : 0,
-                      duration: const Duration(milliseconds: 250),
-                      child: AnimatedScale(
-                        scale: _showAutoToast ? 1.0 : 0.95,
-                        duration: const Duration(milliseconds: 250),
-                        child: Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: Colors.black26,
-                            borderRadius: BorderRadius.circular(30),
+            _buildAmbientAroundVideo(),
+            if (_chewieController != null)
+              Center(
+                child: AspectRatio(
+                  aspectRatio: 16 / 9,
+                  child: Chewie(controller: _chewieController!),
+                ),
+              )
+            else
+              Center(
+                child: LoadingAnimationWidget.stretchedDots(
+                  color: AppColor.secondColor,
+                  size: 20,
+                ),
+              ),
+
+            if (_showControls && _chewieController != null)
+              _buildPlayPauseOverlay(),
+            if (_showSeekOverlay && _seekDir != null) _buildSeekOverlay(50),
+
+            Positioned(
+              top: isExpanded ? 50 : 8,
+              left: 8,
+              right: 0,
+              child: IgnorePointer(
+                ignoring: !_showControls,
+                child: AnimatedOpacity(
+                  opacity: _showControls ? 1 : 0,
+                  duration: const Duration(milliseconds: 200),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 10),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.start,
+                      children: [
+                        IconButton(
+                          icon: const Icon(
+                            Iconsax.arrow_down_1_copy,
+                            color: Colors.white,
+                            size: 18,
                           ),
-                          child: Text(
-                            _autoToastText,
-                            textAlign: TextAlign.center,
-                            style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                              fontSize: 12,
-                            ),
+                          onPressed: () => context.pop(),
+                        ),
+                        const Spacer(),
+                        if (widget.movie.episode_current != 'Full')
+                          _buildAutoPlayToggleButton(),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+
+            isExpanded ? _buildTitleOverlay(isExpanded: isExpanded) : SizedBox.shrink(),
+            Positioned(
+              top: 50,
+              child: IgnorePointer(
+                child: Center(
+                  child: AnimatedOpacity(
+                    opacity: _showAutoToast ? 1 : 0,
+                    duration: const Duration(milliseconds: 250),
+                    child: AnimatedScale(
+                      scale: _showAutoToast ? 1.0 : 0.95,
+                      duration: const Duration(milliseconds: 250),
+                      child: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Colors.black26,
+                          borderRadius: BorderRadius.circular(30),
+                        ),
+                        child: Text(
+                          _autoToastText,
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                            fontSize: 12,
                           ),
                         ),
                       ),
@@ -1178,8 +1420,149 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
                   ),
                 ),
               ),
-            ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTitleOverlay({required bool isExpanded}) {
+    
+
+    return Positioned(
+      top: 100,
+      left: 30,
+      right: 12,
+      child: IgnorePointer(
+        ignoring: !_showControls,
+        child: AnimatedOpacity(
+          opacity: _showControls ? 1 : 0,
+          duration: const Duration(milliseconds: 180),
+          curve: Curves.easeOut,
+          child: AnimatedSlide(
+            offset: _showControls ? Offset.zero : const Offset(0, -0.08),
+            duration: const Duration(milliseconds: 180),
+            curve: Curves.easeOutCubic,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Tên gốc (origin) - thường dài hơn -> 2 lines
+                Text(
+                  widget
+                      .movie
+                      .origin_name, // hoặc widget.movie.originName tuỳ model
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    shadows: [Shadow(blurRadius: 8, color: Colors.black54)],
+                  ),
+                ),
+                const SizedBox(height: 2),
+
+                // Tên Việt/hiển thị - 1 line
+                Text(
+                  widget.movieName,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: Colors.white.withOpacity(0.78),
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    shadows: const [
+                      Shadow(blurRadius: 8, color: Colors.black54),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAmbientAroundVideo() {
+    return Positioned.fill(
+      child: IgnorePointer(
+        child: LayoutBuilder(
+          builder: (context, c) {
+            final w = c.maxWidth;
+            final h = c.maxHeight;
+
+            // video 16:9 đặt giữa theo chiều dọc
+            final videoH = w * (9 / 16);
+            final bar = ((h - videoH) / 2).clamp(0.0, h);
+
+            // Không có bar => không cần ambient
+            if (bar <= 0.5) return const SizedBox.shrink();
+
+            // Lấn nhẹ vào vùng video để cảm nhận "ôm" video
+            const feather = 120.0;
+
+            // Opacity tăng theo độ "dư" (càng dư càng rõ)
+            final t = (bar / 90.0).clamp(0.0, 1.0);
+            final opacity = Curves.easeOut.transform(t);
+
+            return Opacity(
+              opacity: opacity,
+              child: Stack(
+                children: [
+                  // TOP: đen từ trên xuống, fade về gần video
+                  Positioned(
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    height: bar + feather,
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [
+                            Colors.black.withOpacity(0.92),
+                            Colors.black.withOpacity(0.85),
+                            Colors.black.withOpacity(0.65),
+                            Colors.black.withOpacity(0.25),
+                            Colors.transparent,
+                          ],
+                          stops: const [0.0, 0.25, 0.55, 0.80, 1.0],
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  // BOTTOM: đen từ dưới lên, fade về gần video
+                  Positioned(
+                    bottom: 0,
+                    left: 0,
+                    right: 0,
+                    height: bar + feather,
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.bottomCenter,
+                          end: Alignment.topCenter,
+                          colors: [
+                            Colors.black.withOpacity(0.92),
+                            Colors.black.withOpacity(0.85),
+                            Colors.black.withOpacity(0.65),
+                            Colors.black.withOpacity(0.25),
+                            Colors.transparent,
+                          ],
+                          stops: const [0.0, 0.25, 0.55, 0.80, 1.0],
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
         ),
       ),
     );
@@ -1191,14 +1574,14 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
     if (vp == null || !vp.value.isInitialized) return const SizedBox.shrink();
 
     return SizedBox(
-      height: 60,
+      height: 150,
       child: ClipRect(
         child: Stack(
           fit: StackFit.expand,
           children: [
             // Lớp 1: Video (Chỉ lấy nửa dưới)
             Opacity(
-              opacity: .35,
+              opacity: .2,
               child: ImageFiltered(
                 imageFilter: ImageFilter.blur(sigmaX: 50, sigmaY: 50),
                 child: FittedBox(
@@ -1227,7 +1610,7 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
                         alpha: 0.0,
                       ), // Trong suốt dần lên đỉnh
                     ],
-                    stops: const [0.0, 0.3, 1.0],
+                    stops: const [0.0, 0.4, 1.0],
                   ),
                 ),
               ),
@@ -1241,11 +1624,23 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
   Widget _buildPortraitPlayer() {
     // Khi expand video, ẩn SafeArea để video nằm chính giữa
     final isExpanded = _videoHeight >= _maxVideoHeight - 100;
+    final screenH = MediaQuery.of(context).size.height;
+    final panelH = screenH - _videoHeight;
+    final sbPad = _seekbarHPad;
+    final sbLift = _seekbarLift + _seekbarExtraLift;
+
+    // min panel tuỳ content
+    final minPanel = (widget.movie.episode_current == 'Full')
+        ? kMinPanelHFull
+        : kMinPanelHRich;
+    final showContent = _panelDragging || panelH >= minPanel;
+    final showPanel = panelH >= minPanel;
+    final safeOn = _expandT < 0.97;
     return SafeArea(
-      top: !isExpanded,
+      top: safeOn,
+      left: safeOn,
+      right: safeOn,
       bottom: false,
-      left: !isExpanded,
-      right: !isExpanded,
       child: Stack(
         clipBehavior: Clip.none,
         children: [
@@ -1253,29 +1648,52 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
             children: [
               _buildVideoAreaWithoutSeekbar(),
               Flexible(
-                child: _videoHeight < _maxVideoHeight - 120
-                    ? Material(
-                        color: AppColor.bgApp,
-                        clipBehavior: Clip.antiAlias, // QUAN TRỌNG
-                        shape: const RoundedRectangleBorder(
-                          borderRadius: BorderRadius.vertical(
-                            top: Radius.circular(18),
-                          ),
-                        ),
-                        child: Stack(
-                          children: [
-                            // Ambient blur ở trên cùng
-                            if (!isExpanded)
-                              Positioned(
-                                top: 0,
-                                left: 0,
-                                right: 0,
-                                child: Opacity(
-                                  opacity: (1 - _minifyT).clamp(0.0, 1.0),
-                                  child: _buildPanelAmbientTop(),
-                                ),
+                child: Material(
+                  color: AppColor.bgApp,
+                  clipBehavior: Clip.antiAlias, // QUAN TRỌNG
+                  shape: const RoundedRectangleBorder(
+                    borderRadius: BorderRadius.vertical(
+                      top: Radius.circular(18),
+                    ),
+                  ),
+                  child: LayoutBuilder(
+                    builder: (context, c) {
+                      final screen = MediaQuery.of(context).size;
+                      final newMin = screen.width * (9 / 16);
+                      final newMax = screen.height;
+
+                      final needSync =
+                          (_maxVideoHeight - newMax).abs() > 0.5 ||
+                          (_minVideoHeight - newMin).abs() > 0.5;
+
+                      if (needSync) {
+                        WidgetsBinding.instance.addPostFrameCallback((_) {
+                          if (!mounted) return;
+                          setState(() {
+                            _maxVideoHeight = newMax;
+                            _minVideoHeight = newMin;
+                            _videoHeight = _videoHeight.clamp(
+                              _minVideoHeight,
+                              _maxVideoHeight,
+                            );
+                          });
+                        });
+                      }
+                      return Stack(
+                        children: [
+                          // Ambient blur ở trên cùng
+                          if (!isExpanded)
+                            Positioned(
+                              top: 0,
+                              left: 0,
+                              right: 0,
+                              child: Opacity(
+                                opacity: (1 - _minifyT).clamp(0.0, 1.0),
+                                child: _buildPanelAmbientTop(),
                               ),
-                            AnimatedContainer(
+                            ),
+                          Positioned.fill(
+                            child: AnimatedContainer(
                               duration: Duration(milliseconds: 200),
                               curve: Curves.bounceInOut,
                               child: Column(
@@ -1286,34 +1704,36 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
                                       horizontal: 10,
                                       vertical: 10,
                                     ),
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          widget.movie.origin_name,
-                                          maxLines: 2,
-                                          overflow: TextOverflow
-                                              .ellipsis, // Nếu tên quá dài sẽ hiện "..."
-                                          style: const TextStyle(
-                                            fontSize: 18,
-                                            fontWeight: FontWeight.bold,
-                                            color: Colors.white,
+                                    child: _wrapPanelHeaderDrag(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            widget.movie.origin_name,
+                                            maxLines: 2,
+                                            overflow: TextOverflow
+                                                .ellipsis, // Nếu tên quá dài sẽ hiện "..."
+                                            style: const TextStyle(
+                                              fontSize: 18,
+                                              fontWeight: FontWeight.bold,
+                                              color: Colors.white,
+                                            ),
                                           ),
-                                        ),
-                                        const SizedBox(height: 4),
-                                        Text(
-                                          widget.movie.name,
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                          style: const TextStyle(
-                                            fontSize: 14,
-                                            fontWeight: FontWeight.w500,
-                                            color: AppColor
-                                                .secondColor, // Màu nhấn cho tên phụ
+                                          const SizedBox(height: 4),
+                                          Text(
+                                            widget.movie.name,
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: const TextStyle(
+                                              fontSize: 14,
+                                              fontWeight: FontWeight.w500,
+                                              color: AppColor
+                                                  .secondColor, // Màu nhấn cho tên phụ
+                                            ),
                                           ),
-                                        ),
-                                      ],
+                                        ],
+                                      ),
                                     ),
                                   ),
                                   const SizedBox(height: 10),
@@ -1333,42 +1753,45 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
                                         ? _buildEpisodeListForSingle()
                                         : _buidlListEpisodeForSeriesMovie(),
                                   ),
-                                  // Expanded(child: _buildEpisodeListForSingle()),
                                 ],
                               ),
                             ),
-                          ],
-                        ),
-                      )
-                    : const SizedBox.shrink(),
+                          ),
+                        ],
+                      );
+                    },
+                  ),
+                ),
               ),
             ],
           ),
           // 1) Info row + fullscreen (only show when _showControls)
-          if (_showControls)
+          if (_showControls) ...[
             Positioned(
               top:
                   _videoHeight -
                   (_thumbRadius * 2) -
                   44 -
-                  _seekbarLift, // có lift khi expand
-              left: 0,
-              right: 0,
+                  _seekbarLift -
+                  (isExpanded ? 30 : 0),
+              left: (isExpanded ? 5 : 0),
+              right: (isExpanded ? 5 : 0),
               child: _buildBottomInfoRow(),
             ),
-          Positioned(
-            top:
-                _videoHeight -
-                _thumbRadius -
-                _seekbarLift, // có lift khi expand
-            left: 0,
-            right: 0,
-            child: Material(
-              color: Colors.transparent,
-              elevation: 10,
-              child: _buildPinnedSeekbarOnly(),
+            Positioned(
+              top:
+                  _videoHeight -
+                  _thumbRadius -
+                  _seekbarLift -
+                  (isExpanded ? 30 : 0),
+              left: (isExpanded ? 20 : 0),
+              right: (isExpanded ? 20 : 0),
+              child: Material(
+                color: Colors.transparent,
+                child: _buildPinnedSeekbarOnly(),
+              ),
             ),
-          ),
+          ],
         ],
       ),
     );
@@ -1490,6 +1913,9 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
       ),
       child: GridView.builder(
         controller: _episodeScrollController,
+        physics: const AlwaysScrollableScrollPhysics(
+          parent: BouncingScrollPhysics(),
+        ),
         padding: EdgeInsets.only(
           left: 10,
           right: 10,
@@ -1731,6 +2157,9 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
       child: GridView.builder(
         controller: _scrollController,
         padding: const EdgeInsets.all(10),
+        physics: const AlwaysScrollableScrollPhysics(
+          parent: BouncingScrollPhysics(),
+        ),
         gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
           maxCrossAxisExtent: 260, // Một ô rộng tối đa 250px.
           mainAxisSpacing: 10,
@@ -1826,12 +2255,17 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
                                     color: Colors.white,
                                   ),
                                   const SizedBox(width: 4),
-                                  Text(
-                                    serverName['title'],
-                                    style: TextStyle(
-                                      fontSize: 10,
-                                      fontWeight: FontWeight.w600,
-                                      color: Colors.white,
+                                  Flexible(
+                                    child: Text(
+                                      serverName['title'],
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      softWrap: false,
+                                      style: const TextStyle(
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.w600,
+                                        color: Colors.white,
+                                      ),
                                     ),
                                   ),
                                 ],

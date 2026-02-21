@@ -594,7 +594,7 @@ class _EpisodesSliverState extends State<_EpisodesSliver> {
           gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
             maxCrossAxisExtent: 250,
             mainAxisSpacing: 10,
-            crossAxisSpacing: 10,
+            crossAxisSpacing: 5,
             childAspectRatio: 16 / 9,
           ),
         ),
