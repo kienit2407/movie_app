@@ -44,12 +44,15 @@ class MiniPlayerManager extends ChangeNotifier {
   void triggerNavigateToPlayer() {
     navigateToPlayerCallback?.call();
   }
+
   static final MiniPlayerManager _instance = MiniPlayerManager._internal();
   factory MiniPlayerManager() => _instance;
   MiniPlayerManager._internal();
 
   static final ValueNotifier<bool> isVisible = ValueNotifier<bool>(false);
-  static final ValueNotifier<bool> shouldRestorePlayer = ValueNotifier<bool>(false);
+  static final ValueNotifier<bool> shouldRestorePlayer = ValueNotifier<bool>(
+    false,
+  );
 
   ChewieController? _chewieController;
   MiniPlayerLaunchData? _launch;
@@ -167,7 +170,7 @@ class MiniPlayerManager extends ChangeNotifier {
 
     isVisible.value = false;
     shouldRestorePlayer.value = false;
-    
+
     if (notify) {
       Future.microtask(notifyListeners);
     }
@@ -190,7 +193,7 @@ class MiniPlayerManager extends ChangeNotifier {
 
     isVisible.value = false;
     shouldRestorePlayer.value = false;
-    
+
     Future.microtask(notifyListeners);
   }
 

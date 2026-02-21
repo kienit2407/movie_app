@@ -13,8 +13,9 @@ class AppRoutes {
   static const String movieDetail = '/movie/:slug';
   static const String player = '/player';
   static const String search = '/search';
-  
-  static final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+
+  static final GlobalKey<NavigatorState> navigatorKey =
+      GlobalKey<NavigatorState>();
 }
 
 final goRouter = GoRouter(
@@ -42,18 +43,30 @@ final goRouter = GoRouter(
     GoRoute(
       path: AppRoutes.player,
       name: 'player',
-      builder: (context, state) {
+      pageBuilder: (context, state) {
         final args = state.extra as MoviePlayerArgs;
-        return MoviePlayerPage(
-          slug: args.slug,
-          movieName: args.movieName,
-          thumbnailUrl: args.thumbnailUrl,
-          episodes: args.episodes,
-          movie: args.movie,
-          initialEpisodeLink: args.initialEpisodeLink,
-          initialEpisodeIndex: args.initialEpisodeIndex,
-          initialServer: args.initialServer,
-          initialServerIndex: args.initialServerIndex,
+        return CustomTransitionPage<void>(
+          child: MoviePlayerPage(
+            slug: args.slug,
+            movieName: args.movieName,
+            thumbnailUrl: args.thumbnailUrl,
+            episodes: args.episodes,
+            movie: args.movie,
+            initialEpisodeLink: args.initialEpisodeLink,
+            initialEpisodeIndex: args.initialEpisodeIndex,
+            initialServer: args.initialServer,
+            initialServerIndex: args.initialServerIndex,
+          ),
+          // Không vẽ transition (đảm bảo không có slide)
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            return child;
+          },
+
+          // push: bạn muốn có anim hay không thì tuỳ
+          transitionDuration: const Duration(milliseconds: 200),
+
+          //  pop: tắt anim => hết “swipe iOS”
+          reverseTransitionDuration: Duration.zero,
         );
       },
     ),
