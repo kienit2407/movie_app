@@ -15,12 +15,14 @@ class MiniPlayerOverlay extends StatefulWidget {
   State<MiniPlayerOverlay> createState() => _MiniPlayerOverlayState();
 }
 
-class _MiniPlayerOverlayState extends State<MiniPlayerOverlay> {
+class _MiniPlayerOverlayState extends State<MiniPlayerOverlay> with TickerProviderStateMixin {
   final MiniPlayerManager mgr = MiniPlayerManager();
   Offset? _pos;
   bool _wasInactive = true;
   static const double _margin = 16.0;
   bool _draggingMini = false;
+  late final AnimationController _snapCtrl =
+    AnimationController(vsync: this, duration: const Duration(milliseconds: 220));
   Future<bool> _handleBackPress() async {
     if (mgr.isMiniPlayerActive) {
       mgr.disposeMiniPlayer();

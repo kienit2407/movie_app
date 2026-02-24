@@ -63,7 +63,7 @@ final goRouter = GoRouter(
           },
 
           // push: bạn muốn có anim hay không thì tuỳ
-          transitionDuration: const Duration(milliseconds: 200),
+          transitionDuration: Duration.zero,
 
           //  pop: tắt anim => hết “swipe iOS”
           reverseTransitionDuration: Duration.zero,

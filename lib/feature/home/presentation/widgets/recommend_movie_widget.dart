@@ -131,9 +131,12 @@ class _MovieSectionWithScrollState extends State<MovieSectionWithScroll> {
   }
 
   Widget _movieThemeItem(Gradient gadient, String content) {
+    final w = MediaQuery.sizeOf(context).width;
+    final scale = (w / 414).clamp(0.85, 1.15);
+
     return SizedBox(
-      height: MediaQuery.of(context).size.height * .12,
-      width: 150,
+      height: 110 * scale, // ✅ ổn định
+      width: 150 * scale,
       child: Stack(
         children: [
           Positioned.fill(

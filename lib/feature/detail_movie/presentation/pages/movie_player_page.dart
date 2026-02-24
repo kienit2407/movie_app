@@ -76,13 +76,14 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
   static const double _episodeCrossSpacing = 5;
   static const double _episodePaddingTop = 10;
   static const double _episodePaddingH = 10;
-
+  bool _isPLaying = false;
   int _currentEpisodeIndex = 0;
   String _currentServer = '';
   bool _isFullscreen = false;
   static const double kMinPanelHFull = 120; // title + handle (tối thiểu)
   static const double kMinPanelHRich = 260; // title + server list + TextField
   double _videoHeight = 0;
+  bool _lsDrawerOpen = false;
   double _minVideoHeight = 0;
   double _maxVideoHeight = 0;
   double _initialDragY = 0;
@@ -98,8 +99,18 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
   final ScrollController _scrollMovie = ScrollController();
   double _scrubValue = 0.0;
   int _seekCount = 0;
+  bool _headerSnapping = false;
+  static const double _seriesHeaderMinH = 92; // chỉnh theo UI của bạn
+  static const double _seriesHeaderMaxH =
+      92 + 65 + 56 + 14; // title + server + textfield + spacing
+  // chiều cao fixed để snap + tránh overflow
+  static const double _pinnedH = 82; // header "đầu list" (title bar)
+  static const double _serverBarH = 65;
+  static const double _searchBarH =
+      56; // bạn sẽ set SizedBox height cho textfield
+  static const double _collapseH = _serverBarH + _searchBarH + 6; // + spacing
   final int _seekStepSeconds = 10;
-
+  final GlobalKey _videoBoxKey = GlobalKey(); // khai báo ở State
   static const double _thumbRadius = 6;
   final DraggableScrollableController _panelCtrl =
       DraggableScrollableController();
@@ -117,6 +128,7 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
   String? _previewThumbUrl; // nếu có storyboard từ server
   late final AnimationController _minifyCtrl;
   static const double _panelAmbientH = 26;
+
   bool _showSeekOverlay = false;
   SeekDirection? _seekDir;
   Timer? _hideControlsTimer;
@@ -335,6 +347,17 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
     return lerpDouble(0, 10, t)!;
   }
 
+  void _toggleLandscapeDrawer() {
+    setState(() => _lsDrawerOpen = !_lsDrawerOpen);
+
+    if (_lsDrawerOpen) {
+      // mở xong thì scroll tới tập hiện tại
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _drawerKey.currentState?.scrollToCurrentEpisode(animated: false);
+      });
+    }
+  }
+
   void _showControlsWithAutoHide() {
     _hideControlsTimer?.cancel();
     setState(() => _showControls = true);
@@ -396,6 +419,31 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
   }
 
   double get _minifyT => _isMinifyAnimating ? _minifyCtrl.value : _miniDragT;
+  bool _onSeriesScrollSnap(ScrollNotification n) {
+    if (_headerSnapping) return false;
+
+    if (n is ScrollEndNotification) {
+      final range = (_seriesHeaderMaxH - _seriesHeaderMinH).clamp(0.0, 99999.0);
+      final o = _episodeScrollController.hasClients
+          ? _episodeScrollController.offset
+          : 0.0;
+
+      // chỉ snap khi đang ở vùng "đang co header"
+      if (o > 0 && o < range) {
+        final target = (o >= range * 0.5) ? range : 0.0; // 50%
+        _headerSnapping = true;
+
+        _episodeScrollController
+            .animateTo(
+              target,
+              duration: const Duration(milliseconds: 220),
+              curve: Curves.easeOutCubic,
+            )
+            .whenComplete(() => _headerSnapping = false);
+      }
+    }
+    return false; // cho notification nổi lên để _wrapOverscrollToResize vẫn hoạt động
+  }
 
   void _saveWatchProgress() async {
     if (_videoPlayerController != null &&
@@ -896,6 +944,27 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
     );
   }
 
+  Rect _calcMiniRect(BuildContext context) {
+    final size = MediaQuery.sizeOf(context);
+    final bottomInset = MediaQuery.paddingOf(context).bottom;
+
+    final miniW = size.width * 0.55;
+    final miniH = miniW * 9 / 16;
+
+    const margin = 16.0;
+    final left = size.width - miniW - margin;
+    final top = size.height - miniH - margin - bottomInset;
+
+    return Rect.fromLTWH(left, top, miniW, miniH);
+  }
+
+  Rect _globalRectOf(GlobalKey key) {
+    final box = key.currentContext?.findRenderObject() as RenderBox?;
+    if (box == null) return Rect.zero;
+    final topLeft = box.localToGlobal(Offset.zero);
+    return topLeft & box.size;
+  }
+
   void _toggleFullscreen() {
     setState(() => _isFullscreen = !_isFullscreen);
 
@@ -986,6 +1055,20 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
   double get _seekbarLift {
     final t = Curves.easeOut.transform(_expandT);
     return lerpDouble(0, 24, t)!; // 12 -> 24
+  }
+
+  bool isPlayingNow(int serverIndex, int episodeIndex) {
+    final chewie = _chewieController;
+    final vp = _videoPlayerController;
+
+    final selectedMatch =
+        _selectedServerIndex == serverIndex &&
+        _currentEpisodeIndex == episodeIndex;
+
+    final isActuallyPlaying =
+        (chewie?.isPlaying ?? false) || (vp?.value.isPlaying ?? false);
+
+    return selectedMatch && isActuallyPlaying;
   }
 
   void _handleYoutubeSeek(SeekDirection dir) {
@@ -1292,6 +1375,7 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
 
   Widget _buildVideoAreaWithoutSeekbar() {
     final isExpanded = _videoHeight >= _maxVideoHeight - 100;
+    final bool isMinifying = _minifyT > 0.001;
     return GestureDetector(
       behavior: HitTestBehavior.translucent,
 
@@ -1353,6 +1437,7 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
       },
 
       child: Container(
+        key: _videoBoxKey,
         height: _videoHeight,
         color: Colors.black,
         child: Stack(
@@ -1377,7 +1462,8 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
                   ),
                 ),
               ),
-            _buildAmbientAroundVideo(),
+            // chỉ build ambient/blur khi KHÔNG minify
+            if (!isMinifying) _buildAmbientAroundVideo(),
             if (_chewieController != null)
               Center(
                 child: AspectRatio(
@@ -1397,7 +1483,7 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
               _buildPlayPauseOverlay(),
             if (_showSeekOverlay && _seekDir != null) _buildSeekOverlay(50),
             // ✅ THÊM scrim cho appbar ở đây (nằm dưới appbar row)
-            // _buildTopAppbarScrim(isExpanded: isExpanded),
+            _buildTopAppbarScrim(isExpanded: isExpanded),
             Positioned(
               top: isExpanded ? 50 : 8,
               left: 8,
@@ -1716,16 +1802,13 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
     final leftPad = insets.left * safeT;
     final rightPad = insets.right * safeT;
 
-    // Nếu bạn có dùng panelH để tính show/hide content:
-    final screenH = mq.size.height - topPad; // trừ topPad cho đúng cảm giác
-    final panelH = screenH - _videoHeight;
+    // // Nếu bạn có dùng panelH để tính show/hide content:
+    // final screenH = mq.size.height - topPad; // trừ topPad cho đúng cảm giác
+    // final panelH = screenH - _videoHeight;
 
-    final minPanel = (widget.movie.episode_current == 'Full')
-        ? kMinPanelHFull
-        : kMinPanelHRich;
-
-    final showContent = _panelDragging || panelH >= minPanel;
-    final showPanel = panelH >= minPanel;
+    // final minPanel = (widget.movie.episode_current == 'Full')
+    //     ? kMinPanelHFull
+    //     : kMinPanelHRich;
 
     // ✅ CHỐT: bình thường luôn hiện, expand thì phụ thuộc _showControls
     final showSeekbar = isExpandedNow ? _showControls : true;
@@ -1745,7 +1828,7 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
           ),
           Column(
             children: [
-              _buildVideoAreaWithoutSeekbar(),
+              RepaintBoundary(child: _buildVideoAreaWithoutSeekbar()),
               Flexible(
                 child: Material(
                   color: AppColor.bgApp,
@@ -1795,15 +1878,15 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
                             child: AnimatedContainer(
                               duration: Duration(milliseconds: 200),
                               curve: Curves.easeOutCubic,
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Padding(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 10,
-                                      vertical: 10,
-                                    ),
-                                    child: _wrapPanelHeaderDrag(
+                              child: _wrapPanelHeaderDrag(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 10,
+                                        vertical: 10,
+                                      ),
                                       child: Column(
                                         crossAxisAlignment:
                                             CrossAxisAlignment.start,
@@ -1831,28 +1914,102 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
                                                   .secondColor, // Màu nhấn cho tên phụ
                                             ),
                                           ),
+                                          const SizedBox(height: 6),
+
+                                          Builder(
+                                            builder: (context) {
+                                              // Server hiện tại
+                                              // final serverName = widget
+                                              //     .episodes[_selectedServerIndex]
+                                              //     .server_name;
+
+                                              // Tên tập hiện tại (nếu có)
+                                              final serverData = widget
+                                                  .episodes[_selectedServerIndex]
+                                                  .server_data;
+                                              final epName =
+                                                  (serverData.isNotEmpty &&
+                                                      _currentEpisodeIndex >=
+                                                          0 &&
+                                                      _currentEpisodeIndex <
+                                                          serverData.length)
+                                                  ? serverData[_currentEpisodeIndex]
+                                                        .name
+                                                  : 'Full';
+
+                                              final isPlaying =
+                                                  _videoPlayerController
+                                                      ?.value
+                                                      .isPlaying ??
+                                                  false;
+
+                                              return Row(
+                                                children: [
+                                                  SizedBox(
+                                                    width: 13,
+                                                    height: 13,
+                                                    child: Lottie.asset(
+                                                      animate:
+                                                          isPlaying, // ✅ không phát -> đứng yên
+                                                      'assets/icons/now_playing.json',
+                                                      delegates: LottieDelegates(
+                                                        values: [
+                                                          ValueDelegate.color(
+                                                            const ['**'],
+                                                            value: Colors.white,
+                                                          ),
+                                                        ],
+                                                      ),
+                                                    ),
+                                                  ),
+                                                  const SizedBox(width: 6),
+                                                  if (widget
+                                                          .movie
+                                                          .episode_current !=
+                                                      'Full')
+                                                    Expanded(
+                                                      child: Text(
+                                                        'Đang phát: $epName',
+                                                        maxLines: 1,
+                                                        overflow: TextOverflow
+                                                            .ellipsis,
+                                                        style: TextStyle(
+                                                          fontSize: 11,
+                                                          fontWeight:
+                                                              FontWeight.w600,
+                                                          color: Colors.white
+                                                              .withValues(
+                                                                alpha: 0.78,
+                                                              ),
+                                                        ),
+                                                      ),
+                                                    ),
+                                                ],
+                                              );
+                                            },
+                                          ),
                                         ],
                                       ),
                                     ),
-                                  ),
-                                  const SizedBox(height: 10),
-                                  if (widget.movie.episode_current != 'Full')
-                                    Column(
-                                      spacing: 3,
-                                      children: [
-                                        _buildListServerForSeriesMovie(),
-                                        _textFieldEpisode(),
-                                      ],
-                                    ),
+                                    const SizedBox(height: 10),
+                                    if (widget.movie.episode_current != 'Full')
+                                      Column(
+                                        spacing: 3,
+                                        children: [
+                                          _buildListServerForSeriesMovie(),
+                                          _textFieldEpisode(),
+                                        ],
+                                      ),
 
-                                  const SizedBox(height: 10),
-                                  Expanded(
-                                    child:
-                                        widget.movie.episode_current == 'Full'
-                                        ? _buildEpisodeListForSingle()
-                                        : _buidlListEpisodeForSeriesMovie(),
-                                  ),
-                                ],
+                                    const SizedBox(height: 10),
+                                    Expanded(
+                                      child:
+                                          widget.movie.episode_current == 'Full'
+                                          ? _buildEpisodeListForSingle()
+                                          : _buidlListEpisodeForSeriesMovie(),
+                                    ),
+                                  ],
+                                ),
                               ),
                             ),
                           ),
@@ -1884,7 +2041,7 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
                   _videoHeight -
                   _thumbRadius -
                   _seekbarLift -
-                  (isExpanded ? 30 : 0),
+                  (isExpanded ? 30 : 4),
               left: (isExpanded ? 20 : 0),
               right: (isExpanded ? 20 : 0),
               child: Material(
@@ -2001,10 +2158,228 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
     );
   }
 
+  // Widget _buidlListEpisodeForSeriesMovie() {
+  //   final serverData = widget.episodes[_selectedServerIndex].server_data;
+  //   _ensureEpisodeKeys(serverData.length);
+
+  //   final isPlaying = _videoPlayerController?.value.isPlaying ?? false;
+
+  //   final titleArea = Padding(
+  //     padding: const EdgeInsets.fromLTRB(10, 10, 10, 8),
+  //     child: Column(
+  //       crossAxisAlignment: CrossAxisAlignment.start,
+  //       children: [
+  //         Text(
+  //           widget.movie.origin_name,
+  //           maxLines: 2,
+  //           overflow: TextOverflow.ellipsis,
+  //           style: const TextStyle(
+  //             fontSize: 18,
+  //             fontWeight: FontWeight.bold,
+  //             color: Colors.white,
+  //           ),
+  //         ),
+  //         const SizedBox(height: 4),
+  //         Text(
+  //           widget.movie.name,
+  //           maxLines: 1,
+  //           overflow: TextOverflow.ellipsis,
+  //           style: const TextStyle(
+  //             fontSize: 14,
+  //             fontWeight: FontWeight.w500,
+  //             color: AppColor.secondColor,
+  //           ),
+  //         ),
+  //         const SizedBox(height: 6),
+  //         // row "Đang phát..."
+  //         Builder(
+  //           builder: (_) {
+  //             final list = widget.episodes[_selectedServerIndex].server_data;
+  //             final epName =
+  //                 (list.isNotEmpty && _currentEpisodeIndex < list.length)
+  //                 ? list[_currentEpisodeIndex].name
+  //                 : 'Full';
+
+  //             return Row(
+  //               children: [
+  //                 SizedBox(
+  //                   width: 13,
+  //                   height: 13,
+  //                   child: Lottie.asset(
+  //                     'assets/icons/now_playing.json',
+  //                     animate: isPlaying,
+  //                     delegates: LottieDelegates(
+  //                       values: [
+  //                         ValueDelegate.color(const [
+  //                           '**',
+  //                         ], value: Colors.white),
+  //                       ],
+  //                     ),
+  //                   ),
+  //                 ),
+  //                 const SizedBox(width: 6),
+  //                 if (widget.movie.episode_current != 'Full')
+  //                   Expanded(
+  //                     child: Text(
+  //                       'Đang phát: $epName',
+  //                       maxLines: 1,
+  //                       overflow: TextOverflow.ellipsis,
+  //                       style: TextStyle(
+  //                         fontSize: 11,
+  //                         fontWeight: FontWeight.w600,
+  //                         color: Colors.white.withValues(alpha: 0.78),
+  //                       ),
+  //                     ),
+  //                   ),
+  //               ],
+  //             );
+  //           },
+  //         ),
+  //       ],
+  //     ),
+  //   );
+
+  //   final collapsibleArea = Column(
+  //     children: [
+  //       _buildListServerForSeriesMovie(),
+  //       _textFieldEpisode(),
+  //       // const SizedBox(height: 51),
+  //     ],
+  //   );
+
+  //   // ✅ giữ lại overscroll resize video của bạn
+  //   return _wrapOverscrollToResize(
+  //     controller: _episodeScrollController,
+  //     child: NotificationListener<ScrollNotification>(
+  //       onNotification: _onSeriesScrollSnap,
+  //       child: CustomScrollView(
+  //         controller: _episodeScrollController,
+  //         physics: const AlwaysScrollableScrollPhysics(
+  //           parent: ClampingScrollPhysics(),
+  //         ),
+  //         slivers: [
+  //           SliverPersistentHeader(
+  //             pinned: true,
+  //             delegate: _CollapsingHeaderDelegate(
+  //               minH: _seriesHeaderMinH,
+  //               maxH: _seriesHeaderMaxH,
+  //               title: titleArea,
+  //               collapsible: collapsibleArea,
+  //               bgColor: AppColor.bgApp,
+  //               dividerColor: Colors.white.withValues(alpha: 0.1),
+  //             ),
+  //           ),
+
+  //           SliverPadding(
+  //             padding: EdgeInsets.only(
+  //               left: 10,
+  //               right: 10,
+  //               top: 10,
+  //               bottom: MediaQuery.of(context).padding.bottom + 20,
+  //             ),
+  //             sliver: SliverGrid(
+  //               gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+  //                 maxCrossAxisExtent: 120,
+  //                 mainAxisSpacing: 5,
+  //                 crossAxisSpacing: 5,
+  //                 mainAxisExtent: 40,
+  //               ),
+  //               delegate: SliverChildBuilderDelegate((context, index) {
+  //                 final key = _episodeKeys[index];
+  //                 final episode = serverData[index];
+  //                 final bool isActive = _currentEpisodeIndex == index;
+  //                 final currentServer = widget.episodes[_selectedServerIndex];
+
+  //                 return KeyedSubtree(
+  //                   key: key,
+  //                   child: InkWell(
+  //                     onTap: () => _playEpisode(index, currentServer),
+  //                     child: Container(
+  //                       padding: const EdgeInsets.all(2),
+  //                       alignment: Alignment.center,
+  //                       decoration: BoxDecoration(
+  //                         color: const Color(0xff272A39),
+  //                         borderRadius: BorderRadius.circular(5),
+  //                         border: Border.all(
+  //                           color: Colors.white.withValues(alpha: 0.05),
+  //                         ),
+  //                         gradient: isActive
+  //                             ? const LinearGradient(
+  //                                 colors: [
+  //                                   Color(0xFFC77DFF),
+  //                                   Color(0xFFFF9E9E),
+  //                                   Color(0xFFFFD275),
+  //                                 ],
+  //                                 begin: Alignment.topRight,
+  //                                 end: Alignment.bottomLeft,
+  //                               )
+  //                             : null,
+  //                         boxShadow: isActive
+  //                             ? const [
+  //                                 BoxShadow(
+  //                                   color: Color(0xFFC77DFF),
+  //                                   blurRadius: 12,
+  //                                   offset: Offset(0, 0),
+  //                                   spreadRadius: -2,
+  //                                 ),
+  //                               ]
+  //                             : null,
+  //                       ),
+  //                       child: Row(
+  //                         mainAxisAlignment: MainAxisAlignment.center,
+  //                         children: [
+  //                           if (isActive) ...[
+  //                             const SizedBox(width: 3),
+  //                             SizedBox(
+  //                               width: 13,
+  //                               height: 13,
+  //                               child: Lottie.asset(
+  //                                 'assets/icons/now_playing.json',
+  //                                 animate: isPlaying,
+  //                                 delegates: LottieDelegates(
+  //                                   values: [
+  //                                     ValueDelegate.color(const [
+  //                                       '**',
+  //                                     ], value: Colors.white),
+  //                                   ],
+  //                                 ),
+  //                               ),
+  //                             ),
+  //                             const SizedBox(width: 4),
+  //                           ],
+  //                           Flexible(
+  //                             child: Text(
+  //                               episode.name,
+  //                               maxLines: 1,
+  //                               overflow: TextOverflow.ellipsis,
+  //                               softWrap: false,
+  //                               style: TextStyle(
+  //                                 color: isActive
+  //                                     ? Colors.white
+  //                                     : Colors.white70,
+  //                                 fontWeight: FontWeight.bold,
+  //                                 fontSize: 12,
+  //                               ),
+  //                               textAlign: TextAlign.center,
+  //                             ),
+  //                           ),
+  //                         ],
+  //                       ),
+  //                     ),
+  //                   ),
+  //                 );
+  //               }, childCount: serverData.length),
+  //             ),
+  //           ),
+  //         ],
+  //       ),
+  //     ),
+  //   );
+  // }
   Widget _buidlListEpisodeForSeriesMovie() {
     final serverData = widget.episodes[_selectedServerIndex].server_data;
     _ensureEpisodeKeys(serverData.length); //  BẮT BUỘC
-
+    final isPlaying = _videoPlayerController?.value.isPlaying ?? false;
     return Container(
       decoration: BoxDecoration(
         border: Border(
@@ -2089,6 +2464,7 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
                           height: 13,
                           child: Lottie.asset(
                             'assets/icons/now_playing.json',
+                            animate: isPlaying, // ✅ không phát -> đứng yên
                             delegates: LottieDelegates(
                               values: [
                                 ValueDelegate.color(const [
@@ -2194,41 +2570,38 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
       child: Center(
         child: ClipRSuperellipse(
           borderRadius: BorderRadiusGeometry.circular(999),
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-            child: AnimatedOpacity(
-              opacity: _showControls ? 1.0 : 0.0,
-              duration: const Duration(milliseconds: 250),
-              child: GestureDetector(
-                // QUAN TRỌNG: chỉ vùng nút bắt tap
-                onTap: _togglePlayPause,
-                child: Container(
-                  padding: const EdgeInsets.all(13),
-                  decoration: BoxDecoration(
-                    color: Colors.black.withValues(alpha: 0.3),
-                    shape: BoxShape.circle,
-                  ),
-                  child: AnimatedSwitcher(
-                    duration: const Duration(milliseconds: 80),
-                    transitionBuilder: (child, anim) =>
-                        ScaleTransition(scale: anim, child: child),
-                    child: _chewieController!.isPlaying
-                        ? const Icon(
-                            Iconsax.pause_copy,
-                            key: ValueKey('pause'),
+          child: AnimatedOpacity(
+            opacity: _showControls ? 1.0 : 0.0,
+            duration: const Duration(milliseconds: 250),
+            child: GestureDetector(
+              // QUAN TRỌNG: chỉ vùng nút bắt tap
+              onTap: _togglePlayPause,
+              child: Container(
+                padding: const EdgeInsets.all(13),
+                decoration: BoxDecoration(
+                  color: Colors.black.withValues(alpha: 0.3),
+                  shape: BoxShape.circle,
+                ),
+                child: AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 80),
+                  transitionBuilder: (child, anim) =>
+                      ScaleTransition(scale: anim, child: child),
+                  child: _chewieController!.isPlaying
+                      ? const Icon(
+                          Iconsax.pause_copy,
+                          key: ValueKey('pause'),
+                          color: Colors.white,
+                          size: 35,
+                        )
+                      : const Padding(
+                          padding: EdgeInsets.only(left: 3.0),
+                          child: Icon(
+                            Iconsax.play_copy,
+                            key: ValueKey('play'),
                             color: Colors.white,
                             size: 35,
-                          )
-                        : const Padding(
-                            padding: EdgeInsets.only(left: 3.0),
-                            child: Icon(
-                              Iconsax.play_copy,
-                              key: ValueKey('play'),
-                              color: Colors.white,
-                              size: 35,
-                            ),
                           ),
-                  ),
+                        ),
                 ),
               ),
             ),
@@ -2258,6 +2631,7 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
   }
 
   Widget _buildEpisodeListForSingle() {
+    final isPlayingIocn = _videoPlayerController?.value.isPlaying ?? false;
     return Scrollbar(
       controller: _scrollController,
       child: _wrapOverscrollToResize(
@@ -2431,6 +2805,8 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
                                               width: 12,
                                               height: 12,
                                               child: Lottie.asset(
+                                                animate:
+                                                    isPlayingIocn, // ✅ không phát -> đứng yên
                                                 'assets/icons/now_playing.json',
                                                 delegates: LottieDelegates(
                                                   values: [
@@ -2574,49 +2950,46 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
                   children: [
                     ClipRRect(
                       borderRadius: BorderRadius.circular(20),
-                      child: BackdropFilter(
-                        filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 5,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Colors.black.withValues(alpha: 0.2),
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: Row(
-                            spacing: 5,
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text(
-                                _formatDuration(value.position),
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.bold,
-                                ),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 5,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withValues(alpha: 0.2),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Row(
+                          spacing: 5,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              _formatDuration(value.position),
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
                               ),
-                              // const SizedBox(width: 6),
-                              const Text(
-                                '/',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.bold,
-                                ),
+                            ),
+                            // const SizedBox(width: 6),
+                            const Text(
+                              '/',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
                               ),
-                              // const SizedBox(width: 6),
-                              Text(
-                                _formatDuration(value.duration),
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.bold,
-                                ),
+                            ),
+                            // const SizedBox(width: 6),
+                            Text(
+                              _formatDuration(value.duration),
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
                               ),
-                            ],
-                          ),
+                            ),
+                          ],
                         ),
                       ),
                     ),
@@ -2630,7 +3003,7 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
                       ),
                       child: IconButton(
                         padding: EdgeInsets.zero,
-                        iconSize: 20,
+                        iconSize: 25,
                         icon: Icon(
                           _isFullscreen
                               ? Icons.fullscreen_exit
@@ -2732,46 +3105,43 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
             children: [
               ClipRRect(
                 borderRadius: BorderRadius.circular(20),
-                child: BackdropFilter(
-                  filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 5,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.black.withValues(alpha: 0.3),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          _formatDuration(value.position),
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 11,
-                            fontWeight: FontWeight.bold,
-                          ),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 5,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withValues(alpha: 0.3),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        _formatDuration(value.position),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
                         ),
-                        const Text(
-                          ' / ',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 11,
-                            fontWeight: FontWeight.bold,
-                          ),
+                      ),
+                      const Text(
+                        ' / ',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
                         ),
-                        Text(
-                          _formatDuration(value.duration),
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 11,
-                            fontWeight: FontWeight.bold,
-                          ),
+                      ),
+                      Text(
+                        _formatDuration(value.duration),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
                 ),
               ),
@@ -2849,7 +3219,7 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
             showValueIndicator: ShowValueIndicator.never,
           ),
           child: SizedBox(
-            height: 10,
+            height: 18,
             child: GestureDetector(
               behavior: HitTestBehavior.opaque,
               onPanDown: (_) {
@@ -2947,11 +3317,13 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
   }
 
   Widget _buildLandscapePlayer() {
+    final isPlayingIocn = _videoPlayerController?.value.isPlaying ?? false;
     return Scaffold(
       endDrawer: Drawer(
         width: MediaQuery.of(context).size.width * 0.5,
         backgroundColor: AppColor.bgApp,
         child: EpisodeDrawer(
+          isPlayingIcon: isPlayingIocn,
           key: _drawerKey,
           movie: widget.movie,
           movieName: widget.movieName,
@@ -3234,6 +3606,31 @@ class BufferedSliderTrackShape extends SliderTrackShape
   }
 }
 
+class _PinnedBarDelegate extends SliverPersistentHeaderDelegate {
+  _PinnedBarDelegate({this.h = 1, required this.color});
+  final double h;
+  final Color color;
+
+  @override
+  double get minExtent => h;
+
+  @override
+  double get maxExtent => h;
+
+  @override
+  Widget build(
+    BuildContext context,
+    double shrinkOffset,
+    bool overlapsContent,
+  ) {
+    return Container(color: color); // chỉ 1 thanh
+  }
+
+  @override
+  bool shouldRebuild(covariant _PinnedBarDelegate oldDelegate) =>
+      oldDelegate.h != h || oldDelegate.color != color;
+}
+
 class GradientBufferedSliderTrackShape extends SliderTrackShape
     with BaseSliderTrackShape {
   const GradientBufferedSliderTrackShape({
@@ -3427,5 +3824,91 @@ class ScrubPreview extends StatelessWidget {
         ),
       ],
     );
+  }
+}
+
+class _CollapsingHeaderDelegate extends SliverPersistentHeaderDelegate {
+  _CollapsingHeaderDelegate({
+    required this.minH,
+    required this.maxH,
+    required this.title,
+    required this.collapsible,
+    required this.bgColor,
+    required this.dividerColor,
+  });
+
+  final double minH;
+  final double maxH;
+  final Widget title; // phần luôn hiện (giống "Comments")
+  final Widget collapsible; // phần sẽ mờ + co lại (server + textfield)
+  final Color bgColor;
+  final Color dividerColor;
+
+  @override
+  double get minExtent => minH;
+
+  @override
+  double get maxExtent => maxH;
+
+  @override
+  Widget build(
+    BuildContext context,
+    double shrinkOffset,
+    bool overlapsContent,
+  ) {
+    final range = (maxExtent - minExtent).clamp(0.0, double.infinity);
+    final t = range == 0 ? 1.0 : (shrinkOffset / range).clamp(0.0, 1.0);
+
+    // fade + slide giống YouTube
+    final fade = 1.0 - Curves.easeOutCubic.transform(t);
+    final slideY = lerpDouble(0, -14, t)!;
+
+    return Material(
+      color: Colors.transparent,
+      child: Container(
+        color: AppColor.bgApp,
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                title,
+
+                // phần co lại + mờ dần
+                ClipRect(
+                  child: Transform.translate(
+                    offset: Offset(0, slideY),
+                    child: Align(
+                      alignment: Alignment.topCenter,
+                      heightFactor: fade.clamp(0.0, 1.0), // co chiều cao
+                      child: Opacity(opacity: fade, child: collapsible),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+
+            // divider nằm đáy header => khi header co lại, divider tự “chạy lên”
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: Container(height: 1, color: dividerColor),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  @override
+  bool shouldRebuild(covariant _CollapsingHeaderDelegate oldDelegate) {
+    return oldDelegate.minH != minH ||
+        oldDelegate.maxH != maxH ||
+        oldDelegate.bgColor != bgColor ||
+        oldDelegate.dividerColor != dividerColor ||
+        oldDelegate.title != title ||
+        oldDelegate.collapsible != collapsible;
   }
 }

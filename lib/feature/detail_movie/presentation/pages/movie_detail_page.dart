@@ -400,7 +400,7 @@ class _EpisodesSliverState extends State<_EpisodesSliver> {
 
     Navigator.push(
       context,
-      MaterialPageRoute(
+      NoBackSwipeRoute(
         builder: (_) => MoviePlayerPage(
           movie: widget.movie,
           episodes: widget.episodes,
@@ -472,7 +472,7 @@ class _EpisodesSliverState extends State<_EpisodesSliver> {
                   }
                   Navigator.push(
                     context,
-                    MaterialPageRoute(
+                    NoBackSwipeRoute(
                       builder: (context) {
                         return MoviePlayerPage(
                           movie: widget.movie,
@@ -776,7 +776,7 @@ class _EpisodesSliverState extends State<_EpisodesSliver> {
                 // mở player luôn -> đúng nghĩa "chuyển tập"
                 Navigator.push(
                   context,
-                  MaterialPageRoute(
+                  NoBackSwipeRoute(
                     builder: (_) => MoviePlayerPage(
                       movie: widget.movie,
                       episodes: widget.episodes,

@@ -20,6 +20,7 @@ class EpisodeDrawer extends StatefulWidget {
   final Function(int) onSwitchServer;
   ScrollController? scrollController;
   final VoidCallback? onDrawerOpened;
+  final bool isPlayingIcon;
 
   EpisodeDrawer({
     super.key,
@@ -33,7 +34,9 @@ class EpisodeDrawer extends StatefulWidget {
     required this.onPlayEpisode,
     required this.onSubmitEpisode,
     required this.onSwitchServer,
-    this.scrollController, this.onDrawerOpened,
+    this.scrollController,
+    this.onDrawerOpened,
+    required this.isPlayingIcon,
   });
 
   @override
@@ -66,7 +69,9 @@ class EpisodeDrawerState extends State<EpisodeDrawer> {
       ..clear()
       ..addAll(List.generate(count, (_) => GlobalKey()));
   }
-  void scrollToCurrentEpisode({bool animated = true}) => _scrollToCurrentEpisode(animated: animated);
+
+  void scrollToCurrentEpisode({bool animated = true}) =>
+      _scrollToCurrentEpisode(animated: animated);
   void _scrollToCurrentEpisode({bool animated = true}) {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final serverData =
@@ -226,7 +231,7 @@ class EpisodeDrawerState extends State<EpisodeDrawer> {
                   onTap: () => widget.onPlayEpisode(index, currentServer),
                   borderRadius: BorderRadius.circular(6),
                   child: Container(
-                    padding: const EdgeInsets.all(6),
+                    padding: const EdgeInsets.all(2),
                     alignment: Alignment.center,
                     decoration: BoxDecoration(
                       color: const Color(0xff272A39),
@@ -257,6 +262,7 @@ class EpisodeDrawerState extends State<EpisodeDrawer> {
                             width: 13,
                             height: 13,
                             child: Lottie.asset(
+                              animate: widget.isPlayingIcon,
                               'assets/icons/now_playing.json',
                               delegates: LottieDelegates(
                                 values: [
@@ -492,6 +498,7 @@ class EpisodeDrawerState extends State<EpisodeDrawer> {
                                           width: 12,
                                           height: 12,
                                           child: Lottie.asset(
+                                            animate: widget.isPlayingIcon,
                                             'assets/icons/now_playing.json',
                                             delegates: LottieDelegates(
                                               values: [
