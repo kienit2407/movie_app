@@ -56,7 +56,6 @@ dependencies:
   logger: ^2.6.1
   pretty_dio_logger: ^1.4.0
   equatable: ^2.0.7
-  cached_network_image: ^3.4.1
   flutter_cache_manager: ^3.4.1
   dio_cache_interceptor: ^4.0.3
   hive_ce: ^2.11.3

@@ -1,9 +1,13 @@
+import 'package:flutter/foundation.dart';
 import 'package:movie_app/feature/home/domain/entities/fillterType.dart';
 
 class AppUrl {
   AppUrl._();
 
-  static const baseUrl = 'https://phimapi.com/';
+  // ✅ Web: gọi qua Vercel proxy để né CORS
+  // ✅ Mobile: gọi thẳng phimapi (không dính CORS)
+  static final String baseUrl = kIsWeb ? '/api/' : 'https://phimapi.com/';
+
   static const baseUrlBe = 'https://localhost:8017';
   static const baseDomainImg = 'https://phimimg.com/';
   static const getLatestMovie = 'danh-sach/phim-moi-cap-nhat-v3';
@@ -11,8 +15,6 @@ class AppUrl {
   static const getCountryMovie = 'quoc-gia';
   static const postRefreshToken = 'auth/refresh-token';
 
-  /// Tạo URL filter dựa trên loại filter
-  /// Thay vì có nhiều hàm riêng lẻ, chỉ cần 1 hàm này
   static String getFilterUrl(Filltertype filterType, String slug) {
     switch (filterType) {
       case Filltertype.genre:
@@ -29,12 +31,14 @@ class AppUrl {
   }
 
   static String getDetailMovie(String slug) => 'phim/$slug';
+
   static String convertImageDirect(String imageUrl) =>
-      'https://phimapi.com/image.php?url=$imageUrl';
+      '${kIsWeb ? "" : ""}https://phimapi.com/image.php?url=$imageUrl';
+
   static String convertVideoPlayerDirect(String videoUrl) =>
       'https://player.phimapi.com/player/?url=$videoUrl';
+
   static String convertImageAddition(String imageUrl) {
-    // Nếu URL đã có phimimg.com thì không thêm lại
     if (imageUrl.startsWith('https://phimimg.com/') ||
         imageUrl.startsWith('http://phimimg.com/')) {
       return 'https://phimapi.com/image.php?url=$imageUrl';

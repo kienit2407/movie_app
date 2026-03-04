@@ -1,40 +1,34 @@
 import 'dart:math' as math;
 import 'dart:ui';
-import 'package:animate_do/animate_do.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:carousel_slider/carousel_controller.dart';
 import 'package:carousel_slider/carousel_slider.dart';
-import 'package:carousel_slider/carousel_state.dart';
 import 'package:fast_cached_network_image/fast_cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
-import 'package:liquid_glass_renderer/liquid_glass_renderer.dart';
 import 'package:loading_animation_widget/loading_animation_widget.dart';
 import 'package:movie_app/common/components/lost_network.dart';
 import 'package:movie_app/common/helpers/contants/app_url.dart';
 import 'package:movie_app/common/helpers/navigation/app_navigation.dart';
 import 'package:movie_app/common/helpers/watch_history_storage.dart';
 import 'package:movie_app/common/models/watch_history_entry.dart';
+import 'package:movie_app/core/config/utils/blocking_back_page.dart';
 import 'package:movie_app/core/config/utils/episode_map.dart';
 import 'package:movie_app/core/config/utils/package_infor.dart';
 import 'package:movie_app/feature/detail_movie/presentation/pages/movie_detail_page.dart';
-import 'package:movie_app/common/helpers/sort_map.dart';
 import 'package:movie_app/core/config/assets/app_image.dart';
 import 'package:movie_app/feature/detail_movie/presentation/bloc/detail_movie_state.dart';
 import 'package:movie_app/feature/detail_movie/presentation/pages/movie_player_page.dart';
 import 'package:movie_app/feature/detail_movie/presentation/bloc/detail_movie_cubit.dart';
-import 'package:movie_app/feature/detail_movie/presentation/pages/movie_player_page.dart';
 import 'package:movie_app/feature/detail_movie/domain/usecase/get_detail_movie_usecase.dart';
-import 'package:movie_app/core/config/assets/app_image.dart';
 import 'package:movie_app/core/config/di/service_locator.dart';
 import 'package:movie_app/core/config/themes/app_color.dart';
 import 'package:movie_app/core/config/utils/cached_image.dart';
 import 'package:movie_app/core/config/utils/animated_dialog.dart';
 import 'package:movie_app/core/config/utils/format_episode.dart';
-import 'package:movie_app/core/config/utils/list_gadient.dart';
 import 'package:movie_app/core/config/utils/sharder_text.dart';
 import 'package:movie_app/core/config/utils/show_detail_movie_dialog.dart';
 import 'package:movie_app/feature/home/domain/entities/fillterType.dart';
@@ -43,13 +37,16 @@ import 'package:movie_app/feature/home/domain/entities/fillter_genre_movie_req.d
 import 'package:movie_app/feature/home/domain/entities/new_movie_entity.dart';
 import 'package:movie_app/feature/home/presentation/bloc/carousel_display_state.dart';
 import 'package:movie_app/feature/home/presentation/bloc/carousel_display_cubit.dart';
-import 'package:movie_app/feature/home/presentation/bloc/country_movie_cubit.dart';
-import 'package:movie_app/feature/home/presentation/bloc/genre_cubit.dart';
 import 'package:movie_app/feature/home/presentation/widgets/blur_effect.dart';
 import 'package:movie_app/feature/home/presentation/widgets/comprehensive_filter_bottom_sheet.dart';
 import 'package:movie_app/feature/home/presentation/widgets/country_bottom_sheet.dart';
 import 'package:movie_app/feature/home/presentation/widgets/genre_bottom_sheet.dart';
 import 'package:movie_app/feature/home/presentation/widgets/home_skeleton.dart';
+import 'package:movie_app/feature/home/presentation/widgets/home_badge.dart';
+import 'package:movie_app/feature/home/presentation/widgets/home_info_chip.dart';
+import 'package:movie_app/feature/home/presentation/widgets/home_carousel_indicator.dart';
+import 'package:movie_app/feature/home/presentation/widgets/home_action_button.dart';
+import 'package:movie_app/feature/home/presentation/widgets/home_filter_chips.dart';
 import 'package:movie_app/feature/home/presentation/widgets/overlay_gadient.dart';
 import 'package:movie_app/feature/home/presentation/widgets/polk_effect.dart';
 import 'package:movie_app/feature/home/presentation/widgets/recommend_movie_widget.dart';
@@ -71,7 +68,6 @@ class _HomePageState extends State<HomePage>
     with SingleTickerProviderStateMixin {
   CarouselSliderController? indexCarouselController;
   int currentIndex = 0;
-  double _currentPage = 0.0;
   double itemCount = 0;
   double normalize = 0;
   final ScrollController _scrollController = ScrollController();
@@ -79,18 +75,18 @@ class _HomePageState extends State<HomePage>
   double _chipOpacity = 1.0;
   double _chipOffset = 0.0;
   bool isSelectedGenre = false;
-  bool _isLoading = false;
   String? selectedValue;
   final ValueNotifier<double> _currentPageNotifier = ValueNotifier<double>(0.0);
-  int _carouselKeyCounter = 0; // Counter để tạo key mới cho carousel
-  int _carouselGen = 0; // ✅ token để ignore callback của carousel cũ
-  bool _pendingResetToFirst = false; // ✅ trì hoãn reset cho tới khi jump xong
+  int _carouselKeyCounter = 0;
+  int _carouselGen = 0;
+  bool _pendingResetToFirst = false;
   String _lastCarouselKey = '';
   bool _carouselReady = false;
   String appName = '';
   String packageName = '';
   String version = '';
   String buildNumber = '';
+
   @override
   void initState() {
     _loadPackageInfo();
@@ -98,15 +94,19 @@ class _HomePageState extends State<HomePage>
     super.initState();
 
     // Theo dõi vị trí cuộn để điều khiển chip buttons
-    _scrollController.addListener(() {
-      final offset = _scrollController.offset;
+    _scrollController.addListener(_onScroll);
+  }
+
+  void _onScroll() {
+    final offset = _scrollController.offset;
+    final newOpacity = (1 - offset / 40).clamp(0.0, 1.0);
+    final newOffset = offset.clamp(0.0, 30.0);
+    if (_chipOpacity != newOpacity || _chipOffset != newOffset) {
       setState(() {
-        // Tính opacity: mờ dần trong 40px đầu tiên
-        _chipOpacity = (1 - offset / 40).clamp(0.0, 1.0);
-        // Tính offset: trượt lên tối đa 10px
-        _chipOffset = offset.clamp(0.0, 30);
+        _chipOpacity = newOpacity;
+        _chipOffset = newOffset;
       });
-    });
+    }
   }
 
   @override
@@ -442,11 +442,14 @@ class _HomePageState extends State<HomePage>
       },
       builder: (context, data) {
         if (data is CarouselSuccess) {
+          // chiều cao “thiết kế” theo XR: 0.89 * 896 ≈ 797
+          // quy về theo width 414 => ratio ≈ 797/414 = 1.92
+          final heroHeight = (screenWidth * 1.92).clamp(650.0, 840.0);
           return SizedBox(
-            height: screenHeight * .89,
+            height: heroHeight,
             width: screenWidth,
             child: Stack(
-               clipBehavior: Clip.hardEdge, // (2) chặn vẽ tràn đè xuống dưới
+              clipBehavior: Clip.hardEdge, // (2) chặn vẽ tràn đè xuống dưới
               children: [
                 //background image
                 _buildBackgroundImage(data.latestMovie),
@@ -457,7 +460,7 @@ class _HomePageState extends State<HomePage>
                 //Polk Effect
                 // _polkEffect(),
                 //Movie Infora
-                _buildInforSection(screenHeight, data.latestMovie),
+                _buildInforSection(heroHeight, data.latestMovie),
               ],
             ),
           );
@@ -471,16 +474,16 @@ class _HomePageState extends State<HomePage>
     );
   }
 
-  Widget _buildInforSection(double screenHeight, List<ItemEntity> latestMovie) {
+  Widget _buildInforSection(double heroHeight, List<ItemEntity> latestMovie) {
     return Positioned(
       right: 0,
       left: 0,
       bottom: 0,
-      top: screenHeight * .185,
+      top: heroHeight * .185,
       child: Column(
         children: [
           // const SizedBox(height: 20),
-          _buildCarousel(screenHeight, latestMovie),
+          _buildCarousel(heroHeight, latestMovie),
           const SizedBox(height: 8),
           _buildCategory(latestMovie[currentIndex].category),
           const SizedBox(height: 20),
@@ -843,7 +846,7 @@ class _HomePageState extends State<HomePage>
 
       Navigator.push(
         context,
-        MaterialPageRoute(
+        NoBackSwipeRoute(
           builder: (context) => MoviePlayerPage(
             slug: movie.slug,
             movieName: movie.name,
@@ -1023,16 +1026,17 @@ class _HomePageState extends State<HomePage>
   //   );
   // }
 
-  Widget _buildCarousel(double screenHeight, List<ItemEntity> latestMovie) {
+  Widget _buildCarousel(double heroHeight, List<ItemEntity> latestMovie) {
     final count = math.min(latestMovie.length, 20);
     if (count == 0) {
       _carouselReady = false;
       return const SizedBox.shrink();
     }
 
-    final int buildGen = _carouselGen; // ✅ gen tại thời điểm build (để guard callback)
+    final int buildGen =
+        _carouselGen; // ✅ gen tại thời điểm build (để guard callback)
     final carouselKey = latestMovie.take(count).map((e) => e.slug).join('|');
-    
+
     if (_lastCarouselKey != carouselKey) {
       _lastCarouselKey = carouselKey;
       // ✅ nếu đang pending reset thì đừng ép về 0 ngay (tránh lệch khi PageView chưa jump)
@@ -1044,94 +1048,95 @@ class _HomePageState extends State<HomePage>
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted && buildGen == _carouselGen) _carouselReady = true;
     });
+    final carouselH = heroHeight * 0.40;
 
-    return ClipRRect(
-      child: SizedBox(
-        height: screenHeight * 0.36, //chiều cao chứa carousel
-        child: CarouselSlider.builder(
-          key: ValueKey(
-            '$carouselKey-$_carouselKeyCounter',
-          ), // ✅ key mới mỗi khi data đổi
-          carouselController: indexCarouselController!,
-          options: CarouselOptions(
-            // autoPlayCurve: Curves.bounceInOut,
-            height: screenHeight * 0.35,
-            viewportFraction: .65,
-            // autoPlayCurve: Curves.easeInOut,
-            autoPlay: true,
-            animateToClosest: true,
+    return SizedBox(
+      height: carouselH + 5,
+      child: CarouselSlider.builder(
+        key: ValueKey(
+          '$carouselKey-$_carouselKeyCounter',
+        ), // ✅ key mới mỗi khi data đổi
+        carouselController: indexCarouselController!,
+        options: CarouselOptions(
+          // autoPlayCurve: Curves.bounceInOut,
+          height: carouselH,
+          viewportFraction: .65,
+          // autoPlayCurve: Curves.easeInOut,
+          autoPlay: true,
+          animateToClosest: true,
 
-            initialPage: 0,
-            enlargeCenterPage: true,
-            onPageChanged: (index, reason) {
-              if (buildGen != _carouselGen) return; // ✅ ignore callback cũ
-              setState(() {
-                _currentPageNotifier.value = index.toDouble(); // ✅ sync ngay khi settle
-                currentIndex = index;
-              });
-            },
-            onScrolled: (value) {
-              if (value == null || !_carouselReady || buildGen != _carouselGen) return;
-              final double normalize = value % count;
+          initialPage: 0,
+          enlargeCenterPage: true,
+          onPageChanged: (index, reason) {
+            if (buildGen != _carouselGen) return; // ✅ ignore callback cũ
+            setState(() {
+              _currentPageNotifier.value = index
+                  .toDouble(); // ✅ sync ngay khi settle
+              currentIndex = index;
+            });
+          },
+          onScrolled: (value) {
+            if (value == null || !_carouselReady || buildGen != _carouselGen)
+              return;
+            final double normalize = value % count;
 
-              // không setState
-              _currentPageNotifier.value = normalize;
-            },
-          ),
-          itemCount: count,
-          itemBuilder: (BuildContext context, int index, int realiindex) {
-            // final double itemCount = count.toDouble();
-            // double diff = index - _currentPage;
-            // diff = diff - itemCount * (diff / itemCount).round();
-            // // Clamp để max angle cho item liền kề (±1)
-            // diff = diff.clamp(-1.0, 1.0);
-            // // Angle: - để khớp chiều (bạn có thể đảo nếu sai)
-            // final double angle = diff * (math.pi * 0.1);
-            return ValueListenableBuilder(
-              valueListenable: _currentPageNotifier,
-              builder: (context, currentPage, child) {
-                final double itemCount = count.toDouble();
-
-                double diff = index - currentPage;
-                diff = diff - itemCount * (diff / itemCount).round();
-                diff = diff.clamp(-1.0, 1.0);
-
-                final double angle = diff * (math.pi * 0.1);
-                return GestureDetector(
-                  onTap: () {
-                    AppNavigator.push(
-                      context,
-                      MovieDetailPage(slug: latestMovie[index].slug),
-                    );
-                  },
-                  onLongPress: () {
-                    HapticFeedback.mediumImpact();
-                    showAnimatedDialog(
-                      context: context,
-                      dialog: ShowDetailMovieDialog(
-                        slug: latestMovie[index].slug,
-                      ),
-                    );
-                  },
-                  child: Center(
-                    child: Transform.rotate(
-                      angle: angle,
-                      child: CachedImageContainer(
-                        imageUrl: AppUrl.convertImageDirect(
-                          latestMovie[index].posterUrl,
-                        ),
-                        boxFit: BoxFit.cover,
-                        margin: EdgeInsets.symmetric(horizontal: 27),
-                        border: Border.all(color: Colors.white, width: 3),
-                        borderRadius: BorderRadius.circular(15),
-                      ),
-                    ),
-                  ),
-                );
-              },
-            );
+            // không setState
+            _currentPageNotifier.value = normalize;
           },
         ),
+        itemCount: count,
+        itemBuilder: (BuildContext context, int index, int realiindex) {
+          // final double itemCount = count.toDouble();
+          // double diff = index - _currentPage;
+          // diff = diff - itemCount * (diff / itemCount).round();
+          // // Clamp để max angle cho item liền kề (±1)
+          // diff = diff.clamp(-1.0, 1.0);
+          // // Angle: - để khớp chiều (bạn có thể đảo nếu sai)
+          // final double angle = diff * (math.pi * 0.1);
+          return ValueListenableBuilder(
+            valueListenable: _currentPageNotifier,
+            builder: (context, currentPage, child) {
+              final double itemCount = count.toDouble();
+
+              double diff = index - currentPage;
+              diff = diff - itemCount * (diff / itemCount).round();
+              diff = diff.clamp(-1.0, 1.0);
+
+              final double angle = diff * (math.pi * 0.1);
+              return GestureDetector(
+                onTap: () {
+                  AppNavigator.push(
+                    context,
+                    MovieDetailPage(slug: latestMovie[index].slug),
+                  );
+                },
+                onLongPress: () {
+                  HapticFeedback.mediumImpact();
+                  showAnimatedDialog(
+                    context: context,
+                    dialog: ShowDetailMovieDialog(
+                      slug: latestMovie[index].slug,
+                    ),
+                  );
+                },
+                child: Center(
+                  child: Transform.rotate(
+                    angle: angle,
+                    child: CachedImageContainer(
+                      imageUrl: AppUrl.convertImageDirect(
+                        latestMovie[index].posterUrl,
+                      ),
+                      boxFit: BoxFit.cover,
+                      margin: EdgeInsets.symmetric(horizontal: 27),
+                      border: Border.all(color: Colors.white, width: 3),
+                      borderRadius: BorderRadius.circular(15),
+                    ),
+                  ),
+                ),
+              );
+            },
+          );
+        },
       ),
     );
   }
@@ -1244,7 +1249,9 @@ class _CountryMovieSectionState extends State<CountryMovieSection> {
           if (state is FetchFillterLoaded) {
             itemsList.addAll(state.items.take(20));
           }
-
+          final w = MediaQuery.sizeOf(context).width;
+          final scale = (w / 414).clamp(0.85, 1.15);
+          final listH = 260 * scale;
           return Column(
             children: [
               Row(
@@ -1306,7 +1313,7 @@ class _CountryMovieSectionState extends State<CountryMovieSection> {
                 const _CountrySkeletonList()
               else
                 SizedBox(
-                  height: MediaQuery.of(context).size.height * .3,
+                  height: listH,
                   child: AnimationLimiter(
                     child: ListView.separated(
                       padding: const EdgeInsets.only(left: 10),
@@ -1769,57 +1776,16 @@ Widget _buildBadge({required String text, required Color color}) {
   );
 }
 
-// class _ItemChip extends StatelessWidget {
-//   final String content;
-//   final bool isGadient;
-//   final double? size;
-//   final bool isLeft;
-
-//   const _ItemChip({
-//     required this.content,
-//     this.isGadient = false,
-//     this.size,
-//     this.isLeft = false,
-//   });
-
-//   @override
-//   Widget build(BuildContext context) {
-//     return Container(
-//       padding: EdgeInsets.all(5),
-//       decoration: BoxDecoration(
-//         color: isGadient ? null : Colors.white,
-//         borderRadius: isLeft
-//             ? BorderRadius.only(topLeft: Radius.circular(5))
-//             : BorderRadius.only(topRight: Radius.circular(5)),
-//         gradient: isGadient
-//             ? LinearGradient(
-//                 colors: [Color(0xffe73827), Color.fromARGB(255, 254, 136, 115)],
-//                 begin: Alignment.topRight,
-//                 end: Alignment.bottomLeft,
-//               )
-//             : null,
-//       ),
-//       child: Center(
-//         child: Text(
-//           content,
-//           style: TextStyle(
-//             fontSize: size ?? 10,
-//             fontWeight: FontWeight.w600,
-//             color: AppColor.bgApp,
-//           ),
-//         ),
-//       ),
-//     );
-//   }
-// }
-
 class _CountrySkeletonList extends StatelessWidget {
   const _CountrySkeletonList();
 
   @override
   Widget build(BuildContext context) {
+    final w = MediaQuery.sizeOf(context).width;
+    final scale = (w / 414).clamp(0.85, 1.15);
+    final listH = 260 * scale;
     return SizedBox(
-      height: MediaQuery.of(context).size.height * .3,
+      height: listH,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         separatorBuilder: (_, __) => const SizedBox(width: 10),

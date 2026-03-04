@@ -1,8 +1,5 @@
-import 'package:cached_network_image/cached_network_image.dart';
+import 'package:fast_cached_network_image/fast_cached_network_image.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/widgets.dart';
-import 'package:movie_app/common/components/loading/custom_loading.dart';
-import 'package:skeletonizer/skeletonizer.dart';
 
 class CachedImageContainer extends StatefulWidget {
   const CachedImageContainer({
@@ -38,27 +35,26 @@ class CachedImageContainer extends StatefulWidget {
 class _CachedImageContainerState extends State<CachedImageContainer> {
   @override
   Widget build(BuildContext context) {
-    return  CachedNetworkImage(
- 
-      imageUrl: widget.imageUrl,
-
-      imageBuilder: (context, imageProvider) {
-        return Container(
-          height: widget.height,
+    return Container(
+      height: widget.height,
+      width: widget.width,
+      margin: widget.margin,
+      padding: widget.padding,
+      decoration: BoxDecoration(
+        gradient: widget.gradient,
+        border: widget.border,
+        boxShadow: widget.boxShadow,
+        borderRadius: widget.borderRadius,
+      ),
+      child: ClipRRect(
+        borderRadius: widget.borderRadius as BorderRadius? ?? BorderRadius.zero,
+        child: FastCachedImage(
+          url: widget.imageUrl,
+          fit: widget.boxFit ?? BoxFit.cover,
           width: widget.width,
-          margin: widget.margin,
-          padding: widget.padding, 
-          decoration: BoxDecoration(
-            image: DecorationImage(image: imageProvider, fit: widget.boxFit),
-            gradient: widget.gradient,
-            border: widget.border,
-            boxShadow: widget.boxShadow,
-            borderRadius: widget.borderRadius,
-          ),
-        );
-      },
-      placeholder: (context, url) => Skeletonizer(child: SizedBox()),
-      errorWidget: (context, url, error) => Icon(Icons.error),
+          height: widget.height,
+        ),
+      ),
     );
   }
 }

@@ -839,7 +839,9 @@ class _RecommendationItem extends StatelessWidget {
 
     return GestureDetector(
       onTap: () {
-        context.push(AppRoutes.movieDetail.replaceAll(':slug', itemEntity.slug));
+        context.push(
+          AppRoutes.movieDetail.replaceAll(':slug', itemEntity.slug),
+        );
       },
       onLongPress: () {
         HapticFeedback.mediumImpact();
@@ -2077,7 +2079,11 @@ class _MovieDetailPageContentState extends State<_MovieDetailPageContent>
       }
     }
 
-    void navigateToPlayer(int serverIndex, int episodeIndex, String episodeLink) {
+    void navigateToPlayer(
+      int serverIndex,
+      int episodeIndex,
+      String episodeLink,
+    ) {
       if (episodes.isEmpty) return;
       Navigator.of(context).push(
         NoBackSwipeRoute(
@@ -2162,9 +2168,7 @@ class _MovieDetailPageContentState extends State<_MovieDetailPageContent>
       required VoidCallback onTap,
       bool isPrimary = true,
       int flex = 2,
-    }
-    
-    ) {
+    }) {
       return Expanded(
         flex: flex,
         child: GestureDetector(
@@ -2203,13 +2207,13 @@ class _MovieDetailPageContentState extends State<_MovieDetailPageContent>
               spacing: 5,
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                isFullMovie 
-                ? Icon(Iconsax.play_circle)
-                : SizedBox.shrink(),
+                isFullMovie ? Icon(Iconsax.play_circle) : SizedBox.shrink(),
                 Text(
                   text,
                   style: TextStyle(
-                    color: isPrimary ? Colors.white : Colors.white.withOpacity(0.9),
+                    color: isPrimary
+                        ? Colors.white
+                        : Colors.white.withOpacity(0.9),
                     fontWeight: FontWeight.w600,
                     fontSize: 12,
                   ),
@@ -2272,7 +2276,6 @@ class _MovieDetailPageContentState extends State<_MovieDetailPageContent>
       ],
     );
   }
-
 
   String _cleanHtmlTags(String htmlString) {
     final RegExp exp = RegExp(r'<[^>]*>', multiLine: true, caseSensitive: true);

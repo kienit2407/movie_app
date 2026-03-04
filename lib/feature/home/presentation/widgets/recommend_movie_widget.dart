@@ -66,6 +66,7 @@ class _MovieSectionWithScrollState extends State<MovieSectionWithScroll> {
         ),
         // --- LIST ---
         SingleChildScrollView(
+          primary: false,
           controller: _scrollController, // Gắn controller đã khai báo ở trên
           padding: const EdgeInsets.symmetric(horizontal: 20),
           scrollDirection: Axis.horizontal,
