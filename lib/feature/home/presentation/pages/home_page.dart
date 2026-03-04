@@ -1,7 +1,5 @@
 import 'dart:math' as math;
 import 'dart:ui';
-import 'package:animate_do/animate_do.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:carousel_slider/carousel_controller.dart';
 import 'package:carousel_slider/carousel_slider.dart';
 import 'package:carousel_slider/carousel_state.dart';
@@ -311,6 +309,7 @@ class _HomePageState extends State<HomePage>
       child: Scrollbar(
         controller: _scrollController,
         child: SingleChildScrollView(
+          // primary: true,
           controller: _scrollController,
           padding: EdgeInsets.only(bottom: 100),
           physics: ClampingScrollPhysics(),
@@ -445,7 +444,7 @@ class _HomePageState extends State<HomePage>
         if (data is CarouselSuccess) {
           // chiều cao “thiết kế” theo XR: 0.89 * 896 ≈ 797
           // quy về theo width 414 => ratio ≈ 797/414 = 1.92
-          final heroHeight = (screenWidth * 1.92).clamp(650.0, 840.0);
+          final heroHeight = (screenWidth * 1.92 + 10).clamp(650.0, 840.0);
           return SizedBox(
             height: heroHeight,
             width: screenWidth,
@@ -476,18 +475,24 @@ class _HomePageState extends State<HomePage>
   }
 
   Widget _buildInforSection(double heroHeight, List<ItemEntity> latestMovie) {
+    final topSafe = MediaQuery.of(context).padding.top;
+    const toolbarH = 20.0; // bạn đang set AppBar toolbarHeight 90
+    const chipRowH = 44.0; // ước lượng chiều cao hàng chip
+    const extraGap = 8.0;
+
+    final pushDown = topSafe + toolbarH + chipRowH + extraGap;
     return Positioned(
       right: 0,
       left: 0,
       bottom: 0,
-      top: heroHeight * .185,
+      top: heroHeight * .186,
       child: Column(
         children: [
-          // const SizedBox(height: 20),
+          SizedBox(height: 20),
           _buildCarousel(heroHeight, latestMovie),
           const SizedBox(height: 8),
           _buildCategory(latestMovie[currentIndex].category),
-          const SizedBox(height: 20),
+          const SizedBox(height: 25),
           _buildInforMovie(latestMovie),
           const SizedBox(height: 15),
           _buildDotIndicator(latestMovie),
@@ -573,7 +578,7 @@ class _HomePageState extends State<HomePage>
         ),
         const SizedBox(height: 15),
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20),
+          padding: const EdgeInsets.symmetric(horizontal: 10),
           child: Column(
             spacing: 10,
             children: [
@@ -943,7 +948,7 @@ class _HomePageState extends State<HomePage>
                 height: isSelected ? 30 : 25,
                 decoration: BoxDecoration(
                   image: DecorationImage(
-                    image: CachedNetworkImageProvider(
+                    image: NetworkImage(
                       AppUrl.convertImageDirect(latestMovie[index].posterUrl),
                     ),
                     fit: BoxFit.cover,
@@ -1006,15 +1011,7 @@ class _HomePageState extends State<HomePage>
         duration: const Duration(milliseconds: 300),
         switchInCurve: Curves.easeInOut,
         switchOutCurve: Curves.easeInOut,
-        child: CachedNetworkImage(
-          key: ValueKey(url),
-          imageUrl: url,
-          fit: BoxFit.cover,
-          fadeInDuration: const Duration(milliseconds: 200),
-          fadeOutDuration: const Duration(milliseconds: 200),
-          placeholder: (_, __) => const SizedBox(), // hoặc blur/gradient
-          errorWidget: (_, __, ___) => const SizedBox(),
-        ),
+        child: FastCachedImage(key: ValueKey(url), url: url, fit: BoxFit.cover),
       ),
     );
   }
@@ -1040,7 +1037,7 @@ class _HomePageState extends State<HomePage>
 
     if (_lastCarouselKey != carouselKey) {
       _lastCarouselKey = carouselKey;
-      // ✅ nếu đang pending reset thì đừng ép về 0 ngay (tránh lệch khi PageView chưa jump)
+      //  nếu đang pending reset thì đừng ép về 0 ngay (tránh lệch khi PageView chưa jump)
       if (!_pendingResetToFirst) {
         _currentPageNotifier.value = 0.0;
       }
@@ -1053,91 +1050,93 @@ class _HomePageState extends State<HomePage>
 
     return SizedBox(
       height: carouselH + 5,
-      child: CarouselSlider.builder(
-        key: ValueKey(
-          '$carouselKey-$_carouselKeyCounter',
-        ), // ✅ key mới mỗi khi data đổi
-        carouselController: indexCarouselController!,
-        options: CarouselOptions(
-          // autoPlayCurve: Curves.bounceInOut,
-          height: carouselH,
-          viewportFraction: .65,
-          // autoPlayCurve: Curves.easeInOut,
-          autoPlay: true,
-          animateToClosest: true,
+      child: PrimaryScrollController.none(
+        child: CarouselSlider.builder(
+          key: ValueKey(
+            '$carouselKey-$_carouselKeyCounter',
+          ), // ✅ key mới mỗi khi data đổi
+          carouselController: indexCarouselController!,
+          options: CarouselOptions(
+            // autoPlayCurve: Curves.bounceInOut,
+            height: carouselH,
+            viewportFraction: .65,
+            // autoPlayCurve: Curves.easeInOut,
+            autoPlay: true,
+            animateToClosest: true,
 
-          initialPage: 0,
-          enlargeCenterPage: true,
-          onPageChanged: (index, reason) {
-            if (buildGen != _carouselGen) return; // ✅ ignore callback cũ
-            setState(() {
-              _currentPageNotifier.value = index
-                  .toDouble(); // ✅ sync ngay khi settle
-              currentIndex = index;
-            });
-          },
-          onScrolled: (value) {
-            if (value == null || !_carouselReady || buildGen != _carouselGen)
-              return;
-            final double normalize = value % count;
+            initialPage: 0,
+            enlargeCenterPage: true,
+            onPageChanged: (index, reason) {
+              if (buildGen != _carouselGen) return; // ✅ ignore callback cũ
+              setState(() {
+                _currentPageNotifier.value = index
+                    .toDouble(); // ✅ sync ngay khi settle
+                currentIndex = index;
+              });
+            },
+            onScrolled: (value) {
+              if (value == null || !_carouselReady || buildGen != _carouselGen)
+                return;
+              final double normalize = value % count;
 
-            // không setState
-            _currentPageNotifier.value = normalize;
-          },
-        ),
-        itemCount: count,
-        itemBuilder: (BuildContext context, int index, int realiindex) {
-          // final double itemCount = count.toDouble();
-          // double diff = index - _currentPage;
-          // diff = diff - itemCount * (diff / itemCount).round();
-          // // Clamp để max angle cho item liền kề (±1)
-          // diff = diff.clamp(-1.0, 1.0);
-          // // Angle: - để khớp chiều (bạn có thể đảo nếu sai)
-          // final double angle = diff * (math.pi * 0.1);
-          return ValueListenableBuilder(
-            valueListenable: _currentPageNotifier,
-            builder: (context, currentPage, child) {
-              final double itemCount = count.toDouble();
+              // không setState
+              _currentPageNotifier.value = normalize;
+            },
+          ),
+          itemCount: count,
+          itemBuilder: (BuildContext context, int index, int realiindex) {
+            // final double itemCount = count.toDouble();
+            // double diff = index - _currentPage;
+            // diff = diff - itemCount * (diff / itemCount).round();
+            // // Clamp để max angle cho item liền kề (±1)
+            // diff = diff.clamp(-1.0, 1.0);
+            // // Angle: - để khớp chiều (bạn có thể đảo nếu sai)
+            // final double angle = diff * (math.pi * 0.1);
+            return ValueListenableBuilder(
+              valueListenable: _currentPageNotifier,
+              builder: (context, currentPage, child) {
+                final double itemCount = count.toDouble();
 
-              double diff = index - currentPage;
-              diff = diff - itemCount * (diff / itemCount).round();
-              diff = diff.clamp(-1.0, 1.0);
+                double diff = index - currentPage;
+                diff = diff - itemCount * (diff / itemCount).round();
+                diff = diff.clamp(-1.0, 1.0);
 
-              final double angle = diff * (math.pi * 0.1);
-              return GestureDetector(
-                onTap: () {
-                  AppNavigator.push(
-                    context,
-                    MovieDetailPage(slug: latestMovie[index].slug),
-                  );
-                },
-                onLongPress: () {
-                  HapticFeedback.mediumImpact();
-                  showAnimatedDialog(
-                    context: context,
-                    dialog: ShowDetailMovieDialog(
-                      slug: latestMovie[index].slug,
-                    ),
-                  );
-                },
-                child: Center(
-                  child: Transform.rotate(
-                    angle: angle,
-                    child: CachedImageContainer(
-                      imageUrl: AppUrl.convertImageDirect(
-                        latestMovie[index].posterUrl,
+                final double angle = diff * (math.pi * 0.1);
+                return GestureDetector(
+                  onTap: () {
+                    AppNavigator.push(
+                      context,
+                      MovieDetailPage(slug: latestMovie[index].slug),
+                    );
+                  },
+                  onLongPress: () {
+                    HapticFeedback.mediumImpact();
+                    showAnimatedDialog(
+                      context: context,
+                      dialog: ShowDetailMovieDialog(
+                        slug: latestMovie[index].slug,
                       ),
-                      boxFit: BoxFit.cover,
-                      margin: EdgeInsets.symmetric(horizontal: 27),
-                      border: Border.all(color: Colors.white, width: 3),
-                      borderRadius: BorderRadius.circular(15),
+                    );
+                  },
+                  child: Center(
+                    child: Transform.rotate(
+                      angle: angle,
+                      child: CachedImageContainer(
+                        imageUrl: AppUrl.convertImageDirect(
+                          latestMovie[index].posterUrl,
+                        ),
+                        boxFit: BoxFit.cover,
+                        margin: EdgeInsets.symmetric(horizontal: 27),
+                        border: Border.all(color: Colors.white, width: 3),
+                        borderRadius: BorderRadius.circular(15),
+                      ),
                     ),
                   ),
-                ),
-              );
-            },
-          );
-        },
+                );
+              },
+            );
+          },
+        ),
       ),
     );
   }

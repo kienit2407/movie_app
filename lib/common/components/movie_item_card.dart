@@ -1,4 +1,3 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:movie_app/common/helpers/contants/app_url.dart';
@@ -44,7 +43,7 @@ class MovieItemCard extends StatelessWidget {
               height: 200,
               decoration: BoxDecoration(
                 image: DecorationImage(
-                  image: CachedNetworkImageProvider(
+                  image: NetworkImage(
                     AppUrl.convertImageAddition(item.posterUrl),
                   ),
                   fit: BoxFit.cover,
@@ -85,10 +84,7 @@ class MovieItemCard extends StatelessWidget {
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        _itemChip(
-                          content: item.lang,
-                          isLeft: true,
-                        ),
+                        _itemChip(content: item.lang, isLeft: true),
                         _itemChip(content: item.quality, isGadient: true),
                       ],
                     ),

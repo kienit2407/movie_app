@@ -44,42 +44,59 @@ import 'dart:io';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   debugPrint('=== [1/8] WidgetsFlutterBinding initialized ===');
-
-  await SystemChrome.setPreferredOrientations([
-    DeviceOrientation.portraitUp,
-    DeviceOrientation.portraitDown,
-  ]);
+  // 1. Chỉ set orientation trên Mobile
+  if (!kIsWeb) {
+    await SystemChrome.setPreferredOrientations([
+      DeviceOrientation.portraitUp,
+      DeviceOrientation.portraitDown,
+    ]);
+  }
+  // await SystemChrome.setPreferredOrientations([
+  //   DeviceOrientation.portraitUp,
+  //   DeviceOrientation.portraitDown,
+  // ]);
   debugPrint('=== [2/8] Screen orientation set ===');
 
-  await dotenv.load(fileName: 'assets/.env');
+  // await dotenv.load(fileName: 'assets/.env');
   debugPrint('=== [3/8] Dotenv loaded ===');
-
-  try {
+  if (kIsWeb) {
+    // Trên Web, Hive tự hiểu storage là IndexedDB, không cần path
+    await Hive.initFlutter();
+    HydratedBloc.storage = await HydratedStorage.build(
+      storageDirectory: HydratedStorage.webStorageDirectory,
+    );
+  } else {
+    // Code cũ cho Mobile
     final dir = await getApplicationDocumentsDirectory();
-    final hiveDir = Directory('${dir.path}/hive');
-    if (await hiveDir.exists()) {
-      await hiveDir.delete(recursive: true);
-      debugPrint('=== Cleared Hive data directory ===');
-    }
-  } catch (e) {
-    debugPrint('=== Failed to clear Hive directory: $e ===');
+    // ... giữ logic xóa dir và init Hive cũ của bạn ở đây
+    HydratedBloc.storage = await HydratedStorage.build(storageDirectory: dir);
   }
+  // try {
+  //   final dir = await getApplicationDocumentsDirectory();
+  //   final hiveDir = Directory('${dir.path}/hive');
+  //   if (await hiveDir.exists()) {
+  //     await hiveDir.delete(recursive: true);
+  //     debugPrint('=== Cleared Hive data directory ===');
+  //   }
+  // } catch (e) {
+  //   debugPrint('=== Failed to clear Hive directory: $e ===');
+  // }
 
-  await Hive.initFlutter();
-  
-  Hive.registerAdapter(WatchProgressModelAdapter());
-  Hive.registerAdapter(WatchHistoryEntryAdapter());
-  debugPrint('=== [4/8] Hive initialized ===');
+  // await Hive.initFlutter();
 
-  final storage = await HydratedStorage.build(
-    storageDirectory: await getApplicationDocumentsDirectory(),
-  );
-  HydratedBloc.storage = storage;
-  debugPrint('=== [5/8] HydratedBloc storage initialized ===');
+  // Hive.registerAdapter(WatchProgressModelAdapter());
+  // Hive.registerAdapter(WatchHistoryEntryAdapter());
+  // debugPrint('=== [4/8] Hive initialized ===');
 
-  await FastCachedImageConfig.init(
-    clearCacheAfter: const Duration(days: 1),
-  );
+  // final storage = await HydratedStorage.build(
+  //   storageDirectory: await getApplicationDocumentsDirectory(),
+  // );
+  // HydratedBloc.storage = storage;
+  // debugPrint('=== [5/8] HydratedBloc storage initialized ===');
+
+  if (!kIsWeb) {
+    await FastCachedImageConfig.init(clearCacheAfter: const Duration(days: 1));
+  }
   debugPrint('=== [6/8] FastCachedImage initialized ===');
 
   await initializeGetit();
@@ -134,23 +151,34 @@ class MovieApp extends StatelessWidget {
               CountryMovieCubit(sl<GetCountryMovieUsecase>())
                 ..getCountryMovie(),
         ),
-        BlocProvider(
-          create: (context) => sl<SearchCubit>(),
-        ),
-        BlocProvider(
-          create: (context) => sl<PlayerCubit>(),
-        ),
+        BlocProvider(create: (context) => sl<SearchCubit>()),
+        BlocProvider(create: (context) => sl<PlayerCubit>()),
       ],
       child: MaterialApp.router(
         routerConfig: router,
         theme: AppTheme.appTheme,
         debugShowCheckedModeBanner: false,
         builder: (context, child) {
-          return Overlay(
-            initialEntries: [
-              OverlayEntry(builder: (_) => child!),
-              OverlayEntry(builder: (_) => MiniPlayerOverlay()),
-            ],
+          return Center(
+            child: Container(
+              constraints: const BoxConstraints(
+                maxWidth: 450,
+              ), // Giới hạn chiều rộng
+              decoration: BoxDecoration(
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.2),
+                    blurRadius: 10,
+                  ),
+                ],
+              ),
+              child: Overlay(
+                initialEntries: [
+                  OverlayEntry(builder: (_) => child!),
+                  OverlayEntry(builder: (_) => MiniPlayerOverlay()),
+                ],
+              ),
+            ),
           );
         },
       ),
