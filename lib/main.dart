@@ -1,56 +1,62 @@
-import 'package:device_preview/device_preview.dart';
 import 'package:fast_cached_network_image/fast_cached_network_image.dart';
-import 'package:firebase_core/firebase_core.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:hive_ce/hive.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:hive_ce_flutter/hive_flutter.dart';
 import 'package:movie_app/common/bloc/AuthWithSocial/auth_with_social_cubit.dart';
 import 'package:movie_app/core/config/di/service_locator.dart';
 import 'package:movie_app/core/config/network/init_supabase.dart';
 import 'package:movie_app/core/config/themes/app_theme.dart';
 import 'package:movie_app/core/config/utils/support_rotate_screen.dart';
+import 'package:movie_app/feature/auth/domain/usecases/confirm_with_token.dart';
+import 'package:movie_app/feature/auth/domain/usecases/req_reset_password.dart';
+import 'package:movie_app/feature/auth/domain/usecases/sigin_with_facebook.dart';
+import 'package:movie_app/feature/auth/domain/usecases/sigin_with_google.dart';
+import 'package:movie_app/feature/auth/domain/usecases/sign_in.dart';
+import 'package:movie_app/feature/auth/domain/usecases/sign_up.dart';
 import 'package:movie_app/feature/auth/presentation/reset_password/bloc/confirm_token_cubit.dart';
 import 'package:movie_app/feature/auth/presentation/reset_password/bloc/reset_password_cubit.dart';
 import 'package:movie_app/feature/auth/presentation/sign_in/bloc/sign_in_cubit.dart';
 import 'package:movie_app/feature/auth/presentation/sign_up/bloc/sign_up_cubit.dart';
-import 'package:movie_app/feature/detail_movie/presentation/pages/movie_detail_page.dart';
-import 'package:movie_app/feature/home/presentation/bloc/country_movie_cubit.dart';
-import 'package:movie_app/feature/home/presentation/bloc/detail_movie_cubit.dart';
-import 'package:movie_app/feature/movie_pagination/presentation/bloc/fetch_fillter_cubit.dart';
-import 'package:movie_app/feature/home/presentation/bloc/genre_cubit.dart';
+import 'package:movie_app/feature/home/domain/usecase/get_country_movie.dart';
+import 'package:movie_app/feature/home/domain/usecase/get_movies_by_filter_usecase.dart';
+import 'package:movie_app/feature/home/domain/usecase/get_genre_movie.dart';
+import 'package:movie_app/feature/home/domain/usecase/get_latest_usecase.dart';
 import 'package:movie_app/feature/home/presentation/bloc/carousel_display_cubit.dart';
+import 'package:movie_app/feature/home/presentation/bloc/country_movie_cubit.dart';
+import 'package:movie_app/feature/home/presentation/bloc/genre_cubit.dart';
 import 'package:movie_app/feature/home/presentation/pages/home_page.dart';
 import 'package:movie_app/feature/intro/presentation/splash/bloc/splash_cubit.dart';
+import 'package:movie_app/feature/movie_pagination/presentation/bloc/fetch_fillter_cubit.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 
 Future<void> main() async {
-  // ensure flutter Initialized before of all
   WidgetsFlutterBinding.ensureInitialized();
-    SupportRotateScreen.onlyPotrait;
-  //đảm bảo hiện màn hình trước
-  runApp(
-    // DevicePreview(
-    const MovieApp(),
-    // enabled: !kReleaseMode,
-    // builder: (context) => const MovieApp()
-    // )
-  );
-  Future.microtask(() async { // khởi tao cá service sau. Bởi vì nếu chạy run app trước thì ui sẽ k kịp show ra or slower 
-    //Init get it để tiêm phụ thuộc
-    await initializeGetit(); //<- hàm thuần
-    await Hive.initFlutter();
-    await FastCachedImageConfig.init();
-    // Hive.openBox('authBox');
-    //Next one load môi trường
-    await dotenv.load(fileName: 'assets/.env');
-    // //khởi động biến môi trường cho supabase
-    await supaBaseInit.initSupabase();
-    //khởi động firebase
-    // await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
-  });
+  debugPrint('=== [1/6] WidgetsFlutterBinding initialized ===');
+  await PackageInfo.fromPlatform();
+  SupportRotateScreen.onlyPotrait();
+  debugPrint('=== [2/6] Screen orientation set ===');
+
+  // Khởi tạo tất cả dependencies TRƯỚC KHI runApp
+  await dotenv.load(fileName: 'assets/.env');
+  debugPrint('=== [3/6] Dotenv loaded ===');
+
+  await Hive.initFlutter();
+  debugPrint('=== [4/6] Hive initialized ===');
+
+  await FastCachedImageConfig.init();
+  debugPrint('=== [5/6] FastCachedImage initialized ===');
+
+  await initializeGetit();
+  debugPrint('=== [6/6] GetIt initialized ===');
+
+  await supaBaseInit.initSupabase();
+  debugPrint('=== [7/7] Supabase initialized ===');
+
+  debugPrint('=== Starting app... ===');
+  runApp(const MovieApp());
 }
 
 class MovieApp extends StatelessWidget {
@@ -58,32 +64,61 @@ class MovieApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    SystemChrome.setSystemUIOverlayStyle(
-      // <- custom status bar
-      const SystemUiOverlayStyle(statusBarColor: Colors.transparent),
-    );
-    SupportRotateScreen.onlyPotrait;
-    return MultiBlocProvider(
-      providers: [
-        BlocProvider(create: (context) => SplashCubit()..appStarted()), //<- khởi động app, để xét xem có người dùng chưa
-        BlocProvider(create: (context) => SignUpCubit()),
-        BlocProvider(create: (context) => SignInCubit()),
-        BlocProvider(create: (context) => AuthWithSocialCubit()),
-        BlocProvider(create: (context) => ResetPasswordCubit()),
-        BlocProvider(create: (context) => ConfirmTokenCubit()),
-        BlocProvider(create: (context) => CarouselDisplayCubit()..getLatestMovie()),
-        BlocProvider(create: (context) => DetailMovieCubit()),
-        BlocProvider(create: (context) => GenreCubit()..getGenreMovie()),
-        BlocProvider(create: (context) => CountryMovieCubit()..getCountryMovie()),
-        BlocProvider(create: (context) => FetchFillterCubit(),),
-      ],
-      child: MaterialApp(
-        // locale: DevicePreview.locale(context),
-        // builder: DevicePreview.appBuilder,
-        theme: AppTheme.appTheme,
-        debugShowCheckedModeBanner: false,
-        home: const HomePage(),
-      ),
+    return ScreenUtilInit(
+      designSize: const Size(390, 844),
+      minTextAdapt: true,
+      splitScreenMode: true,
+      builder: (context, child) {
+        SystemChrome.setSystemUIOverlayStyle(
+          const SystemUiOverlayStyle(statusBarColor: Colors.transparent),
+        );
+        return MultiBlocProvider(
+          providers: [
+            BlocProvider(create: (context) => SplashCubit()..appStarted()),
+            BlocProvider(create: (context) => SignUpCubit(sl<SignUpUsecase>())),
+            BlocProvider(create: (context) => SignInCubit(sl<SignInUsecase>())),
+            BlocProvider(
+              create: (context) => AuthWithSocialCubit(
+                sl<SiginWithGoogleUsecase>(),
+                sl<SiginWithFacebookUsecase>(),
+              ),
+            ),
+            BlocProvider(
+              create: (context) =>
+                  ResetPasswordCubit(sl<ReqResetPasswordUsecase>()),
+            ),
+            BlocProvider(
+              create: (context) =>
+                  ConfirmTokenCubit(sl<ConfirmWithTokenUsecase>()),
+            ),
+            BlocProvider(
+              create: (context) =>
+                  CarouselDisplayCubit(sl<GetLatestUsecase>())
+                    ..getLatestMovie(),
+            ),
+            BlocProvider(
+              create: (context) => FetchFillterCubit(
+                getMoviesByFilterUsecase: sl<GetMoviesByFilterUsecase>(),
+              ),
+            ),
+            BlocProvider(
+              create: (context) =>
+                  GenreCubit(sl<GetGenreMovieUsecase>())..getGenreMovie(),
+            ),
+            BlocProvider(
+              create: (context) =>
+                  CountryMovieCubit(sl<GetCountryMovieUsecase>())
+                    ..getCountryMovie(),
+            ),
+          ],
+          child: MaterialApp(
+            theme: AppTheme.appTheme,
+            debugShowCheckedModeBanner: false,
+            home: const HomePage(),
+          ),
+        );
+      },
+      child: const SizedBox.shrink(),
     );
   }
 }

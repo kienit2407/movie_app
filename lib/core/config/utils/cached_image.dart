@@ -1,7 +1,5 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/widgets.dart';
-import 'package:movie_app/common/components/loading/custom_loading.dart';
 import 'package:skeletonizer/skeletonizer.dart';
 
 class CachedImageContainer extends StatefulWidget {
@@ -38,16 +36,16 @@ class CachedImageContainer extends StatefulWidget {
 class _CachedImageContainerState extends State<CachedImageContainer> {
   @override
   Widget build(BuildContext context) {
-    return  CachedNetworkImage(
- 
+    return CachedNetworkImage(
       imageUrl: widget.imageUrl,
-
+      fadeInDuration: const Duration(milliseconds: 260),
+      fadeOutDuration: const Duration(milliseconds: 90),
       imageBuilder: (context, imageProvider) {
         return Container(
           height: widget.height,
           width: widget.width,
           margin: widget.margin,
-          padding: widget.padding, 
+          padding: widget.padding,
           decoration: BoxDecoration(
             image: DecorationImage(image: imageProvider, fit: widget.boxFit),
             gradient: widget.gradient,
@@ -57,8 +55,37 @@ class _CachedImageContainerState extends State<CachedImageContainer> {
           ),
         );
       },
-      placeholder: (context, url) => Skeletonizer(child: SizedBox()),
-      errorWidget: (context, url, error) => Icon(Icons.error),
+      placeholder: (context, url) {
+        return Container(
+          height: widget.height,
+          width: widget.width,
+          margin: widget.margin,
+          padding: widget.padding,
+          decoration: BoxDecoration(
+            color: Colors.white12,
+            border: widget.border,
+            boxShadow: widget.boxShadow,
+            borderRadius: widget.borderRadius,
+            gradient: widget.gradient,
+          ),
+          child: const Skeletonizer(child: SizedBox.expand()),
+        );
+      },
+      errorWidget: (context, url, error) {
+        return Container(
+          height: widget.height,
+          width: widget.width,
+          margin: widget.margin,
+          padding: widget.padding,
+          decoration: BoxDecoration(
+            color: Colors.white10,
+            border: widget.border,
+            boxShadow: widget.boxShadow,
+            borderRadius: widget.borderRadius,
+          ),
+          child: const Center(child: Icon(Icons.broken_image_outlined)),
+        );
+      },
     );
   }
 }

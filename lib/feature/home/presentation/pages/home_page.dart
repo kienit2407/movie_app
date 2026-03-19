@@ -1,27 +1,17 @@
-import 'dart:math' as math;
-import 'dart:ui';
-import 'package:animate_do/animate_do.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:carousel_slider/carousel_controller.dart';
 import 'package:carousel_slider/carousel_slider.dart';
-import 'package:carousel_slider/carousel_state.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
-import 'package:liquid_glass_renderer/liquid_glass_renderer.dart';
 import 'package:movie_app/common/helpers/contants/app_url.dart';
-import 'package:movie_app/common/helpers/navigation/app_navigation.dart';
-import 'package:movie_app/common/helpers/sort_map.dart';
 import 'package:movie_app/core/config/assets/app_image.dart';
 import 'package:movie_app/core/config/themes/app_color.dart';
 import 'package:movie_app/core/config/utils/cached_image.dart';
+import 'package:movie_app/core/config/utils/animated_dialog.dart';
 import 'package:movie_app/core/config/utils/format_episode.dart';
-import 'package:movie_app/core/config/utils/list_gadient.dart';
-import 'package:movie_app/core/config/utils/sharder_text.dart';
-import 'package:movie_app/feature/home/domain/entities/fillterType.dart';
-import 'package:movie_app/feature/home/domain/entities/fillter_genre_movie_req.dart';
+import 'package:movie_app/core/config/utils/show_detail_movie_dialog.dart';
 import 'package:movie_app/feature/home/domain/entities/new_movie_entity.dart';
 import 'package:movie_app/feature/home/presentation/bloc/carousel_display_state.dart';
 import 'package:movie_app/feature/home/presentation/bloc/carousel_display_cubit.dart';
@@ -30,9 +20,8 @@ import 'package:movie_app/feature/home/presentation/widgets/country_bottom_sheet
 import 'package:movie_app/feature/home/presentation/widgets/genre_bottom_sheet.dart';
 import 'package:movie_app/feature/home/presentation/widgets/overlay_gadient.dart';
 import 'package:movie_app/feature/home/presentation/widgets/polk_effect.dart';
-import 'package:movie_app/feature/movie_pagination/presentation/bloc/fetch_fillter_cubit.dart';
-import 'package:movie_app/feature/movie_pagination/presentation/bloc/fetch_fillter_state.dart';
-import 'package:movie_app/feature/movie_pagination/presentation/pages/all_movie_page.dart';
+import 'package:movie_app/feature/home/presentation/widgets/recommend_movie_widget.dart';
+import 'package:movie_app/feature/home/presentation/widgets/year_bottom_sheet.dart';
 import 'package:skeletonizer/skeletonizer.dart';
 
 class HomePage extends StatefulWidget {
@@ -41,16 +30,11 @@ class HomePage extends StatefulWidget {
   State<HomePage> createState() => _HomePageState();
 }
 
-class _HomePageState extends State<HomePage>
-    with SingleTickerProviderStateMixin {
-  late CarouselSliderController
-  indexCarouselController; //do carousel là một control cần dữ liệu và context nên nó phải được tạo sau khi widget được mounted, nó cần dữ liệu từ api nên cần trước. Chính vì cần trước nên nó phải được khởi tạo sau. Nhằm đảm bảo nó không bị lỗi]
-  int currentIndex = 0;
-  double _currentPage = 0.0;
-  double itemCount = 0;
-  double normalize = 0;
+class _HomePageState extends State<HomePage> {
+  late final CarouselSliderController indexCarouselController;
   final ScrollController _scrollController = ScrollController();
-  int itemCountStandart = 10;
+  static const int itemCountStandart = 10;
+  int currentIndex = 0;
   double _chipOpacity = 1.0;
   double _chipOffset = 0.0;
   bool isSelectedGenre = false;
@@ -75,101 +59,52 @@ class _HomePageState extends State<HomePage>
   }
 
   @override
-  Widget build(BuildContext context) {
-    //Take height size of device
-    final screenHeight = MediaQuery.of(context).size.height;
-    final screenWidth = MediaQuery.of(context).size.width;
-    return Scaffold(
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
 
-      extendBodyBehindAppBar: true, //-> dùng khi muốn làm appbar trong suốt
-      extendBody:
-          true, //-> cái này nó sẽ render full màn hình bottom nav trong suốt
-      // bottom nav
-      // bottomNavigationBar: Transform.translate(
-      //   offset: Offset(0, -20),
-      //   child: Container(
-      //     margin: EdgeInsets.symmetric(horizontal: 20),
-      //     height: 70,
-      //     child: LiquidGlass(
-      //       shape: LiquidRoundedSuperellipse(borderRadius: Radius.circular(50)),
-      //       settings: LiquidGlassSettings(
-      //         blur: 2,
-      //         blend: 10
-      //       ),
-      //       child: Transform.translate(
-      //         offset: Offset(0, 18),
-      //         child: NavigationBar(
-      //           indicatorColor: Colors.transparent,
-      //           shadowColor: Colors.transparent,
-      //           elevation: 0,
-      //           surfaceTintColor: Colors.transparent,
-      //           overlayColor: WidgetStateProperty.all(Colors.transparent),
-      //           labelTextStyle: WidgetStateProperty.all(
-      //             TextStyle(color: Colors.white, fontSize: 12),
-      //           ),
-      //           backgroundColor: Colors.transparent,
-      //           destinations: [
-      //             NavigationDestination(
-      //               icon: Icon(Iconsax.home_2_copy,),
-      //               selectedIcon: Icon(Iconsax.home_2),
-      //               label: 'Home',
-      //             ),
-      //             NavigationDestination(
-      //               icon: Icon(Iconsax.home_2_copy,),
-      //               selectedIcon: Icon(Iconsax.home_2),
-      //               label: 'Home',
-      //             ),
-      //             NavigationDestination(
-      //               icon: Icon(Iconsax.home_2_copy,),
-      //               selectedIcon: Icon(Iconsax.home_2),
-      //               label: 'Home',
-      //             ),
-      //           ],
-      //         ),
-      //       ),
-      //     ),
-      //   ),
-      // ),
-      //app bar
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      extendBodyBehindAppBar: true,
+      extendBody: true,
       appBar: AppBar(
-        toolbarHeight: 90,
+        toolbarHeight: 92.h,
         foregroundColor: Colors.white,
         title: Column(
-          spacing: 10,
           children: [
             Row(
               children: [
                 Image.asset(AppImage.splashLogo, scale: 1.5),
-                Spacer(),
+                const Spacer(),
                 IconButton.outlined(
                   onPressed: () {
                     GenreBottomSheet.show(context);
                   },
-                  icon: Icon(Iconsax.filter),
+                  icon: Icon(Iconsax.filter, size: 20.sp),
                 ),
-                const SizedBox(width: 15),
+                SizedBox(width: 12.w),
                 Stack(
                   children: [
                     IconButton.outlined(
-                      onPressed: () {
-                        
-                      },
-                      icon: Icon(Iconsax.notification),
+                      onPressed: () {},
+                      icon: Icon(Iconsax.notification, size: 20.sp),
                     ),
                     Positioned(
-                      top: 14,
-                      right: 14,
+                      top: 11.h,
+                      right: 11.w,
                       child: Container(
                         alignment: Alignment.center,
-                        width: 10,
-                        height: 10,
+                        width: 12.w,
+                        height: 12.w,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
                           color: Colors.red,
                         ),
                         child: Text(
                           '1',
-                          style: TextStyle(fontSize: 6, color: Colors.white),
+                          style: TextStyle(fontSize: 6.sp, color: Colors.white),
                         ),
                       ),
                     ),
@@ -177,36 +112,48 @@ class _HomePageState extends State<HomePage>
                 ),
               ],
             ),
+            SizedBox(height: 10.h),
             AnimatedBuilder(
               animation: _scrollController,
               builder: (context, child) {
                 return AnimatedOpacity(
-                  duration: Duration(milliseconds: 200),
+                  duration: const Duration(milliseconds: 200),
                   curve: Curves.easeInOut,
                   opacity: _chipOpacity,
                   child: Transform.translate(
                     offset: Offset(0, -_chipOffset),
-                    child: Row(
-                      spacing: 10,
-                      mainAxisAlignment: MainAxisAlignment.start,
-                      children: [
-                        _buildChipButton('Đề Xuất', isSelected: true),
-                        _buildChipButton(
-                          'Thể loại',
-                          icon: Iconsax.arrow_down_1_copy,
-                          showIcon: true,
-                          onPressed: () {
-                            GenreBottomSheet.show(context);
-                          },
-                          isSelected: isSelectedGenre,
-                        ),
-                        _buildChipButton(
-                          onPressed: () => CountryBottomSheet.show(context),
-                          'Quốc gia',
-                          icon: Iconsax.arrow_down_1_copy,
-                          showIcon: true,
-                        ),
-                      ],
+                    child: SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      physics: const BouncingScrollPhysics(),
+                      child: Row(
+                        children: [
+                          _buildChipButton('Đề Xuất', isSelected: true),
+                          SizedBox(width: 8.w),
+                          _buildChipButton(
+                            'Thể loại',
+                            icon: Iconsax.arrow_down_1_copy,
+                            showIcon: true,
+                            onPressed: () {
+                              GenreBottomSheet.show(context);
+                            },
+                            isSelected: isSelectedGenre,
+                          ),
+                          SizedBox(width: 8.w),
+                          _buildChipButton(
+                            onPressed: () => CountryBottomSheet.show(context),
+                            'Quốc gia',
+                            icon: Iconsax.arrow_down_1_copy,
+                            showIcon: true,
+                          ),
+                          SizedBox(width: 8.w),
+                          _buildChipButton(
+                            onPressed: () => YearBottomSheet.show(context),
+                            'Năm',
+                            icon: Iconsax.arrow_down_1_copy,
+                            showIcon: true,
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 );
@@ -225,7 +172,7 @@ class _HomePageState extends State<HomePage>
                 colors: [
                   Colors.black,
                   Colors.black,
-                  Colors.black.withOpacity(.90),
+                  Colors.black.withValues(alpha: .9),
                   Colors.transparent,
                 ],
                 begin: Alignment.topCenter,
@@ -235,33 +182,38 @@ class _HomePageState extends State<HomePage>
           ),
         ),
       ),
-      body: SingleChildScrollView(
-        controller: _scrollController,
-        padding: EdgeInsets.only(bottom: 100),
-        physics: ClampingScrollPhysics(),
-        child: Column(
-          children: [
-            _buildCarouselPoster(screenHeight, screenWidth),
-            _movieTheme(),
-            SizedBox(height: 30),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 10),
-              child: Container(
-                width: double.maxFinite,
-                decoration: BoxDecoration(
-                  color: Colors.amber,
-                  gradient: LinearGradient(
-                    colors: [Color(0xff282B38), AppColor.bgApp],
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                  ),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                // child: _lastedMovie(),
-              ),
-            ),
-          ],
+      body: RefreshIndicator.adaptive(
+        onRefresh: () async {
+          context.read<CarouselDisplayCubit>().getLatestMovie();
+        },
+        child: BlocBuilder<CarouselDisplayCubit, CarouselDisplayState>(
+          builder: (context, state) {
+            if (state is CarouselLoading) {
+              return const Center(child: CircularProgressIndicator.adaptive());
+            } else if (state is CarouselFalure) {
+              return Center(child: Text("Lỗi: ${state.message}"));
+            } else if (state is CarouselSuccess) {
+              return _buildContent();
+            } else {
+              return const Center(child: Text("Không có dữ liệu"));
+            }
+          },
         ),
+      ),
+    );
+  }
+
+  Widget _buildContent() {
+    return SingleChildScrollView(
+      controller: _scrollController,
+      padding: EdgeInsets.only(bottom: 100.h),
+      physics: const ClampingScrollPhysics(),
+      child: Column(
+        children: [
+          _buildCarouselPoster(),
+          const MovieSectionWithScroll(),
+          SizedBox(height: 30.h),
+        ],
       ),
     );
   }
@@ -314,266 +266,22 @@ class _HomePageState extends State<HomePage>
   //     },
   //   );
   // }
-  
-  Widget _itemLatestMovieCountry({
-    required String content,
-    required Gradient gadient,
-    required List<ItemEntity> items,
-    required String typeOfList
-  }) {
-    return Column(
-      children: [
-        Row(
-          children: [
-            Padding(
-              padding: const EdgeInsets.only(left: 20),
-              child: SharderText(
-                gradient: gadient,
-                child: Text(
-                  content,
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                ),
-              ),
-            ),
-            Spacer(),
-            IconButton(
-              onPressed: () {
-                final filteredResult = FillterMovieReq(
-                  typeList: typeOfList,
-                  fillterType: Filltertype.country,
-                );
-                AppNavigator.push(
-                  context,
-                  AllMoviePage(fillterReq: filteredResult),
-                );
-              },
-              icon: Icon(Iconsax.arrow_right_3_copy),
-            ),
-          ],
-        ),
-        const SizedBox(height: 10),
-        SizedBox(
-          height: MediaQuery.of(context).size.height * .3,
-          child: AnimationLimiter(
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              // shrinkWrap: true, // sử dụng cái này thì nó sẽ đo chiều cao của list nếu 100 item thì nó sẽ nặng và lagy -> chậm
-              //thay vì dùng nó để tránh lõi khi nhét list view vào colum thì dùng Expanded listview sẽ chiếm hết phần trống flutter chỉ việc render trong viewport
-              addAutomaticKeepAlives:
-                  true, // từ động giữ state của widget con khi cúng ra khở màn hình và rebuild khong cần thiết
-              // addRepaintBoundaries: false, // cái này nó giảm vẽ lại nhưng nêis widget con ít thày đôi khi không cầ sử dụng
-              // addSemanticIndexes: true,
-              // primary: true,
-              separatorBuilder: (context, index) => SizedBox(width: 10),
-              itemCount: items.length,
-              cacheExtent: 500, //khởng pixel render trước khi thấy viewport
-              itemBuilder: (context, index) {
-                return _itemLatestMovie(items: items[index]);
-              },
-            ),
-          ),
-        ),
-      ],
-    );
+
+  int _visibleItemCount(List<ItemEntity> latestMovie) {
+    if (latestMovie.isEmpty) return 0;
+    return latestMovie.length < itemCountStandart
+        ? latestMovie.length
+        : itemCountStandart;
   }
 
-  Widget _itemLatestMovie({required ItemEntity items}) {
-    return SizedBox(
-      width: 140,
-      height: 200,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          Container(
-            height: 200,
-            decoration: BoxDecoration(
-              image: DecorationImage(
-                image: CachedNetworkImageProvider(
-                  AppUrl.convertImageAddition(items.posterUrl),
-                ),
-                fit: BoxFit.cover,
-              ),
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: Colors.white, width: 2),
-            ),
-            child: Stack(
-              children: [
-                Positioned(
-                  right: 0,
-                  bottom: 0,
-                  left: 0,
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      _itemChip(
-                        content: items.lang.toConvertLang(),
-                        isLeft: true,
-                      ),
-                      _itemChip(content: items.quality, isGadient: true),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-          SizedBox(height: 10),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 10),
-            child: Text(
-              items.name,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
-            ),
-          ),
-          Text(
-            items.originName,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              fontSize: 10,
-              fontWeight: FontWeight.w400,
-              color: Colors.grey,
-            ),
-          ),
-        ],
-      ),
-    );
+  int _safeCurrentIndex(List<ItemEntity> latestMovie) {
+    final visibleCount = _visibleItemCount(latestMovie);
+    if (visibleCount == 0) return 0;
+    if (currentIndex >= visibleCount) return 0;
+    return currentIndex;
   }
 
-  Widget _itemChip({
-    required String content,
-    bool isGadient = false,
-    double? size,
-    bool isLeft = false,
-  }) {
-    return Container(
-      // foregroundDecoration: BoxDecoration(), s//-> cái này trang tí trên container
-      padding: EdgeInsets.all(5),
-      decoration: BoxDecoration(
-        //-> cái này thì bên dưới
-        color: isGadient ? null : Colors.white,
-        borderRadius: isLeft
-            ? BorderRadius.only(topLeft: Radius.circular(5))
-            : BorderRadius.only(topRight: Radius.circular(5)),
-        gradient: isGadient
-            ? LinearGradient(
-                colors: [Color(0xffFDF9EB), Color(0xffE8CF6F)],
-                begin: Alignment.bottomLeft,
-                end: Alignment.topRight,
-              )
-            : null,
-      ),
-      child: Center(
-        child: Text(
-          content,
-          style: TextStyle(
-            fontSize: size ?? 10,
-            fontWeight: FontWeight.w600,
-            color: AppColor.bgApp,
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _movieTheme() {
-    return Column(
-      spacing: 10,
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.only(left: 20),
-          child: Text(
-            'What are you watching ?',
-            style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
-          ),
-        ),
-        SingleChildScrollView(
-          padding: EdgeInsets.symmetric(horizontal: 20),
-          scrollDirection: Axis.horizontal,
-          child: Row(
-            spacing: 10,
-            children: List.generate(SortMap.sortMovie.length, (index) {
-              final sortMovie = SortMap.sortMovie[index];
-              return GestureDetector(
-                onTap: () {
-                  final result = FillterMovieReq(
-                    typeList: sortMovie.keys.single,
-                    fillterType: Filltertype.recomendation,
-                  );
-                  AppNavigator.push(context, AllMoviePage(fillterReq: result));
-                },
-                child: _movieThemeItem(
-                  ListGadient.listGadient[index %
-                      ListGadient.listGadient.length],
-                  SortMap.sortMovie[index].values.single,
-                ),
-              );
-            }),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _movieThemeItem(Gradient gadient, String content) {
-    return SizedBox(
-      height: MediaQuery.of(context).size.height * .12,
-      width: 150,
-      child: Stack(
-        children: [
-          Positioned.fill(
-            child: Container(
-              decoration: BoxDecoration(
-                // lớp nền
-                borderRadius: BorderRadius.circular(10),
-                gradient: gadient,
-              ),
-            ),
-          ),
-
-          Align(
-            alignment: Alignment.bottomLeft,
-            child: Container(
-              width: 100,
-              margin: EdgeInsets.only(left: 10),
-              child: Column(
-                spacing: 5,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    content,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                  ),
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      const Text(
-                        'Watch More',
-                        style: TextStyle(
-                          fontWeight: FontWeight.w500,
-                          fontSize: 9,
-                        ),
-                      ),
-                      Icon(Iconsax.arrow_right_3_copy, size: 14),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildCarouselPoster(double screenHeight, double screenWidth) {
+  Widget _buildCarouselPoster() {
     return BlocConsumer<CarouselDisplayCubit, CarouselDisplayState>(
       listener: (context, state) {
         if (state is CarouselLoading) {
@@ -583,10 +291,10 @@ class _HomePageState extends State<HomePage>
         }
       },
       builder: (context, data) {
-        if (data is CarouselSuccess) {
+        if (data is CarouselSuccess && data.latestMovie.isNotEmpty) {
           return SizedBox(
-            height: screenHeight * .89,
-            width: screenWidth,
+            height: 0.89.sh,
+            width: 1.sw,
             child: Stack(
               children: [
                 //background image
@@ -598,43 +306,45 @@ class _HomePageState extends State<HomePage>
                 //Polk Effect
                 _polkEffect(),
                 //Movie Infora
-                _buildInforSection(screenHeight, data.latestMovie),
+                _buildInforSection(data.latestMovie),
               ],
             ),
           );
         }
         return SizedBox(
-          height: screenHeight * .88,
-          child: Center(child: Text('')),
+          height: 0.89.sh,
+          child: const Center(child: SizedBox.shrink()),
         );
       },
     );
   }
 
-  Widget _buildInforSection(double screenHeight, List<ItemEntity> latestMovie) {
+  Widget _buildInforSection(List<ItemEntity> latestMovie) {
+    final safeIndex = _safeCurrentIndex(latestMovie);
+    final selectedMovie = latestMovie[safeIndex];
+
     return Positioned(
       right: 0,
       left: 0,
       bottom: 0,
-      top: screenHeight * .185,
+      top: 0.185.sh,
       child: Column(
         children: [
-          // const SizedBox(height: 20),
-          _buildCarousel(screenHeight, latestMovie),
-          const SizedBox(height: 8),
-          _buildCategory(latestMovie[currentIndex].category),
-          const SizedBox(height: 18),
+          _buildCarousel(latestMovie),
+          SizedBox(height: 8.h),
+          _buildCategory(selectedMovie.category),
+          SizedBox(height: 18.h),
           _buildInforMovie(latestMovie),
-          const SizedBox(height: 15),
+          SizedBox(height: 15.h),
           _buildDotIndicator(latestMovie),
-          const SizedBox(height: 15),
+          SizedBox(height: 15.h),
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 50),
+            padding: EdgeInsets.symmetric(horizontal: 28.w),
             child: Row(
-              spacing: 10,
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 _buildActionButton(Iconsax.play_circle, 'Watch Now'),
+                SizedBox(width: 10.w),
                 _buildActionButton(Iconsax.info_circle, 'Information'),
               ],
             ),
@@ -645,90 +355,91 @@ class _HomePageState extends State<HomePage>
   }
 
   Widget _buildCategory(List<CategoryEntity> category) {
-    return SizedBox(
-      height: MediaQuery.of(context).size.height * .04,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 90),
-        child: Wrap(
-          alignment: WrapAlignment.center,
-          spacing: 5,
-          runSpacing: 5,
-          children: List.generate(category.length, (index) {
-            return Container(
-              padding: EdgeInsets.symmetric(horizontal: 5, vertical: 5),
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(.1),
-                borderRadius: BorderRadius.circular(5),
-              ),
-              child: Text(category[index].name, style: TextStyle(fontSize: 9)),
-            );
-          }),
-        ),
+    return Padding(
+      padding: EdgeInsets.symmetric(horizontal: 24.w),
+      child: Wrap(
+        alignment: WrapAlignment.center,
+        spacing: 6.w,
+        runSpacing: 6.h,
+        children: List.generate(category.length, (index) {
+          return Container(
+            padding: EdgeInsets.symmetric(horizontal: 6.w, vertical: 4.h),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: .12),
+              borderRadius: BorderRadius.circular(6.r),
+            ),
+            child: Text(
+              category[index].name,
+              style: TextStyle(fontSize: 10.sp),
+            ),
+          );
+        }),
       ),
     );
   }
 
   Widget _buildInforMovie(List<ItemEntity> latestMovie) {
+    final safeIndex = _safeCurrentIndex(latestMovie);
+    final selectedMovie = latestMovie[safeIndex];
+
     return Skeletonizer(
       enabled: _isLoading,
       child: Column(
         children: [
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 50),
+            padding: EdgeInsets.symmetric(horizontal: 48.w),
             child: Text(
-              latestMovie[currentIndex].name,
-              textAlign: TextAlign.justify,
+              selectedMovie.name,
+              textAlign: TextAlign.center,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
+              style: TextStyle(fontSize: 20.sp, fontWeight: FontWeight.w800),
             ),
           ),
-          SizedBox(height: 2),
+          SizedBox(height: 2.h),
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 50),
+            padding: EdgeInsets.symmetric(horizontal: 48.w),
             child: Text(
-              textAlign: TextAlign.justify,
+              textAlign: TextAlign.center,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              latestMovie[currentIndex].originName,
+              selectedMovie.originName,
               style: TextStyle(
-                fontSize: 10,
+                fontSize: 10.sp,
                 fontWeight: FontWeight.w500,
-                color: Color(0xfff85032),
+                color: const Color(0xfff85032),
               ),
             ),
           ),
-          const SizedBox(height: 15),
+          SizedBox(height: 15.h),
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
+            padding: EdgeInsets.symmetric(horizontal: 20.w),
             child: Column(
-              spacing: 10,
               children: [
                 Wrap(
                   direction: Axis.horizontal,
-                  runSpacing: 10,
+                  runSpacing: 10.h,
                   alignment: WrapAlignment.center,
-                  spacing: 10,
+                  spacing: 10.w,
                   children: [
                     _buildInforChip(
-                      borderColor: Color(0xfff85032),
+                      borderColor: const Color(0xfff85032),
                       child: Wrap(
                         crossAxisAlignment: WrapCrossAlignment.center,
-                        spacing: 5,
+                        spacing: 5.w,
                         children: [
-                          const Text(
+                          Text(
                             'iMdB',
                             style: TextStyle(
-                              fontSize: 10,
+                              fontSize: 10.sp,
                               fontWeight: FontWeight.w700,
-                              color: Color(0xfff85032),
+                              color: const Color(0xfff85032),
                             ),
                           ),
                           Text(
-                            latestMovie[currentIndex].tmdb.voteAverage
-                                .toStringAsFixed(1),
+                            selectedMovie.tmdb.voteAverage.toStringAsFixed(1),
                             style: TextStyle(
-                              fontSize: 10,
+                              fontSize: 10.sp,
                               fontWeight: FontWeight.w800,
                               color: Colors.white,
                             ),
@@ -740,9 +451,9 @@ class _HomePageState extends State<HomePage>
                       isGadient: true,
                       borderColor: Colors.transparent,
                       child: Text(
-                        latestMovie[currentIndex].quality,
+                        selectedMovie.quality,
                         style: TextStyle(
-                          fontSize: 10,
+                          fontSize: 10.sp,
                           fontWeight: FontWeight.w600,
                           color: Colors.white,
                         ),
@@ -750,9 +461,9 @@ class _HomePageState extends State<HomePage>
                     ),
                     _buildInforChip(
                       child: Text(
-                        latestMovie[currentIndex].year.toString(),
+                        selectedMovie.year.toString(),
                         style: TextStyle(
-                          fontSize: 10,
+                          fontSize: 10.sp,
                           fontWeight: FontWeight.w600,
                           color: Colors.white,
                         ),
@@ -760,11 +471,11 @@ class _HomePageState extends State<HomePage>
                     ),
                     _buildInforChip(
                       child: Text(
-                        (latestMovie[currentIndex].episodeCurrent == 'Full')
-                            ? latestMovie[currentIndex].time.toFormatEpisode()
-                            : latestMovie[currentIndex].time,
+                        (selectedMovie.episodeCurrent == 'Full')
+                            ? selectedMovie.time.toFormatEpisode()
+                            : selectedMovie.time,
                         style: TextStyle(
-                          fontSize: 10,
+                          fontSize: 10.sp,
                           fontWeight: FontWeight.w600,
                           color: Colors.white,
                         ),
@@ -772,16 +483,17 @@ class _HomePageState extends State<HomePage>
                     ),
                   ],
                 ),
+                SizedBox(height: 10.h),
                 Wrap(
-                  spacing: 10,
+                  spacing: 10.w,
                   crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
                     _buildInforChip(
                       backgroundColor: Colors.white,
                       child: Text(
-                        latestMovie[currentIndex].episodeCurrent,
+                        selectedMovie.episodeCurrent,
                         style: TextStyle(
-                          fontSize: 10,
+                          fontSize: 10.sp,
                           fontWeight: FontWeight.w600,
                           color: Colors.black,
                         ),
@@ -789,9 +501,9 @@ class _HomePageState extends State<HomePage>
                     ),
                     _buildInforChip(
                       child: Text(
-                        latestMovie[currentIndex].lang,
+                        selectedMovie.lang,
                         style: TextStyle(
-                          fontSize: 10,
+                          fontSize: 10.sp,
                           fontWeight: FontWeight.w600,
                           color: Colors.white,
                         ),
@@ -816,18 +528,17 @@ class _HomePageState extends State<HomePage>
   }) {
     return Container(
       alignment: Alignment.center,
-      height: 30,
+      height: 30.h,
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(30),
+        borderRadius: BorderRadius.circular(30.r),
         border: Border.all(color: Colors.white),
         color: isSelected ? Colors.white : Colors.transparent,
       ),
       child: TextButton(
         style: TextButton.styleFrom(
-          padding: EdgeInsets.symmetric(horizontal: 8),
-          // foregroundColor: isSelected ? Colors.black : Colors.white,
+          padding: EdgeInsets.symmetric(horizontal: 9.w),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(30),
+            borderRadius: BorderRadius.circular(30.r),
           ),
         ),
         onPressed: onPressed,
@@ -835,23 +546,23 @@ class _HomePageState extends State<HomePage>
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.center,
           mainAxisAlignment: MainAxisAlignment.center,
-          spacing: showIcon ? 5 : 0,
           children: [
             Text(
               content,
               style: TextStyle(
                 fontWeight: FontWeight.w600,
-                fontSize: 10,
+                fontSize: 10.sp,
                 color: isSelected ? Colors.black : Colors.white,
               ),
             ),
+            if (showIcon) SizedBox(width: 5.w),
             showIcon
                 ? Icon(
                     icon,
-                    size: 15,
+                    size: 14.sp,
                     color: isSelected ? Colors.black : Colors.white,
                   )
-                : SizedBox.shrink(),
+                : const SizedBox.shrink(),
           ],
         ),
       ),
@@ -862,30 +573,31 @@ class _HomePageState extends State<HomePage>
     return Flexible(
       child: Container(
         decoration: BoxDecoration(
-          gradient: LinearGradient(
+          gradient: const LinearGradient(
             colors: [Color(0xffe73827), Color.fromARGB(255, 254, 136, 115)],
             begin: Alignment.topRight,
             end: Alignment.bottomLeft,
           ),
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(10.r),
         ),
         child: TextButton(
           style: TextButton.styleFrom(
-            maximumSize: Size.fromWidth(200),
+            minimumSize: Size(0, 42.h),
+            maximumSize: Size.fromWidth(200.w),
             foregroundColor: Colors.white,
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadiusGeometry.circular(10),
+              borderRadius: BorderRadius.circular(10.r),
             ),
           ),
           onPressed: () {},
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
-            spacing: 5,
             children: [
-              Icon(icon, size: 25),
+              Icon(icon, size: 22.sp),
+              SizedBox(width: 5.w),
               Text(
                 content,
-                style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12),
+                style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12.sp),
               ),
             ],
           ),
@@ -895,45 +607,90 @@ class _HomePageState extends State<HomePage>
   }
 
   Widget _buildDotIndicator(List<ItemEntity> latestMovie) {
+    final visibleCount = _visibleItemCount(latestMovie);
+    if (visibleCount == 0) return const SizedBox.shrink();
+    final safeIndex = _safeCurrentIndex(latestMovie);
+
     return Skeletonizer(
       enabled: _isLoading,
       child: SizedBox(
-        height: 30,
-        child: Row(
-          spacing: 10,
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: List.generate(itemCountStandart, (index) {
-            bool isSelected = currentIndex == index;
-            return GestureDetector(
-              onTap: () {
-                // indexCarouselController.animateToPage(index);
-                indexCarouselController.jumpToPage(index);
-              },
-              child: AnimatedContainer(
-                curve: Curves.easeInOut,
-                duration: Duration(milliseconds: 300),
-                width: isSelected ? 30 : 25,
-                height: isSelected ? 30 : 25,
-                decoration: BoxDecoration(
-                  image: DecorationImage(
-                    image: CachedNetworkImageProvider(
-                      AppUrl.convertImageDirect(latestMovie[index].posterUrl),
-                    ),
-                    fit: BoxFit.cover,
-                  ),
-                  shape: BoxShape.circle,
-                  border: isSelected
-                      ? Border.all(color: Colors.white, width: 2)
-                      : null,
+        height: 34.h,
+        child: SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          physics: const BouncingScrollPhysics(),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: List.generate(visibleCount, (index) {
+              final isSelected = safeIndex == index;
+              return Padding(
+                padding: EdgeInsets.only(
+                  right: index == visibleCount - 1 ? 0 : 8.w,
                 ),
-              ),
-            );
-          }),
+                child: GestureDetector(
+                  onTap: () {
+                    indexCarouselController.animateToPage(
+                      index,
+                      duration: const Duration(milliseconds: 320),
+                      curve: Curves.easeOutCubic,
+                    );
+                  },
+                  child: AnimatedScale(
+                    scale: isSelected ? 1.1 : 1,
+                    duration: const Duration(milliseconds: 260),
+                    curve: Curves.easeOutCubic,
+                    child: AnimatedContainer(
+                      curve: Curves.easeOutCubic,
+                      duration: const Duration(milliseconds: 260),
+                      width: isSelected ? 30.w : 24.w,
+                      height: isSelected ? 30.w : 24.w,
+                      clipBehavior: Clip.antiAlias,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: isSelected
+                              ? Colors.white
+                              : Colors.white.withValues(alpha: .45),
+                          width: isSelected ? 2.w : 1.w,
+                        ),
+                        boxShadow: isSelected
+                            ? [
+                                BoxShadow(
+                                  color: Colors.white.withValues(alpha: .2),
+                                  blurRadius: 10.r,
+                                  offset: Offset(0, 4.h),
+                                ),
+                              ]
+                            : null,
+                      ),
+                      child: CachedNetworkImage(
+                        imageUrl: AppUrl.convertImageDirect(
+                          latestMovie[index].posterUrl,
+                        ),
+                        fit: BoxFit.cover,
+                        filterQuality: FilterQuality.medium,
+                        fadeInDuration: const Duration(milliseconds: 220),
+                        placeholder: (context, url) =>
+                            Container(color: Colors.white12),
+                        errorWidget: (context, url, error) => Container(
+                          color: Colors.white10,
+                          child: Icon(
+                            Icons.broken_image_outlined,
+                            color: Colors.white70,
+                            size: 12.sp,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            }),
+          ),
         ),
       ),
     );
   }
-  
+
   Widget _buildInforChip({
     Color? borderColor,
     bool isGadient = false,
@@ -941,13 +698,13 @@ class _HomePageState extends State<HomePage>
     Color? backgroundColor,
   }) {
     return Container(
-      padding: EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+      padding: EdgeInsets.symmetric(vertical: 4.h, horizontal: 8.w),
       decoration: BoxDecoration(
         color: backgroundColor,
         border: Border.all(color: borderColor ?? Colors.white),
-        borderRadius: BorderRadius.circular(7),
+        borderRadius: BorderRadius.circular(7.r),
         gradient: isGadient
-            ? LinearGradient(
+            ? const LinearGradient(
                 colors: [Color(0xffe73827), Color.fromARGB(255, 254, 136, 115)],
                 begin: Alignment.topRight,
                 end: Alignment.bottomLeft,
@@ -959,17 +716,21 @@ class _HomePageState extends State<HomePage>
   }
 
   Widget _buildBackgroundImage(List<ItemEntity> latestMovie) {
+    final safeIndex = _safeCurrentIndex(latestMovie);
+
     return Positioned.fill(
-      child: AnimatedContainer(
-        duration: Duration(milliseconds: 300),
-        curve: Curves.easeInOut,
-        decoration: BoxDecoration(
-          image: DecorationImage(
-            image: CachedNetworkImageProvider(
-              AppUrl.convertImageDirect(latestMovie[currentIndex].posterUrl),
-            ),
-            fit: BoxFit.cover,
-          ),
+      child: AnimatedSwitcher(
+        duration: const Duration(milliseconds: 450),
+        switchInCurve: Curves.easeOutCubic,
+        switchOutCurve: Curves.easeInCubic,
+        child: CachedNetworkImage(
+          key: ValueKey(latestMovie[safeIndex].posterUrl),
+          imageUrl: AppUrl.convertImageDirect(latestMovie[safeIndex].posterUrl),
+          fit: BoxFit.cover,
+          fadeInDuration: const Duration(milliseconds: 260),
+          placeholder: (context, url) => Container(color: Colors.black12),
+          errorWidget: (context, url, error) =>
+              Container(color: Colors.black26),
         ),
       ),
     );
@@ -977,66 +738,91 @@ class _HomePageState extends State<HomePage>
 
   Widget _polkEffect() {
     return PolkBackGround(
-      dotColor: AppColor.bgApp.withOpacity(.5),
-      dotRadius: .5,
-      spacing: 4,
+      dotColor: AppColor.bgApp.withValues(alpha: .5),
+      dotRadius: .55.r,
+      spacing: 4.w,
     );
   }
 
-  Widget _buildCarousel(double screenHeight, List<ItemEntity> latestMovie) {
+  Widget _buildCarousel(List<ItemEntity> latestMovie) {
+    final visibleCount = _visibleItemCount(latestMovie);
+    if (visibleCount == 0) return const SizedBox.shrink();
+
     return Skeletonizer(
       enabled: _isLoading,
       child: ClipRRect(
         child: SizedBox(
-          height: screenHeight * 0.36, //chiều cao chứa carousel
+          height: 0.37.sh,
           child: CarouselSlider.builder(
             carouselController: indexCarouselController,
             options: CarouselOptions(
-              height: screenHeight * 0.35,
-              viewportFraction: .65,
-              // autoPlayCurve: Curves.easeInOut,
-              autoPlay: true,
+              height: 0.35.sh,
+              viewportFraction: .62,
+              autoPlay: visibleCount > 1,
+              autoPlayInterval: const Duration(seconds: 4),
+              autoPlayAnimationDuration: const Duration(milliseconds: 680),
+              autoPlayCurve: Curves.easeOutCubic,
               initialPage: 0,
               enlargeCenterPage: true,
+              enlargeFactor: .2,
+              enableInfiniteScroll: visibleCount > 1,
+              pauseAutoPlayOnTouch: true,
+              pauseAutoPlayInFiniteScroll: true,
+              clipBehavior: Clip.none,
               onPageChanged: (index, reason) {
                 setState(() {
                   currentIndex = index;
                 });
               },
-              onScrolled: (value) {
-                if (value != null) {
-                  itemCount = itemCountStandart.toDouble();
-                  normalize = value % itemCount;
-                  setState(() {
-                    _currentPage = normalize;
-                  });
-                }
-              },
             ),
-            itemCount: itemCountStandart,
+            itemCount: visibleCount,
             itemBuilder: (BuildContext context, int index, int realiindex) {
-              final double itemCount = itemCountStandart.toDouble();
-              double diff = index - _currentPage;
-              diff = diff - itemCount * (diff / itemCount).round();
-              // Clamp để max angle cho item liền kề (±1)
-              diff = diff.clamp(-1.0, 1.0);
-              // Angle: - để khớp chiều (bạn có thể đảo nếu sai)
-              final double angle = diff * (math.pi * 0.1);
+              final isSelected = _safeCurrentIndex(latestMovie) == index;
               return GestureDetector(
                 onTap: () {
-                  print(latestMovie[index].slug);
+                  showAnimatedDialog(
+                    context: context,
+                    dialog: ShowDetailMovieDialog(
+                      slug: latestMovie[index].slug,
+                    ),
+                  );
+                },
+                onLongPress: () {
+                  HapticFeedback.mediumImpact();
+                  showAnimatedDialog(
+                    context: context,
+                    dialog: ShowDetailMovieDialog(
+                      slug: latestMovie[index].slug,
+                    ),
+                  );
                 },
                 child: Center(
-                  child: Transform.rotate(
-                    angle: angle,
-                    child: CachedImageContainer(
-                      imageUrl: AppUrl.convertImageDirect(
-                        latestMovie[index].posterUrl,
+                  child: RepaintBoundary(
+                    child: AnimatedScale(
+                      scale: isSelected ? 1 : .94,
+                      duration: const Duration(milliseconds: 240),
+                      curve: Curves.easeOutCubic,
+                      child: CachedImageContainer(
+                        imageUrl: AppUrl.convertImageDirect(
+                          latestMovie[index].posterUrl,
+                        ),
+                        height: 0.34.sh,
+                        width: 0.57.sw,
+                        boxFit: BoxFit.cover,
+                        margin: EdgeInsets.symmetric(
+                          horizontal: 10.w,
+                          vertical: 8.h,
+                        ),
+                        border: Border.all(color: Colors.white, width: 2.w),
+                        borderRadius: BorderRadius.circular(16.r),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: .2),
+                            blurRadius: 20.r,
+                            offset: Offset(0, 10.h),
+                          ),
+                        ],
                       ),
-                      boxFit: BoxFit.cover,
-                      margin: EdgeInsets.symmetric(horizontal: 27),
-                      border: Border.all(color: Colors.white, width: 3),
-                      borderRadius: BorderRadius.circular(15),
                     ),
                   ),
                 ),
