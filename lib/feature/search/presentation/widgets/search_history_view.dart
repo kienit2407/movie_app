@@ -40,17 +40,26 @@ class SearchHistoryView extends StatelessWidget {
         Expanded(
           child: ListView.separated(
             itemCount: history.length,
-            separatorBuilder: (_, __) => Divider(
-              height: 1,
-              color: Colors.white.withValues(alpha: 0.05),
-            ),
+            separatorBuilder: (_, __) =>
+                Divider(height: 1, color: Colors.white.withValues(alpha: 0.05)),
             itemBuilder: (context, index) {
               final keyword = history[index];
               return ListTile(
-                leading: const Icon(Icons.history, color: Colors.white54, size: 20,),
-                title: Text(keyword, style: const TextStyle(color: Colors.white, fontSize: 12)),
+                leading: const Icon(
+                  Icons.history,
+                  color: Colors.white54,
+                  size: 20,
+                ),
+                title: Text(
+                  keyword,
+                  style: const TextStyle(color: Colors.white, fontSize: 12),
+                ),
                 trailing: IconButton(
-                  icon: const Icon(Icons.close, color: Colors.white24, size: 18),
+                  icon: const Icon(
+                    Icons.close,
+                    color: Colors.white24,
+                    size: 18,
+                  ),
                   onPressed: () =>
                       context.read<SearchCubit>().deleteHistoryItem(index),
                 ),

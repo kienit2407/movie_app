@@ -28,6 +28,7 @@ import 'package:movie_app/feature/detail_movie/domain/usecase/get_detail_movie_u
 import 'package:movie_app/feature/detail_movie/presentation/bloc/detail_movie_cubit.dart';
 import 'package:movie_app/feature/detail_movie/presentation/bloc/detail_movie_state.dart';
 import 'package:movie_app/feature/detail_movie/presentation/pages/movie_player_page.dart';
+import 'package:movie_app/feature/detail_movie/presentation/bloc/player_cubit.dart';
 import 'package:movie_app/common/helpers/watch_progress_storage.dart';
 import 'package:movie_app/feature/home/domain/entities/fillterType.dart';
 import 'package:movie_app/feature/home/domain/entities/fillter_genre_movie_req.dart';
@@ -401,16 +402,19 @@ class _EpisodesSliverState extends State<_EpisodesSliver> {
     Navigator.push(
       context,
       NoBackSwipeRoute(
-        builder: (_) => MoviePlayerPage(
-          movie: widget.movie,
-          episodes: widget.episodes,
-          movieName: widget.movie.name,
-          slug: widget.movie.slug,
-          initialEpisodeIndex: episodeIndex,
-          initialServer: _currentServerModel.server_name,
-          thumbnailUrl: widget.movie.thumb_url,
-          initialEpisodeLink: link,
-          initialServerIndex: _selectedServerIndex,
+        builder: (ctx) => BlocProvider.value(
+          value: context.read<PlayerCubit>(),
+          child: MoviePlayerPage(
+            movie: widget.movie,
+            episodes: widget.episodes,
+            movieName: widget.movie.name,
+            slug: widget.movie.slug,
+            initialEpisodeIndex: episodeIndex,
+            initialServer: _currentServerModel.server_name,
+            thumbnailUrl: widget.movie.thumb_url,
+            initialEpisodeLink: link,
+            initialServerIndex: _selectedServerIndex,
+          ),
         ),
       ),
     );
@@ -473,8 +477,9 @@ class _EpisodesSliverState extends State<_EpisodesSliver> {
                   Navigator.push(
                     context,
                     NoBackSwipeRoute(
-                      builder: (context) {
-                        return MoviePlayerPage(
+                      builder: (ctx) => BlocProvider.value(
+                        value: context.read<PlayerCubit>(),
+                        child: MoviePlayerPage(
                           movie: widget.movie,
                           episodes: widget.episodes,
                           movieName: widget.movie.name,
@@ -484,8 +489,8 @@ class _EpisodesSliverState extends State<_EpisodesSliver> {
                           thumbnailUrl: widget.movie.thumb_url,
                           initialEpisodeLink: link,
                           initialServerIndex: index,
-                        );
-                      },
+                        ),
+                      ),
                     ),
                   );
                 },
@@ -777,16 +782,19 @@ class _EpisodesSliverState extends State<_EpisodesSliver> {
                 Navigator.push(
                   context,
                   NoBackSwipeRoute(
-                    builder: (_) => MoviePlayerPage(
-                      movie: widget.movie,
-                      episodes: widget.episodes,
-                      movieName: widget.movie.name,
-                      slug: widget.movie.slug,
-                      initialEpisodeIndex: index,
-                      initialServer: selectedModel.server_name,
-                      initialServerIndex: _selectedServerIndex,
-                      thumbnailUrl: widget.movie.thumb_url,
-                      initialEpisodeLink: link,
+                    builder: (ctx) => BlocProvider.value(
+                      value: context.read<PlayerCubit>(),
+                      child: MoviePlayerPage(
+                        movie: widget.movie,
+                        episodes: widget.episodes,
+                        movieName: widget.movie.name,
+                        slug: widget.movie.slug,
+                        initialEpisodeIndex: index,
+                        initialServer: selectedModel.server_name,
+                        initialServerIndex: _selectedServerIndex,
+                        thumbnailUrl: widget.movie.thumb_url,
+                        initialEpisodeLink: link,
+                      ),
                     ),
                   ),
                 );
@@ -2087,16 +2095,19 @@ class _MovieDetailPageContentState extends State<_MovieDetailPageContent>
       if (episodes.isEmpty) return;
       Navigator.of(context).push(
         NoBackSwipeRoute(
-          builder: (_) => MoviePlayerPage(
-            slug: movie.slug,
-            movieName: movie.name,
-            thumbnailUrl: movie.poster_url,
-            episodes: episodes,
-            movie: movie,
-            initialEpisodeLink: episodeLink,
-            initialEpisodeIndex: episodeIndex,
-            initialServer: episodes[serverIndex].server_name,
-            initialServerIndex: serverIndex,
+          builder: (ctx) => BlocProvider.value(
+            value: context.read<PlayerCubit>(),
+            child: MoviePlayerPage(
+              slug: movie.slug,
+              movieName: movie.name,
+              thumbnailUrl: movie.poster_url,
+              episodes: episodes,
+              movie: movie,
+              initialEpisodeLink: episodeLink,
+              initialEpisodeIndex: episodeIndex,
+              initialServer: episodes[serverIndex].server_name,
+              initialServerIndex: serverIndex,
+            ),
           ),
         ),
       );

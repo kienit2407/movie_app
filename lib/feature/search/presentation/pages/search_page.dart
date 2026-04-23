@@ -53,7 +53,7 @@ class _SearchPageViewState extends State<_SearchPageView> {
       final state = cubit.state;
 
       if (state is SearchLoaded) {
-        // ✅ còn trang + không đang load more mới gọi
+        //  còn trang + không đang load more mới gọi
         if (state.hasMore && !state.isLoadingMore) {
           cubit.search(state.currentKeyword, isLoadMore: true);
         }
@@ -90,27 +90,28 @@ class _SearchPageViewState extends State<_SearchPageView> {
     return GestureDetector(
       onTap: () => FocusScope.of(context).unfocus(),
       child: Scaffold(
+        extendBody: true,
         resizeToAvoidBottomInset: false,
         backgroundColor: AppColor.bgApp,
-        body: SafeArea(
-          bottom: false,
-          child: Stack(
-            children: [
-              Positioned.fill(
-                child: IgnorePointer(
-                  child: Container(
-                    decoration: BoxDecoration(
-                      gradient: RadialGradient(
-                        colors: [
-                          AppColor.firstColor.withOpacity(.4),
-                          AppColor.firstColor.withOpacity(.02),
-                        ],
-                      ),
+        body: Stack(
+          children: [
+            Positioned.fill(
+              child: IgnorePointer(
+                child: Container(
+                  decoration: BoxDecoration(
+                    gradient: RadialGradient(
+                      colors: [
+                        AppColor.firstColor.withOpacity(.4),
+                        AppColor.firstColor.withOpacity(.02),
+                      ],
                     ),
                   ),
                 ),
               ),
-              Column(
+            ),
+            SafeArea(
+              bottom: false,
+              child: Column(
                 children: [
                   Padding(
                     padding: const EdgeInsets.all(16.0),
@@ -241,8 +242,8 @@ class _SearchPageViewState extends State<_SearchPageView> {
                   ),
                 ],
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );

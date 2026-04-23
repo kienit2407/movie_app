@@ -5,7 +5,12 @@ import 'package:liquid_glass_renderer/liquid_glass_renderer.dart';
 import 'package:movie_app/common/components/loading/custom_loading.dart';
 
 class AppButton extends StatelessWidget {
-  const AppButton({super.key, required this.onPressed, required this.title, this.size});
+  const AppButton({
+    super.key,
+    required this.onPressed,
+    required this.title,
+    this.size,
+  });
   final String title;
   final VoidCallback onPressed;
   final double? size;
@@ -14,10 +19,8 @@ class AppButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return ElevatedButton(
       onPressed: onPressed,
-      style: ElevatedButton.styleFrom(
-        minimumSize:  Size.fromHeight(size ?? 60 ) 
-        ),
-      child:Text(title)
+      style: ElevatedButton.styleFrom(minimumSize: Size.fromHeight(size ?? 60)),
+      child: Text(title),
     );
   }
 }

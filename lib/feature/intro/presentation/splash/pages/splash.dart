@@ -42,20 +42,14 @@ class _SplashPageState extends State<SplashPage> {
             Container(
               decoration: BoxDecoration(
                 gradient: LinearGradient(
-                  colors: [
-                    AppColor.bgApp,
-                    AppColor.buttonColor.withOpacity(1),
-                  ],
+                  colors: [AppColor.bgApp, AppColor.buttonColor.withOpacity(1)],
                   begin: Alignment.bottomCenter,
                   end: Alignment.topCenter,
                 ),
               ),
             ),
             TweenAnimationBuilder<double>(
-              tween: Tween<double>(
-                begin: 0.0,
-                end: _animateOut ? 1.0 : 0.0,
-              ),
+              tween: Tween<double>(begin: 0.0, end: _animateOut ? 1.0 : 0.0),
               duration: const Duration(milliseconds: 450),
               curve: Curves.easeInOutCubic,
               builder: (context, t, child) {
@@ -63,10 +57,7 @@ class _SplashPageState extends State<SplashPage> {
                 final opacity = 1.0 - t;
                 return Opacity(
                   opacity: opacity,
-                  child: Transform.scale(
-                    scale: scale,
-                    child: child,
-                  ),
+                  child: Transform.scale(scale: scale, child: child),
                 );
               },
               child: Container(

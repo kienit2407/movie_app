@@ -4,8 +4,8 @@ import 'package:shimmer/shimmer.dart';
 class AllMovieLoadingSkeleton extends StatelessWidget {
   const AllMovieLoadingSkeleton({super.key});
 
-  static const _base = Color(0xFF141827);     // nền tối
-  static const _hi   = Color(0xFF2A2F42);     // sáng nhẹ
+  static const _base = Color(0xFF141827); // nền tối
+  static const _hi = Color(0xFF2A2F42); // sáng nhẹ
 
   @override
   Widget build(BuildContext context) {

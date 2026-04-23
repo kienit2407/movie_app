@@ -1,15 +1,12 @@
 import 'dart:math' as math;
-import 'dart:ui';
-import 'package:carousel_slider/carousel_controller.dart';
 import 'package:carousel_slider/carousel_slider.dart';
-import 'package:carousel_slider/carousel_state.dart';
 import 'package:fast_cached_network_image/fast_cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
-import 'package:liquid_glass_renderer/liquid_glass_renderer.dart';
 import 'package:loading_animation_widget/loading_animation_widget.dart';
 import 'package:movie_app/common/components/lost_network.dart';
 import 'package:movie_app/common/helpers/contants/app_url.dart';
@@ -19,21 +16,17 @@ import 'package:movie_app/common/models/watch_history_entry.dart';
 import 'package:movie_app/core/config/utils/blocking_back_page.dart';
 import 'package:movie_app/core/config/utils/episode_map.dart';
 import 'package:movie_app/core/config/utils/package_infor.dart';
+import 'package:movie_app/feature/detail_movie/presentation/bloc/player_cubit.dart';
 import 'package:movie_app/feature/detail_movie/presentation/pages/movie_detail_page.dart';
-import 'package:movie_app/common/helpers/sort_map.dart';
 import 'package:movie_app/core/config/assets/app_image.dart';
 import 'package:movie_app/feature/detail_movie/presentation/bloc/detail_movie_state.dart';
-import 'package:movie_app/feature/detail_movie/presentation/pages/movie_player_page.dart';
 import 'package:movie_app/feature/detail_movie/presentation/bloc/detail_movie_cubit.dart';
 import 'package:movie_app/feature/detail_movie/presentation/pages/movie_player_page.dart';
 import 'package:movie_app/feature/detail_movie/domain/usecase/get_detail_movie_usecase.dart';
-import 'package:movie_app/core/config/assets/app_image.dart';
 import 'package:movie_app/core/config/di/service_locator.dart';
 import 'package:movie_app/core/config/themes/app_color.dart';
-import 'package:movie_app/core/config/utils/cached_image.dart';
 import 'package:movie_app/core/config/utils/animated_dialog.dart';
 import 'package:movie_app/core/config/utils/format_episode.dart';
-import 'package:movie_app/core/config/utils/list_gadient.dart';
 import 'package:movie_app/core/config/utils/sharder_text.dart';
 import 'package:movie_app/core/config/utils/show_detail_movie_dialog.dart';
 import 'package:movie_app/feature/home/domain/entities/fillterType.dart';
@@ -42,15 +35,14 @@ import 'package:movie_app/feature/home/domain/entities/fillter_genre_movie_req.d
 import 'package:movie_app/feature/home/domain/entities/new_movie_entity.dart';
 import 'package:movie_app/feature/home/presentation/bloc/carousel_display_state.dart';
 import 'package:movie_app/feature/home/presentation/bloc/carousel_display_cubit.dart';
-import 'package:movie_app/feature/home/presentation/bloc/country_movie_cubit.dart';
-import 'package:movie_app/feature/home/presentation/bloc/genre_cubit.dart';
+import 'package:movie_app/feature/home/presentation/bloc/home_ui_cubit.dart';
+import 'package:movie_app/feature/home/presentation/bloc/home_ui_state.dart';
 import 'package:movie_app/feature/home/presentation/widgets/blur_effect.dart';
 import 'package:movie_app/feature/home/presentation/widgets/comprehensive_filter_bottom_sheet.dart';
 import 'package:movie_app/feature/home/presentation/widgets/country_bottom_sheet.dart';
 import 'package:movie_app/feature/home/presentation/widgets/genre_bottom_sheet.dart';
 import 'package:movie_app/feature/home/presentation/widgets/home_skeleton.dart';
 import 'package:movie_app/feature/home/presentation/widgets/overlay_gadient.dart';
-import 'package:movie_app/feature/home/presentation/widgets/polk_effect.dart';
 import 'package:movie_app/feature/home/presentation/widgets/recommend_movie_widget.dart';
 import 'package:movie_app/feature/home/presentation/widgets/year_bottom_sheet.dart';
 import 'package:movie_app/feature/movie_pagination/presentation/bloc/fetch_fillter_cubit.dart';
@@ -58,7 +50,6 @@ import 'package:movie_app/feature/movie_pagination/presentation/bloc/fetch_fillt
 import 'package:movie_app/feature/movie_pagination/presentation/pages/all_movie_page.dart';
 import 'package:movie_app/feature/search/presentation/pages/search_page.dart';
 import 'package:shimmer/shimmer.dart';
-import 'package:skeletonizer/skeletonizer.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -68,30 +59,25 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage>
     with SingleTickerProviderStateMixin {
+  static const double _bannerPosterAspectRatio = 2 / 3;
+  late final HomeUiCubit _homeUiCubit;
   CarouselSliderController? indexCarouselController;
-  int currentIndex = 0;
-  double _currentPage = 0.0;
   double itemCount = 0;
   double normalize = 0;
   final ScrollController _scrollController = ScrollController();
   int itemCountStandart = 20;
-  double _chipOpacity = 1.0;
-  double _chipOffset = 0.0;
-  bool isSelectedGenre = false;
-  bool _isLoading = false;
   String? selectedValue;
   final ValueNotifier<double> _currentPageNotifier = ValueNotifier<double>(0.0);
-  int _carouselKeyCounter = 0; // Counter để tạo key mới cho carousel
-  int _carouselGen = 0; // ✅ token để ignore callback của carousel cũ
-  bool _pendingResetToFirst = false; // ✅ trì hoãn reset cho tới khi jump xong
+  int _carouselGen = 0; //  token để ignore callback của carousel cũ
+  bool _pendingResetToFirst = false; //  trì hoãn reset cho tới khi jump xong
   String _lastCarouselKey = '';
   bool _carouselReady = false;
-  String appName = '';
-  String packageName = '';
-  String version = '';
-  String buildNumber = '';
+
+  HomeUiState get _uiState => _homeUiCubit.state;
+
   @override
   void initState() {
+    _homeUiCubit = HomeUiCubit();
     _loadPackageInfo();
     indexCarouselController = CarouselSliderController();
     super.initState();
@@ -99,12 +85,7 @@ class _HomePageState extends State<HomePage>
     // Theo dõi vị trí cuộn để điều khiển chip buttons
     _scrollController.addListener(() {
       final offset = _scrollController.offset;
-      setState(() {
-        // Tính opacity: mờ dần trong 40px đầu tiên
-        _chipOpacity = (1 - offset / 40).clamp(0.0, 1.0);
-        // Tính offset: trượt lên tối đa 10px
-        _chipOffset = offset.clamp(0.0, 30);
-      });
+      _homeUiCubit.updateScrollEffects(offset);
     });
   }
 
@@ -113,19 +94,25 @@ class _HomePageState extends State<HomePage>
     _currentPageNotifier.dispose();
     _scrollController.dispose();
     indexCarouselController?.dispose();
+    _homeUiCubit.close();
     super.dispose();
+  }
+
+  int _safeIndex(int length) {
+    if (length <= 0) return 0;
+    return _uiState.currentIndex.clamp(0, length - 1);
   }
 
   Future<void> _loadPackageInfo() async {
     final packageInfo = await PackageInfor.getPackageInfo();
     if (mounted) {
-      setState(() {
-        _currentPageNotifier.value = 0.0;
-        appName = packageInfo.appName;
-        packageName = packageInfo.packageName;
-        version = packageInfo.version;
-        buildNumber = packageInfo.buildNumber;
-      });
+      _currentPageNotifier.value = 0.0;
+      _homeUiCubit.setPackageInfo(
+        appName: packageInfo.appName,
+        packageName: packageInfo.packageName,
+        version: packageInfo.version,
+        buildNumber: packageInfo.buildNumber,
+      );
     }
   }
 
@@ -134,167 +121,206 @@ class _HomePageState extends State<HomePage>
     //Take height size of device
     // final screenHeight = MediaQuery.of(context).size.height;
     // final screenWidth = MediaQuery.of(context).size.width;
-    return Scaffold(
-      extendBodyBehindAppBar: true, //-> dùng khi muốn làm appbar trong suốt
-      extendBody:
-          true, //-> cái này nó sẽ render full màn hình bottom nav trong suốt
-      // bottom nav
-      // bottomNavigationBar: Transform.translate(
-      //   offset: Offset(0, -20),
-      //   child: Container(
-      //     margin: EdgeInsets.symmetric(horizontal: 20),
-      //     height: 70,
-      //     child: LiquidGlass(
-      //       shape: LiquidRoundedSuperellipse(borderRadius: Radius.circular(50)),
-      //       settings: LiquidGlassSettings(
-      //         blur: 2,
-      //         blend: 10
-      //       ),
-      //       child: Transform.translate(
-      //         offset: Offset(0, 18),
-      //         child: NavigationBar(
-      //           indicatorColor: Colors.transparent,
-      //           shadowColor: Colors.transparent,
-      //           elevation: 0,
-      //           surfaceTintColor: Colors.transparent,
-      //           overlayColor: WidgetStateProperty.all(Colors.transparent),
-      //           labelTextStyle: WidgetStateProperty.all(
-      //             TextStyle(color: Colors.white, fontSize: 12),
-      //           ),
-      //           backgroundColor: Colors.transparent,
-      //           destinations: [
-      //             NavigationDestination(
-      //               icon: Icon(Iconsax.home_2_copy,),
-      //               selectedIcon: Icon(Iconsax.home_2),
-      //               label: 'Home',
-      //             ),
-      //             NavigationDestination(
-      //               icon: Icon(Iconsax.home_2_copy,),
-      //               selectedIcon: Icon(Iconsax.home_2),
-      //               label: 'Home',
-      //             ),
-      //             NavigationDestination(
-      //               icon: Icon(Iconsax.home_2_copy,),
-      //               selectedIcon: Icon(Iconsax.home_2),
-      //               label: 'Home',
-      //             ),
-      //           ],
-      //         ),
-      //       ),
-      //     ),
-      //   ),
-      // ),
-      //app bar
-      appBar: AppBar(
-        toolbarHeight: 90,
-        foregroundColor: Colors.white,
-        title: Column(
-          spacing: 10,
-          children: [
-            Row(
-              children: [
-                Image.asset(AppImage.splashLogo, scale: 28),
-                Spacer(),
-                IconButton.outlined(
-                  onPressed: () {
-                    ComprehensiveFilterBottomSheet.show(context);
-                  },
-                  icon: Icon(Iconsax.filter_copy),
-                ),
-                const SizedBox(width: 15),
-                IconButton.outlined(
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const SearchPage(),
-                      ),
-                    );
-                  },
-                  icon: Icon(Iconsax.search_normal_1_copy),
-                ),
-              ],
-            ),
-            AnimatedBuilder(
-              animation: _scrollController,
-              builder: (context, child) {
-                return AnimatedOpacity(
-                  duration: Duration(milliseconds: 200),
-                  curve: Curves.easeInOut,
-                  opacity: _chipOpacity,
-                  child: Transform.translate(
-                    offset: Offset(0, -_chipOffset),
-                    child: Row(
-                      spacing: 10,
-                      mainAxisAlignment: MainAxisAlignment.start,
-                      children: [
-                        _buildChipButton('Đề Xuất', isSelected: true),
-                        _buildChipButton(
-                          'Thể loại',
-                          icon: Iconsax.arrow_down_1_copy,
-                          showIcon: true,
-                          onPressed: () {
-                            GenreBottomSheet.show(context);
-                          },
-                          isSelected: isSelectedGenre,
-                        ),
-                        _buildChipButton(
-                          onPressed: () => CountryBottomSheet.show(context),
-                          'Quốc gia',
-                          icon: Iconsax.arrow_down_1_copy,
-                          showIcon: true,
-                        ),
-                        _buildChipButton(
-                          onPressed: () => YearBottomSheet.show(context),
-                          'Năm',
-                          icon: Iconsax.arrow_down_1_copy,
-                          showIcon: true,
-                        ),
-                      ],
-                    ),
+    return BlocProvider.value(
+      value: _homeUiCubit,
+      child: Scaffold(
+        extendBodyBehindAppBar: true, //-> dùng khi muốn làm appbar trong suốt
+        extendBody:
+            true, //-> cái này nó sẽ render full màn hình bottom nav trong suốt
+        // bottom nav
+        // bottomNavigationBar: Transform.translate(
+        //   offset: Offset(0, -20),
+        //   child: Container(
+        //     margin: EdgeInsets.symmetric(horizontal: 20),
+        //     height: 70,
+        //     child: LiquidGlass(
+        //       shape: LiquidRoundedSuperellipse(borderRadius: Radius.circular(50)),
+        //       settings: LiquidGlassSettings(
+        //         blur: 2,
+        //         blend: 10
+        //       ),
+        //       child: Transform.translate(
+        //         offset: Offset(0, 18),
+        //         child: NavigationBar(
+        //           indicatorColor: Colors.transparent,
+        //           shadowColor: Colors.transparent,
+        //           elevation: 0,
+        //           surfaceTintColor: Colors.transparent,
+        //           overlayColor: WidgetStateProperty.all(Colors.transparent),
+        //           labelTextStyle: WidgetStateProperty.all(
+        //             TextStyle(color: Colors.white, fontSize: 12),
+        //           ),
+        //           backgroundColor: Colors.transparent,
+        //           destinations: [
+        //             NavigationDestination(
+        //               icon: Icon(Iconsax.home_2_copy,),
+        //               selectedIcon: Icon(Iconsax.home_2),
+        //               label: 'Home',
+        //             ),
+        //             NavigationDestination(
+        //               icon: Icon(Iconsax.home_2_copy,),
+        //               selectedIcon: Icon(Iconsax.home_2),
+        //               label: 'Home',
+        //             ),
+        //             NavigationDestination(
+        //               icon: Icon(Iconsax.home_2_copy,),
+        //               selectedIcon: Icon(Iconsax.home_2),
+        //               label: 'Home',
+        //             ),
+        //           ],
+        //         ),
+        //       ),
+        //     ),
+        //   ),
+        // ),
+        //app bar
+        appBar: AppBar(
+          toolbarHeight: 90.h,
+          foregroundColor: Colors.white,
+          title: Column(
+            spacing: 10.h,
+            children: [
+              Row(
+                children: [
+                  Image.asset(AppImage.splashLogo, scale: 28),
+                  Spacer(),
+                  IconButton.outlined(
+                    onPressed: () {
+                      ComprehensiveFilterBottomSheet.show(context);
+                    },
+                    icon: Icon(Iconsax.filter_copy),
                   ),
-                );
-              },
-            ),
-          ],
-        ),
-        backgroundColor: Colors.transparent,
-        surfaceTintColor: Colors.transparent,
-        elevation: 0,
-        shadowColor: Colors.transparent,
-        flexibleSpace: ClipRect(
-          child: Container(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [
-                  Colors.black,
-                  Colors.black,
-                  Colors.black.withOpacity(.90),
-                  Colors.transparent,
+                  SizedBox(width: 15.w),
+                  IconButton.outlined(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const SearchPage(),
+                        ),
+                      );
+                    },
+                    icon: Icon(Iconsax.search_normal_1_copy),
+                  ),
                 ],
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
+              ),
+              AnimatedBuilder(
+                animation: _scrollController,
+                builder: (context, child) {
+                  final uiState = context.read<HomeUiCubit>().state;
+                  return AnimatedOpacity(
+                    duration: Duration(milliseconds: 200),
+                    curve: Curves.easeInOut,
+                    opacity: uiState.chipOpacity,
+                    child: Transform.translate(
+                      offset: Offset(0, -uiState.chipOffset),
+                      child: Row(
+                        spacing: 10.w,
+                        mainAxisAlignment: MainAxisAlignment.start,
+                        children: [
+                          _buildChipButton('Đề Xuất', isSelected: true),
+                          _buildChipButton(
+                            'Thể loại',
+                            icon: Iconsax.arrow_down_1_copy,
+                            showIcon: true,
+                            onPressed: () {
+                              GenreBottomSheet.show(context);
+                            },
+                            isSelected: uiState.isSelectedGenre,
+                          ),
+                          _buildChipButton(
+                            onPressed: () => CountryBottomSheet.show(context),
+                            'Quốc gia',
+                            icon: Iconsax.arrow_down_1_copy,
+                            showIcon: true,
+                          ),
+                          _buildChipButton(
+                            onPressed: () => YearBottomSheet.show(context),
+                            'Năm',
+                            icon: Iconsax.arrow_down_1_copy,
+                            showIcon: true,
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ],
+          ),
+          backgroundColor: Colors.transparent,
+          surfaceTintColor: Colors.transparent,
+          elevation: 0,
+          shadowColor: Colors.transparent,
+          flexibleSpace: ClipRect(
+            child: Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    Colors.black,
+                    Colors.black,
+                    Colors.black.withOpacity(.90),
+                    Colors.transparent,
+                  ],
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                ),
               ),
             ),
           ),
         ),
-      ),
-      body: RefreshIndicator.adaptive(
-        onRefresh: () async {
-          context.read<CarouselDisplayCubit>().getLatestMovie();
-        },
-        child: BlocBuilder<CarouselDisplayCubit, CarouselDisplayState>(
-          builder: (context, state) {
-            if (state is CarouselLoading) {
-              return Center(child: HomeSkeleton());
-            } else if (state is CarouselFalure) {
-              return Center(child: const LostNetworkPage());
-            } else if (state is CarouselSuccess) {
-              return _buildContent(); // Hiển thị dữ liệu khi đã tải xong
-            } else {
-              return Center(child: Text("Không có dữ liệu"));
-            }
+        body: RefreshIndicator.adaptive(
+          onRefresh: () async {
+            // Reset carousel state TRƯỚC khi gọi getLatestMovie
+            _carouselGen++;
+            _carouselReady = false;
+            _lastCarouselKey = '';
+            _currentPageNotifier.value = 0.0;
+            _homeUiCubit.setCurrentIndex(0);
+            indexCarouselController = CarouselSliderController();
+
+            context.read<CarouselDisplayCubit>().getLatestMovie();
           },
+          child: BlocBuilder<CarouselDisplayCubit, CarouselDisplayState>(
+            builder: (context, state) {
+              // 1. TRẠNG THÁI ĐANG TẢI
+              if (state is CarouselLoading) {
+                return const Center(child: HomeSkeleton());
+              }
+              // 2. TRẠNG THÁI LỖI (MẤT MẠNG)
+              else if (state is CarouselFalure) {
+                return CustomScrollView(
+                  physics:
+                      const AlwaysScrollableScrollPhysics(), // Bắt buộc để vuốt được
+                  slivers: [
+                    SliverFillRemaining(
+                      hasScrollBody: false,
+                      child: const Center(
+                        child: LostNetworkPage(),
+                      ), // Trang báo lỗi của bạn
+                    ),
+                  ],
+                );
+              }
+              // 3. TRẠNG THÁI THÀNH CÔNG
+              else if (state is CarouselSuccess) {
+                return _buildContent(); // Hiển thị dữ liệu khi đã tải xong
+              }
+              // 4. TRẠNG THÁI KHÔNG CÓ DỮ LIỆU
+              else {
+                return CustomScrollView(
+                  physics:
+                      const AlwaysScrollableScrollPhysics(), // Bắt buộc để vuốt được
+                  slivers: [
+                    SliverFillRemaining(
+                      hasScrollBody: false,
+                      child: const Center(child: Text("Không có dữ liệu")),
+                    ),
+                  ],
+                );
+              }
+            },
+          ),
         ),
       ),
     );
@@ -311,20 +337,33 @@ class _HomePageState extends State<HomePage>
         child: SingleChildScrollView(
           // primary: true,
           controller: _scrollController,
-          padding: EdgeInsets.only(bottom: 100),
+          padding: EdgeInsets.only(bottom: 100.h),
           physics: ClampingScrollPhysics(),
           child: Column(
             children: [
-              _buildCarouselPoster(screenHeight, screenWidth),
-              const SizedBox(height: 10),
-              MovieSectionWithScroll(),
-              const SizedBox(height: 30),
+              BlocBuilder<HomeUiCubit, HomeUiState>(
+                buildWhen: (previous, current) =>
+                    previous.carouselKeyCounter != current.carouselKeyCounter ||
+                    previous.currentIndex != current.currentIndex,
+                builder: (context, _) =>
+                    _buildCarouselPoster(screenHeight, screenWidth),
+              ),
+              SizedBox(height: 10.h),
+              const MovieSectionWithScroll(),
+              SizedBox(height: 30.h),
               //HISTORICAL MOVIE
               _watchedMoviesSection(),
-              const SizedBox(height: 30),
+              SizedBox(height: 30.h),
               _lastedMovie(),
-              const SizedBox(height: 30),
-              _buildVersionInfo(),
+              SizedBox(height: 30.h),
+              BlocBuilder<HomeUiCubit, HomeUiState>(
+                buildWhen: (previous, current) =>
+                    previous.version != current.version ||
+                    previous.buildNumber != current.buildNumber ||
+                    previous.appName != current.appName ||
+                    previous.packageName != current.packageName,
+                builder: (context, _) => _buildVersionInfo(),
+              ),
             ],
           ),
         ),
@@ -334,18 +373,18 @@ class _HomePageState extends State<HomePage>
 
   Widget _lastedMovie() {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 8),
+      padding: EdgeInsets.symmetric(horizontal: 8.w),
       child: Column(
-        spacing: 10,
+        spacing: 10.h,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
-            padding: const EdgeInsets.only(left: 10),
-            child: const Text(
+            padding: EdgeInsets.only(left: 10.w),
+            child: Text(
               'Phim mới coóng!',
               style: TextStyle(
                 color: Colors.white,
-                fontSize: 18,
+                fontSize: 18.sp,
                 fontWeight: FontWeight.w600,
               ),
             ),
@@ -353,7 +392,7 @@ class _HomePageState extends State<HomePage>
           Container(
             // padding: const EdgeInsets.only(left: 15),
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.vertical(top: Radius.circular(10)),
+              borderRadius: BorderRadius.vertical(top: Radius.circular(10.r)),
               gradient: LinearGradient(
                 colors: [Color(0xff272A39), Color(0xff191A24)],
                 begin: Alignment.topCenter,
@@ -375,7 +414,7 @@ class _HomePageState extends State<HomePage>
                   ),
                   countrySlug: 'han-quoc',
                 ),
-                SizedBox(height: 20),
+                SizedBox(height: 20.h),
                 CountryMovieSection(
                   title: "Phim Trung Quốc",
                   gradient: LinearGradient(
@@ -388,7 +427,7 @@ class _HomePageState extends State<HomePage>
                   ),
                   countrySlug: 'trung-quoc',
                 ),
-                SizedBox(height: 20),
+                SizedBox(height: 20.h),
                 CountryMovieSection(
                   title: "Phim Mỹ - UK",
                   gradient: LinearGradient(
@@ -413,30 +452,21 @@ class _HomePageState extends State<HomePage>
     return BlocConsumer<CarouselDisplayCubit, CarouselDisplayState>(
       listener: (context, state) {
         if (state is CarouselSuccess) {
-          _carouselGen++; // ✅ invalidate callback của carousel cũ
-          final int gen = _carouselGen;
+          _carouselGen++;
           _carouselReady = false;
-          _pendingResetToFirst = true;
-          final oldController = indexCarouselController;
-          indexCarouselController = CarouselSliderController();
+
+          _pendingResetToFirst = false;
           _lastCarouselKey = '';
-          setState(() {
-            _carouselKeyCounter++; // Tăng counter để tạo key mới
-          });
+
+          _currentPageNotifier.value = 0.0;
+          _homeUiCubit.setCurrentIndex(0);
+
+          indexCarouselController = CarouselSliderController();
+          _homeUiCubit.bumpCarouselKeyCounter();
+
           WidgetsBinding.instance.addPostFrameCallback((_) {
-            oldController?.dispose();
-            if (!mounted || gen != _carouselGen) return;
-            indexCarouselController?.jumpToPage(0);
-            // ✅ ĐỢI thêm 1 frame để đảm bảo carousel đã jump xong mới reset state
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              if (!mounted || gen != _carouselGen) return;
-              setState(() {
-                currentIndex = 0;
-              });
-              _currentPageNotifier.value = 0.0;
-              _pendingResetToFirst = false;
-              _carouselReady = true;
-            });
+            if (!mounted) return;
+            _carouselReady = true;
           });
         }
       },
@@ -444,7 +474,7 @@ class _HomePageState extends State<HomePage>
         if (data is CarouselSuccess) {
           // chiều cao “thiết kế” theo XR: 0.89 * 896 ≈ 797
           // quy về theo width 414 => ratio ≈ 797/414 = 1.92
-          final heroHeight = (screenWidth * 1.92 + 10).clamp(650.0, 840.0);
+          final heroHeight = (screenWidth * 1.88).clamp(700.h, 900.h);
           return SizedBox(
             height: heroHeight,
             width: screenWidth,
@@ -475,44 +505,44 @@ class _HomePageState extends State<HomePage>
   }
 
   Widget _buildInforSection(double heroHeight, List<ItemEntity> latestMovie) {
-    final topSafe = MediaQuery.of(context).padding.top;
-    const toolbarH = 20.0; // bạn đang set AppBar toolbarHeight 90
-    const chipRowH = 44.0; // ước lượng chiều cao hàng chip
-    const extraGap = 8.0;
-
-    final pushDown = topSafe + toolbarH + chipRowH + extraGap;
+    final safeTop = MediaQuery.of(context).padding.top;
+    final minTopFromFilters = safeTop + 90.h + 10.h;
+    final sectionTop = math.max(heroHeight * .17, minTopFromFilters);
+    final safeIndex = _safeIndex(latestMovie.length);
     return Positioned(
       right: 0,
       left: 0,
       bottom: 0,
-      top: heroHeight * .186,
+      top: sectionTop,
       child: Column(
         children: [
-          SizedBox(height: 20),
+          SizedBox(height: 8.h),
           _buildCarousel(heroHeight, latestMovie),
-          const SizedBox(height: 8),
-          _buildCategory(latestMovie[currentIndex].category),
-          const SizedBox(height: 25),
+          SizedBox(height: 8.h),
+          _buildCategory(latestMovie[safeIndex].category),
+          SizedBox(height: 12.h),
           _buildInforMovie(latestMovie),
-          const SizedBox(height: 15),
+          SizedBox(height: 10.h),
           _buildDotIndicator(latestMovie),
-          const SizedBox(height: 15),
+          SizedBox(height: 8.h),
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 50),
+            padding: EdgeInsets.symmetric(horizontal: 50.w),
             child: Row(
-              spacing: 10,
+              spacing: 10.w,
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 _buildActionButton(Iconsax.play_circle, 'Xem Phim', () async {
-                  await _navigateToPlayer(latestMovie[currentIndex].slug);
+                  await _navigateToPlayer(
+                    latestMovie[_uiState.currentIndex].slug,
+                  );
                 }),
                 _buildActionButton(Iconsax.info_circle, 'Thông Tin', () {
-                  // HapticFeedback.mediumImpact();
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) =>
-                          MovieDetailPage(slug: latestMovie[currentIndex].slug),
+                      builder: (context) => MovieDetailPage(
+                        slug: latestMovie[_uiState.currentIndex].slug,
+                      ),
                     ),
                   );
                 }),
@@ -526,21 +556,24 @@ class _HomePageState extends State<HomePage>
 
   Widget _buildCategory(List<CategoryEntity> category) {
     return SizedBox(
-      height: MediaQuery.of(context).size.height * .04,
+      height: 36.h,
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 90),
+        padding: EdgeInsets.symmetric(horizontal: 70.w),
         child: Wrap(
           alignment: WrapAlignment.center,
-          spacing: 5,
-          runSpacing: 5,
+          spacing: 5.w,
+          runSpacing: 5.h,
           children: List.generate(category.length, (index) {
             return Container(
-              padding: EdgeInsets.symmetric(horizontal: 5, vertical: 5),
+              padding: EdgeInsets.symmetric(horizontal: 6.w, vertical: 4.h),
               decoration: BoxDecoration(
                 color: Colors.white.withOpacity(.1),
-                borderRadius: BorderRadius.circular(5),
+                borderRadius: BorderRadius.circular(5.r),
               ),
-              child: Text(category[index].name, style: TextStyle(fontSize: 9)),
+              child: Text(
+                category[index].name,
+                style: TextStyle(fontSize: 9.sp),
+              ),
             );
           }),
         ),
@@ -552,61 +585,61 @@ class _HomePageState extends State<HomePage>
     return Column(
       children: [
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 50),
+          padding: EdgeInsets.symmetric(horizontal: 50.w),
           child: Text(
-            latestMovie[currentIndex].name,
+            latestMovie[_uiState.currentIndex].name,
             textAlign: TextAlign.justify,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
+            style: TextStyle(fontSize: 20.sp, fontWeight: FontWeight.w800),
           ),
         ),
-        SizedBox(height: 2),
+        SizedBox(height: 2.h),
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 50),
+          padding: EdgeInsets.symmetric(horizontal: 50.w),
           child: Text(
             textAlign: TextAlign.justify,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            latestMovie[currentIndex].originName,
+            latestMovie[_uiState.currentIndex].originName,
             style: TextStyle(
-              fontSize: 10,
+              fontSize: 10.sp,
               fontWeight: FontWeight.w500,
               color: Color(0xfff85032),
             ),
           ),
         ),
-        const SizedBox(height: 15),
+        SizedBox(height: 15.h),
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 10),
+          padding: EdgeInsets.symmetric(horizontal: 10.w),
           child: Column(
-            spacing: 10,
+            spacing: 10.h,
             children: [
               Wrap(
                 direction: Axis.horizontal,
-                runSpacing: 10,
+                runSpacing: 10.h,
                 alignment: WrapAlignment.center,
-                spacing: 10,
+                spacing: 10.w,
                 children: [
                   _buildInforChip(
                     borderColor: Color(0xfff85032),
                     child: Wrap(
                       crossAxisAlignment: WrapCrossAlignment.center,
-                      spacing: 5,
+                      spacing: 5.w,
                       children: [
-                        const Text(
+                        Text(
                           'iMdB',
                           style: TextStyle(
-                            fontSize: 10,
+                            fontSize: 10.sp,
                             fontWeight: FontWeight.w700,
                             color: Color(0xfff85032),
                           ),
                         ),
                         Text(
-                          latestMovie[currentIndex].tmdb.voteAverage
+                          latestMovie[_uiState.currentIndex].tmdb.voteAverage
                               .toStringAsFixed(1),
                           style: TextStyle(
-                            fontSize: 10,
+                            fontSize: 10.sp,
                             fontWeight: FontWeight.w800,
                             color: Colors.white,
                           ),
@@ -618,9 +651,9 @@ class _HomePageState extends State<HomePage>
                     isGadient: true,
                     borderColor: Colors.transparent,
                     child: Text(
-                      latestMovie[currentIndex].quality,
+                      latestMovie[_uiState.currentIndex].quality,
                       style: TextStyle(
-                        fontSize: 10,
+                        fontSize: 10.sp,
                         fontWeight: FontWeight.w600,
                         color: Colors.white,
                       ),
@@ -628,9 +661,9 @@ class _HomePageState extends State<HomePage>
                   ),
                   _buildInforChip(
                     child: Text(
-                      latestMovie[currentIndex].year.toString(),
+                      latestMovie[_uiState.currentIndex].year.toString(),
                       style: TextStyle(
-                        fontSize: 10,
+                        fontSize: 10.sp,
                         fontWeight: FontWeight.w600,
                         color: Colors.white,
                       ),
@@ -638,11 +671,13 @@ class _HomePageState extends State<HomePage>
                   ),
                   _buildInforChip(
                     child: Text(
-                      (latestMovie[currentIndex].episodeCurrent == 'Full')
-                          ? latestMovie[currentIndex].time.toFormatEpisode()
-                          : latestMovie[currentIndex].time,
+                      (latestMovie[_uiState.currentIndex].episodeCurrent ==
+                              'Full')
+                          ? latestMovie[_uiState.currentIndex].time
+                                .toFormatEpisode()
+                          : latestMovie[_uiState.currentIndex].time,
                       style: TextStyle(
-                        fontSize: 10,
+                        fontSize: 10.sp,
                         fontWeight: FontWeight.w600,
                         color: Colors.white,
                       ),
@@ -651,21 +686,21 @@ class _HomePageState extends State<HomePage>
                 ],
               ),
               Wrap(
-                spacing: 10,
+                spacing: 10.w,
                 crossAxisAlignment: WrapCrossAlignment.center,
                 children: [
                   _buildInforChip(
                     backgroundColor: Colors.white,
                     child: Text(
-                      latestMovie[currentIndex].episodeCurrent,
+                      latestMovie[_uiState.currentIndex].episodeCurrent,
                       style: TextStyle(
-                        fontSize: 10,
+                        fontSize: 10.sp,
                         fontWeight: FontWeight.w600,
                         color: Colors.black,
                       ),
                     ),
                   ),
-                  // if (latestMovie[currentIndex].chieurap == false)
+                  // if (latestMovie[_uiState.currentIndex].chieurap == false)
                   //   _buildInforChip(
                   //     isGadient: true,
                   //     borderColor: Colors.transparent,
@@ -678,14 +713,14 @@ class _HomePageState extends State<HomePage>
                   //       ),
                   //     ),
                   //   ),
-                  if (latestMovie[currentIndex].subDocquyen == true)
+                  if (latestMovie[_uiState.currentIndex].subDocquyen == true)
                     _buildInforChip(
                       isGadient: true,
                       borderColor: Colors.transparent,
-                      child: const Text(
+                      child: Text(
                         'Sub Độc Quyền',
                         style: TextStyle(
-                          fontSize: 10,
+                          fontSize: 10.sp,
                           fontWeight: FontWeight.w600,
                           color: Colors.white,
                         ),
@@ -693,9 +728,9 @@ class _HomePageState extends State<HomePage>
                     ),
                   _buildInforChip(
                     child: Text(
-                      latestMovie[currentIndex].lang,
+                      latestMovie[_uiState.currentIndex].lang,
                       style: TextStyle(
-                        fontSize: 10,
+                        fontSize: 10.sp,
                         fontWeight: FontWeight.w600,
                         color: Colors.white,
                       ),
@@ -719,18 +754,17 @@ class _HomePageState extends State<HomePage>
   }) {
     return Container(
       alignment: Alignment.center,
-      height: 30,
+      height: 30.h,
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(30),
+        borderRadius: BorderRadius.circular(30.r),
         border: Border.all(color: Colors.white),
         color: isSelected ? Colors.white : Colors.transparent,
       ),
       child: TextButton(
         style: TextButton.styleFrom(
-          padding: EdgeInsets.symmetric(horizontal: 8),
-          // foregroundColor: isSelected ? Colors.black : Colors.white,
+          padding: EdgeInsets.symmetric(horizontal: 8.w),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(30),
+            borderRadius: BorderRadius.circular(30.r),
           ),
         ),
         onPressed: onPressed,
@@ -738,20 +772,20 @@ class _HomePageState extends State<HomePage>
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.center,
           mainAxisAlignment: MainAxisAlignment.center,
-          spacing: showIcon ? 5 : 0,
+          spacing: showIcon ? 5.w : 0,
           children: [
             Text(
               content,
               style: TextStyle(
                 fontWeight: FontWeight.w600,
-                fontSize: 10,
+                fontSize: 10.sp,
                 color: isSelected ? Colors.black : Colors.white,
               ),
             ),
             showIcon
                 ? Icon(
                     icon,
-                    size: 15,
+                    size: 15.sp,
                     color: isSelected ? Colors.black : Colors.white,
                   )
                 : SizedBox.shrink(),
@@ -853,16 +887,19 @@ class _HomePageState extends State<HomePage>
       Navigator.push(
         context,
         NoBackSwipeRoute(
-          builder: (context) => MoviePlayerPage(
-            slug: movie.slug,
-            movieName: movie.name,
-            thumbnailUrl: movie.poster_url,
-            episodes: episodes,
-            movie: movie,
-            initialEpisodeLink: episodeLink,
-            initialEpisodeIndex: episodeIndex,
-            initialServer: episodes[serverIndex].server_name,
-            initialServerIndex: serverIndex,
+          builder: (ctx) => BlocProvider.value(
+            value: context.read<PlayerCubit>(),
+            child: MoviePlayerPage(
+              slug: movie.slug,
+              movieName: movie.name,
+              thumbnailUrl: movie.poster_url,
+              episodes: episodes,
+              movie: movie,
+              initialEpisodeLink: episodeLink,
+              initialEpisodeIndex: episodeIndex,
+              initialServer: episodes[serverIndex].server_name,
+              initialServerIndex: serverIndex,
+            ),
           ),
         ),
       );
@@ -895,14 +932,14 @@ class _HomePageState extends State<HomePage>
               spreadRadius: -2,
             ),
           ],
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(10.r),
         ),
         child: TextButton(
           style: TextButton.styleFrom(
-            maximumSize: Size.fromWidth(200),
+            maximumSize: Size.fromWidth(200.w),
             foregroundColor: Colors.white,
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadiusGeometry.circular(10),
+              borderRadius: BorderRadiusGeometry.circular(10.r),
             ),
           ),
           onPressed: () {
@@ -911,12 +948,12 @@ class _HomePageState extends State<HomePage>
           },
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
-            spacing: 5,
+            spacing: 5.w,
             children: [
-              Icon(icon, size: 25),
+              Icon(icon, size: 25.sp),
               Text(
                 content,
-                style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12),
+                style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12.sp),
               ),
             ],
           ),
@@ -928,15 +965,15 @@ class _HomePageState extends State<HomePage>
   Widget _buildDotIndicator(List<ItemEntity> latestMovie) {
     final count = math.min(latestMovie.length, 20);
     return SizedBox(
-      height: 30,
+      height: 30.h,
       child: SingleChildScrollView(
-        padding: EdgeInsets.only(left: 30),
+        padding: EdgeInsets.only(left: 30.w),
         scrollDirection: Axis.horizontal,
         child: Row(
-          spacing: 10,
+          spacing: 10.w,
           mainAxisAlignment: MainAxisAlignment.center,
           children: List.generate(count, (index) {
-            bool isSelected = currentIndex == index;
+            bool isSelected = _uiState.currentIndex == index;
             return GestureDetector(
               onTap: () {
                 indexCarouselController?.jumpToPage(index);
@@ -944,8 +981,8 @@ class _HomePageState extends State<HomePage>
               child: AnimatedContainer(
                 curve: Curves.easeInOut,
                 duration: Duration(milliseconds: 300),
-                width: isSelected ? 30 : 25,
-                height: isSelected ? 30 : 25,
+                width: isSelected ? 30.w : 25.w,
+                height: isSelected ? 30.w : 25.w,
                 decoration: BoxDecoration(
                   image: DecorationImage(
                     image: NetworkImage(
@@ -955,7 +992,7 @@ class _HomePageState extends State<HomePage>
                   ),
                   shape: BoxShape.circle,
                   border: isSelected
-                      ? Border.all(color: Colors.white, width: 2)
+                      ? Border.all(color: Colors.white, width: 2.w)
                       : null,
                 ),
               ),
@@ -973,11 +1010,11 @@ class _HomePageState extends State<HomePage>
     Color? backgroundColor,
   }) {
     return Container(
-      padding: EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+      padding: EdgeInsets.symmetric(vertical: 4.h, horizontal: 8.w),
       decoration: BoxDecoration(
         color: backgroundColor,
         border: Border.all(color: borderColor ?? Colors.white),
-        borderRadius: BorderRadius.circular(7),
+        borderRadius: BorderRadius.circular(7.r),
         boxShadow: isGadient
             ? const [
                 BoxShadow(
@@ -1005,13 +1042,24 @@ class _HomePageState extends State<HomePage>
   }
 
   Widget _buildBackgroundImage(List<ItemEntity> latestMovie) {
-    final url = AppUrl.convertImageDirect(latestMovie[currentIndex].posterUrl);
+    final safeIndex = _safeIndex(latestMovie.length);
+    final url = AppUrl.convertImageDirect(latestMovie[safeIndex].posterUrl);
     return Positioned.fill(
       child: AnimatedSwitcher(
         duration: const Duration(milliseconds: 300),
         switchInCurve: Curves.easeInOut,
         switchOutCurve: Curves.easeInOut,
-        child: FastCachedImage(key: ValueKey(url), url: url, fit: BoxFit.cover),
+        child: Image.network(
+          key: ValueKey(url),
+          url,
+          fit: BoxFit.cover,
+          frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
+            if (wasSynchronouslyLoaded || frame != null) return child;
+            return _buildBannerShimmer(borderRadius: BorderRadius.zero);
+          },
+          errorBuilder: (context, error, stackTrace) =>
+              Container(color: const Color(0xff191A24)),
+        ),
       ),
     );
   }
@@ -1032,67 +1080,60 @@ class _HomePageState extends State<HomePage>
     }
 
     final int buildGen =
-        _carouselGen; // ✅ gen tại thời điểm build (để guard callback)
+        _carouselGen; //  gen tại thời điểm build (để guard callback)
     final carouselKey = latestMovie.take(count).map((e) => e.slug).join('|');
 
     if (_lastCarouselKey != carouselKey) {
       _lastCarouselKey = carouselKey;
-      //  nếu đang pending reset thì đừng ép về 0 ngay (tránh lệch khi PageView chưa jump)
-      if (!_pendingResetToFirst) {
-        _currentPageNotifier.value = 0.0;
-      }
+      _currentPageNotifier.value = 0.0;
     }
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted && buildGen == _carouselGen) _carouselReady = true;
+      // Chờ thêm 1 frame nữa để carousel slider hoàn tất khởi tạo internal PageView
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && buildGen == _carouselGen) _carouselReady = true;
+      });
     });
-    final carouselH = heroHeight * 0.40;
+    final carouselH = math.min(heroHeight * 0.42, 340.h);
+    final posterHeight = carouselH;
+    final posterWidth = posterHeight * _bannerPosterAspectRatio;
 
     return SizedBox(
-      height: carouselH + 5,
+      height: carouselH + 5.h,
       child: PrimaryScrollController.none(
         child: CarouselSlider.builder(
           key: ValueKey(
-            '$carouselKey-$_carouselKeyCounter',
-          ), // ✅ key mới mỗi khi data đổi
+            '$carouselKey-${_uiState.carouselKeyCounter}',
+          ), //  key mới mỗi khi data đổi
           carouselController: indexCarouselController!,
           options: CarouselOptions(
-            // autoPlayCurve: Curves.bounceInOut,
             height: carouselH,
             viewportFraction: .65,
-            // autoPlayCurve: Curves.easeInOut,
             autoPlay: true,
             animateToClosest: true,
-
             initialPage: 0,
             enlargeCenterPage: true,
             onPageChanged: (index, reason) {
-              if (buildGen != _carouselGen) return; // ✅ ignore callback cũ
-              setState(() {
-                _currentPageNotifier.value = index
-                    .toDouble(); // ✅ sync ngay khi settle
-                currentIndex = index;
-              });
+              if (buildGen != _carouselGen) return;
+              _currentPageNotifier.value = index.toDouble();
+              if (!mounted) return;
+              _homeUiCubit.setCurrentIndex(index);
             },
             onScrolled: (value) {
               if (value == null || !_carouselReady || buildGen != _carouselGen)
                 return;
-              final double normalize = value % count;
-
-              // không setState
-              _currentPageNotifier.value = normalize;
+              final normalizedValue = value % count;
+              // Bỏ qua jump lớn bất thường (do carousel internal page math khi khởi tạo)
+              if ((_currentPageNotifier.value - normalizedValue).abs() >
+                  count / 2) {
+                return;
+              }
+              _currentPageNotifier.value = normalizedValue;
             },
           ),
           itemCount: count,
           itemBuilder: (BuildContext context, int index, int realiindex) {
-            // final double itemCount = count.toDouble();
-            // double diff = index - _currentPage;
-            // diff = diff - itemCount * (diff / itemCount).round();
-            // // Clamp để max angle cho item liền kề (±1)
-            // diff = diff.clamp(-1.0, 1.0);
-            // // Angle: - để khớp chiều (bạn có thể đảo nếu sai)
-            // final double angle = diff * (math.pi * 0.1);
-            return ValueListenableBuilder(
+            return ValueListenableBuilder<double>(
               valueListenable: _currentPageNotifier,
               builder: (context, currentPage, child) {
                 final double itemCount = count.toDouble();
@@ -1102,38 +1143,54 @@ class _HomePageState extends State<HomePage>
                 diff = diff.clamp(-1.0, 1.0);
 
                 final double angle = diff * (math.pi * 0.1);
-                return GestureDetector(
-                  onTap: () {
-                    AppNavigator.push(
-                      context,
-                      MovieDetailPage(slug: latestMovie[index].slug),
-                    );
-                  },
-                  onLongPress: () {
-                    HapticFeedback.mediumImpact();
-                    showAnimatedDialog(
-                      context: context,
-                      dialog: ShowDetailMovieDialog(
-                        slug: latestMovie[index].slug,
-                      ),
-                    );
-                  },
-                  child: Center(
-                    child: Transform.rotate(
-                      angle: angle,
-                      child: CachedImageContainer(
-                        imageUrl: AppUrl.convertImageDirect(
-                          latestMovie[index].posterUrl,
-                        ),
-                        boxFit: BoxFit.cover,
-                        margin: EdgeInsets.symmetric(horizontal: 27),
-                        border: Border.all(color: Colors.white, width: 3),
-                        borderRadius: BorderRadius.circular(15),
+                return Center(
+                  child: Transform.rotate(angle: angle, child: child),
+                );
+              },
+              child: GestureDetector(
+                onTap: () {
+                  AppNavigator.push(
+                    context,
+                    MovieDetailPage(slug: latestMovie[index].slug),
+                  );
+                },
+                onLongPress: () {
+                  HapticFeedback.mediumImpact();
+                  showAnimatedDialog(
+                    context: context,
+                    dialog: ShowDetailMovieDialog(
+                      slug: latestMovie[index].slug,
+                    ),
+                  );
+                },
+                child: Container(
+                  width: posterWidth,
+                  margin: EdgeInsets.symmetric(horizontal: 14.w),
+                  decoration: BoxDecoration(
+                    border: Border.all(color: Colors.white, width: 3.w),
+                    borderRadius: BorderRadius.circular(15.r),
+                  ),
+                  child: AspectRatio(
+                    aspectRatio: _bannerPosterAspectRatio,
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(12.r),
+                      child: Image.network(
+                        AppUrl.convertImageDirect(latestMovie[index].posterUrl),
+                        fit: BoxFit.cover,
+                        frameBuilder:
+                            (context, child, frame, wasSynchronouslyLoaded) {
+                              if (wasSynchronouslyLoaded || frame != null) {
+                                return child;
+                              }
+                              return _buildBannerShimmer();
+                            },
+                        errorBuilder: (context, error, stackTrace) =>
+                            _buildBannerShimmer(),
                       ),
                     ),
                   ),
-                );
-              },
+                ),
+              ),
             );
           },
         ),
@@ -1156,22 +1213,25 @@ class _HomePageState extends State<HomePage>
             Row(
               children: [
                 Padding(
-                  padding: const EdgeInsets.only(left: 20),
-                  child: const Text(
+                  padding: EdgeInsets.only(left: 20.w),
+                  child: Text(
                     'Bạn đã xem gần đây',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                    style: TextStyle(
+                      fontSize: 18.sp,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ),
                 const Spacer(),
               ],
             ),
-            const SizedBox(height: 10),
+            SizedBox(height: 10.h),
             SizedBox(
-              height: 260,
+              height: 260.h,
               child: ListView.separated(
-                padding: const EdgeInsets.only(left: 15),
+                padding: EdgeInsets.only(left: 15.w),
                 scrollDirection: Axis.horizontal,
-                separatorBuilder: (_, __) => const SizedBox(width: 10),
+                separatorBuilder: (_, __) => SizedBox(width: 10.w),
                 itemCount: watchedMovies.length,
                 itemBuilder: (context, index) {
                   return _ItemWatchedMovie(entry: watchedMovies[index]);
@@ -1185,26 +1245,41 @@ class _HomePageState extends State<HomePage>
   }
 
   Widget _buildVersionInfo() {
-    if (version.isEmpty) return const SizedBox.shrink();
+    if (_uiState.version.isEmpty) return const SizedBox.shrink();
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+      padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 10.h),
       child: Column(
         children: [
           Text(
-            'Version: $version ($buildNumber)',
+            'Version: ${_uiState.version} (${_uiState.buildNumber})',
             style: TextStyle(
-              fontSize: 12,
+              fontSize: 12.sp,
               color: Colors.white.withOpacity(0.5),
             ),
           ),
           Text(
-            '$appName - $packageName',
+            '${_uiState.appName} - ${_uiState.packageName}',
             style: TextStyle(
-              fontSize: 10,
+              fontSize: 10.sp,
               color: Colors.white.withOpacity(0.3),
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildBannerShimmer({
+    BorderRadius borderRadius = const BorderRadius.all(Radius.zero),
+  }) {
+    return Shimmer.fromColors(
+      baseColor: const Color(0xff272A39),
+      highlightColor: const Color(0xff4A4E69),
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.black,
+          borderRadius: borderRadius,
+        ),
       ),
     );
   }
@@ -1249,21 +1324,19 @@ class _CountryMovieSectionState extends State<CountryMovieSection> {
           if (state is FetchFillterLoaded) {
             itemsList.addAll(state.items.take(20));
           }
-          final w = MediaQuery.sizeOf(context).width;
-          final scale = (w / 414).clamp(0.85, 1.15);
-          final listH = 260 * scale;
+          final listH = 260.h;
           return Column(
             children: [
               Row(
                 children: [
                   Padding(
-                    padding: const EdgeInsets.only(left: 20),
+                    padding: EdgeInsets.only(left: 20.w),
                     child: SharderText(
                       gradient: widget.gradient,
                       child: Text(
                         widget.title,
                         style: TextStyle(
-                          fontSize: 20,
+                          fontSize: 20.sp,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
@@ -1282,12 +1355,12 @@ class _CountryMovieSectionState extends State<CountryMovieSection> {
                       );
                     },
                     child: Padding(
-                      padding: const EdgeInsets.only(right: 10),
+                      padding: EdgeInsets.only(right: 10.w),
                       child: Text(
                         'Xem tất cả',
                         style: TextStyle(
                           color: Colors.white.withOpacity(0.7),
-                          fontSize: 12,
+                          fontSize: 12.sp,
                           fontWeight: FontWeight.w500,
                         ),
                       ),
@@ -1308,7 +1381,7 @@ class _CountryMovieSectionState extends State<CountryMovieSection> {
                   ),
                 ],
               ),
-              const SizedBox(height: 10),
+              SizedBox(height: 10.h),
               if (itemsList.isEmpty)
                 const _CountrySkeletonList()
               else
@@ -1316,10 +1389,11 @@ class _CountryMovieSectionState extends State<CountryMovieSection> {
                   height: listH,
                   child: AnimationLimiter(
                     child: ListView.separated(
-                      padding: const EdgeInsets.only(left: 10),
+                      padding: EdgeInsets.only(left: 10.w),
                       scrollDirection: Axis.horizontal,
                       addAutomaticKeepAlives: true,
-                      separatorBuilder: (context, index) => SizedBox(width: 10),
+                      separatorBuilder: (context, index) =>
+                          SizedBox(width: 10.w),
                       itemCount: itemsList.length,
                       cacheExtent: 500,
                       itemBuilder: (context, index) {
@@ -1359,20 +1433,20 @@ class _ItemLatestMovie extends StatelessWidget {
         );
       },
       child: SizedBox(
-        width: 140,
-        height: 260,
+        width: 140.w,
+        height: 260.h,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             Container(
-              height: 200,
+              height: 200.h,
               decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: Colors.white, width: 2),
+                borderRadius: BorderRadius.circular(10.r),
+                border: Border.all(color: Colors.white, width: 2.w),
               ),
               child: ClipRRect(
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(8.r),
                 child: Stack(
                   children: [
                     Positioned.fill(
@@ -1388,12 +1462,12 @@ class _ItemLatestMovie extends StatelessWidget {
                       ),
                     ),
                     Positioned(
-                      top: 5,
-                      left: 5,
+                      top: 5.h,
+                      left: 5.w,
                       child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 6,
-                          vertical: 3,
+                        padding: EdgeInsets.symmetric(
+                          horizontal: 6.w,
+                          vertical: 3.h,
                         ),
                         decoration: BoxDecoration(
                           gradient: const LinearGradient(
@@ -1413,12 +1487,12 @@ class _ItemLatestMovie extends StatelessWidget {
                               spreadRadius: -2,
                             ),
                           ],
-                          borderRadius: BorderRadius.circular(6),
+                          borderRadius: BorderRadius.circular(6.r),
                         ),
                         child: Text(
                           items.tmdb.voteAverage.toStringAsFixed(1),
-                          style: const TextStyle(
-                            fontSize: 10,
+                          style: TextStyle(
+                            fontSize: 10.sp,
                             fontWeight: FontWeight.bold,
                             color: Colors.white,
                           ),
@@ -1427,10 +1501,10 @@ class _ItemLatestMovie extends StatelessWidget {
                     ),
                     Positioned(
                       // right: 0,
-                      bottom: 5,
-                      left: 5,
+                      bottom: 5.h,
+                      left: 5.w,
                       child: Column(
-                        spacing: 3,
+                        spacing: 3.h,
                         crossAxisAlignment:
                             CrossAxisAlignment.start, // Căn lề phải
                         verticalDirection: VerticalDirection.up,
@@ -1453,14 +1527,14 @@ class _ItemLatestMovie extends StatelessWidget {
                 ),
               ),
             ),
-            SizedBox(height: 10),
+            SizedBox(height: 10.h),
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 10),
+              padding: EdgeInsets.symmetric(horizontal: 10.w),
               child: Text(
                 items.name,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                style: TextStyle(fontSize: 13.sp, fontWeight: FontWeight.w600),
               ),
             ),
             Text(
@@ -1468,7 +1542,7 @@ class _ItemLatestMovie extends StatelessWidget {
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
-                fontSize: 10,
+                fontSize: 10.sp,
                 fontWeight: FontWeight.w400,
                 color: Colors.grey,
               ),
@@ -1481,17 +1555,17 @@ class _ItemLatestMovie extends StatelessWidget {
 
   Widget _buildBadge({required String text, required Color color}) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 0),
+      padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 0),
       decoration: BoxDecoration(
         color: color,
         border: Border.all(color: color), // Viền đậm cùng tông
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(10.r),
       ),
       child: Text(
         text,
         style: TextStyle(
           color: Colors.white, // Chữ đậm cùng tông
-          fontSize: 9,
+          fontSize: 9.sp,
           fontWeight: FontWeight.bold,
         ),
       ),
@@ -1508,7 +1582,7 @@ class _ItemLatestMovie extends StatelessWidget {
         child: Container(
           decoration: BoxDecoration(
             color: Colors.black, // Bắt buộc phải có màu để Shimmer phủ lên
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: BorderRadius.circular(8.r),
           ),
         ),
       ),
@@ -1537,20 +1611,20 @@ class _ItemWatchedMovie extends StatelessWidget {
         );
       },
       child: SizedBox(
-        width: 140,
-        height: 260,
+        width: 140.w,
+        height: 260.h,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             Container(
-              height: 200,
+              height: 200.h,
               decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: Colors.white, width: 2),
+                borderRadius: BorderRadius.circular(10.r),
+                border: Border.all(color: Colors.white, width: 2.w),
               ),
               child: ClipRRect(
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(8.r),
                 child: Stack(
                   children: [
                     Positioned.fill(
@@ -1566,7 +1640,7 @@ class _ItemWatchedMovie extends StatelessWidget {
                               child: Container(
                                 decoration: BoxDecoration(
                                   color: Colors.black,
-                                  borderRadius: BorderRadius.circular(8),
+                                  borderRadius: BorderRadius.circular(8.r),
                                 ),
                               ),
                             ),
@@ -1581,7 +1655,7 @@ class _ItemWatchedMovie extends StatelessWidget {
                               child: Container(
                                 decoration: BoxDecoration(
                                   color: Colors.black,
-                                  borderRadius: BorderRadius.circular(8),
+                                  borderRadius: BorderRadius.circular(8.r),
                                 ),
                               ),
                             ),
@@ -1591,12 +1665,12 @@ class _ItemWatchedMovie extends StatelessWidget {
                     ),
                     if (entry.rating != null)
                       Positioned(
-                        top: 5,
-                        left: 5,
+                        top: 5.h,
+                        left: 5.w,
                         child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 6,
-                            vertical: 3,
+                          padding: EdgeInsets.symmetric(
+                            horizontal: 6.w,
+                            vertical: 3.h,
                           ),
                           decoration: BoxDecoration(
                             gradient: const LinearGradient(
@@ -1616,12 +1690,12 @@ class _ItemWatchedMovie extends StatelessWidget {
                                 spreadRadius: -2,
                               ),
                             ],
-                            borderRadius: BorderRadius.circular(6),
+                            borderRadius: BorderRadius.circular(6.r),
                           ),
                           child: Text(
                             entry.rating!.toStringAsFixed(1),
-                            style: const TextStyle(
-                              fontSize: 10,
+                            style: TextStyle(
+                              fontSize: 10.sp,
                               fontWeight: FontWeight.bold,
                               color: Colors.white,
                             ),
@@ -1629,16 +1703,16 @@ class _ItemWatchedMovie extends StatelessWidget {
                         ),
                       ),
                     Positioned(
-                      bottom: 2,
+                      bottom: 2.h,
                       left: 0,
                       child: Column(
                         children: [
                           Container(
-                            padding: const EdgeInsets.only(
-                              top: 4,
-                              bottom: 4,
-                              left: 5,
-                              right: 5,
+                            padding: EdgeInsets.only(
+                              top: 4.h,
+                              bottom: 4.h,
+                              left: 5.w,
+                              right: 5.w,
                             ),
                             decoration: BoxDecoration(
                               gradient: LinearGradient(
@@ -1651,7 +1725,7 @@ class _ItemWatchedMovie extends StatelessWidget {
                               ),
                             ),
                             child: Column(
-                              spacing: 3,
+                              spacing: 3.h,
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 ...langTags.map(
@@ -1674,7 +1748,7 @@ class _ItemWatchedMovie extends StatelessWidget {
                         ],
                       ),
                     ),
-                    if (progress != null && progress > 0)
+                    if (progress > 0)
                       Positioned(
                         left: 1,
                         right: 1,
@@ -1683,13 +1757,13 @@ class _ItemWatchedMovie extends StatelessWidget {
                           height: 4,
                           decoration: BoxDecoration(
                             color: Colors.white.withValues(alpha: 0.3),
-                            borderRadius: BorderRadius.circular(2),
+                            borderRadius: BorderRadius.circular(2.r),
                           ),
                           child: LayoutBuilder(
                             builder: (context, constraints) {
                               double p = entry.progressPercent;
-                              if (p > 1) p /= 100; // ✅ phòng trường hợp 0..100
-                              p = p.clamp(0.0, 1.0); // ✅ chặn vượt
+                              if (p > 1) p /= 100; //  phòng trường hợp 0..100
+                              p = p.clamp(0.0, 1.0); //  chặn vượt
 
                               return Align(
                                 alignment: Alignment.centerLeft,
@@ -1714,7 +1788,7 @@ class _ItemWatchedMovie extends StatelessWidget {
                                           spreadRadius: -2,
                                         ),
                                       ],
-                                      borderRadius: BorderRadius.circular(2),
+                                      borderRadius: BorderRadius.circular(2.r),
                                     ),
                                   ),
                                 ),
@@ -1727,25 +1801,22 @@ class _ItemWatchedMovie extends StatelessWidget {
                 ),
               ),
             ),
-            const SizedBox(height: 10),
+            SizedBox(height: 10.h),
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 10),
+              padding: EdgeInsets.symmetric(horizontal: 10.w),
               child: Text(
                 entry.name,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                ),
+                style: TextStyle(fontSize: 13.sp, fontWeight: FontWeight.w600),
               ),
             ),
             Text(
               entry.originName,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                fontSize: 10,
+              style: TextStyle(
+                fontSize: 10.sp,
                 fontWeight: FontWeight.w400,
                 color: Colors.grey,
               ),
@@ -1759,17 +1830,17 @@ class _ItemWatchedMovie extends StatelessWidget {
 
 Widget _buildBadge({required String text, required Color color}) {
   return Container(
-    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 0),
+    padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 0),
     decoration: BoxDecoration(
       color: color,
       border: Border.all(color: color),
-      borderRadius: BorderRadius.circular(10),
+      borderRadius: BorderRadius.circular(10.r),
     ),
     child: Text(
       text,
-      style: const TextStyle(
+      style: TextStyle(
         color: Colors.white,
-        fontSize: 9,
+        fontSize: 9.sp,
         fontWeight: FontWeight.bold,
       ),
     ),
@@ -1781,18 +1852,17 @@ class _CountrySkeletonList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final w = MediaQuery.sizeOf(context).width;
-    final scale = (w / 414).clamp(0.85, 1.15);
-    final listH = 260 * scale;
+    final listH = 260.h;
     return SizedBox(
       height: listH,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
-        separatorBuilder: (_, __) => const SizedBox(width: 10),
+        padding: EdgeInsets.only(left: 10.w),
+        separatorBuilder: (_, __) => SizedBox(width: 10.w),
         itemCount: 5,
         itemBuilder: (context, index) {
           return SizedBox(
-            width: 100,
+            width: 100.w,
             child: Shimmer.fromColors(
               baseColor: const Color(0xff272A39).withOpacity(0.2),
               highlightColor: const Color(0xff191A24).withOpacity(0.2),
@@ -1804,26 +1874,26 @@ class _CountrySkeletonList extends StatelessWidget {
                       child: Container(
                         decoration: BoxDecoration(
                           color: Colors.white,
-                          borderRadius: BorderRadius.circular(8),
+                          borderRadius: BorderRadius.circular(8.r),
                         ),
                       ),
                     ),
-                    const SizedBox(height: 5),
+                    SizedBox(height: 5.h),
                     Container(
-                      height: 12,
+                      height: 12.h,
                       width: double.infinity,
                       decoration: BoxDecoration(
                         color: Colors.white,
-                        borderRadius: BorderRadius.circular(4),
+                        borderRadius: BorderRadius.circular(4.r),
                       ),
                     ),
-                    const SizedBox(height: 4),
+                    SizedBox(height: 4.h),
                     Container(
-                      height: 10,
+                      height: 10.h,
                       width: double.infinity,
                       decoration: BoxDecoration(
                         color: Colors.white,
-                        borderRadius: BorderRadius.circular(4),
+                        borderRadius: BorderRadius.circular(4.r),
                       ),
                     ),
                   ],

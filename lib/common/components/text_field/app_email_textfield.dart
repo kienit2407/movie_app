@@ -5,14 +5,9 @@ import 'package:iconsax_flutter/iconsax_flutter.dart';
 import 'package:movie_app/core/config/themes/app_color.dart';
 
 class AppEmailTextfield extends StatefulWidget {
-  const AppEmailTextfield
-  ({
-    super.key, 
-    required this.controller
-  });
+  const AppEmailTextfield({super.key, required this.controller});
 
-  final TextEditingController controller
-;
+  final TextEditingController controller;
   @override
   State<AppEmailTextfield> createState() => _AppEmailTextfieldState();
 }
@@ -21,10 +16,10 @@ class _AppEmailTextfieldState extends State<AppEmailTextfield> {
   final _focusedNode = FocusNode();
   bool _isFocused = false;
   bool _hideClear = false;
-@override
+  @override
   void initState() {
-    _focusedNode.addListener((){
-      if(_focusedNode.hasFocus != _isFocused){
+    _focusedNode.addListener(() {
+      if (_focusedNode.hasFocus != _isFocused) {
         setState(() {
           _isFocused = _focusedNode.hasFocus;
         });
@@ -38,6 +33,7 @@ class _AppEmailTextfieldState extends State<AppEmailTextfield> {
     _focusedNode.dispose();
     super.dispose();
   }
+
   @override
   Widget build(BuildContext context) {
     return ClipRect(
@@ -55,22 +51,25 @@ class _AppEmailTextfieldState extends State<AppEmailTextfield> {
             gradient: LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
-                colors: [
-                  Colors.white60.withOpacity(.3),
-                  Colors.white10.withOpacity(.1),
-              ]
+              colors: [
+                Colors.white60.withOpacity(.3),
+                Colors.white10.withOpacity(.1),
+              ],
             ),
             border: Border(
               top: BorderSide(color: Colors.white60.withOpacity(0.7), width: 1),
-              left: BorderSide(color: Colors.white60.withOpacity(0.7), width: 1)
+              left: BorderSide(
+                color: Colors.white60.withOpacity(0.7),
+                width: 1,
+              ),
             ),
             borderRadius: BorderRadius.circular(10),
           ),
           child: TextField(
-            onSubmitted: (value){
-              if(value.isNotEmpty){
+            onSubmitted: (value) {
+              if (value.isNotEmpty) {
                 FocusScope.of(context).nextFocus();
-              } else{
+              } else {
                 _focusedNode.requestFocus();
               }
             },
@@ -86,27 +85,32 @@ class _AppEmailTextfieldState extends State<AppEmailTextfield> {
             cursorWidth: 1,
             cursorRadius: Radius.circular(10),
             decoration: InputDecoration(
-              prefixIcon:const Icon(Icons.mail),
+              prefixIcon: const Icon(Icons.mail),
               suffixIcon: AnimatedSwitcher(
                 duration: Duration(milliseconds: 300),
                 switchInCurve: Curves.elasticInOut,
                 transitionBuilder: (Widget child, Animation<double> animation) {
-                  return ScaleTransition(scale: animation, child: child); // Hiệu ứng scale
+                  return ScaleTransition(
+                    scale: animation,
+                    child: child,
+                  ); // Hiệu ứng scale
                 },
-                child: (_hideClear && _isFocused) ? IconButton(
-                  onPressed: (){
-                    setState(() {
-                      widget.controller.clear();
-                      _hideClear = false;
-                    });
-                  }, 
-                  icon: Icon(Iconsax.tag_cross_copy) ,
-                ): null,
+                child: (_hideClear && _isFocused)
+                    ? IconButton(
+                        onPressed: () {
+                          setState(() {
+                            widget.controller.clear();
+                            _hideClear = false;
+                          });
+                        },
+                        icon: Icon(Iconsax.tag_cross_copy),
+                      )
+                    : null,
               ),
               filled: true,
               fillColor: _isFocused
                   ? AppColor.secondColor.withOpacity(.2)
-                  :  Colors.transparent,
+                  : Colors.transparent,
               prefixIconColor: _isFocused ? AppColor.secondColor : Colors.white,
               hintText: 'Email',
             ).applyDefaults(Theme.of(context).inputDecorationTheme),

@@ -19,6 +19,7 @@ import 'package:movie_app/feature/detail_movie/presentation/bloc/detail_movie_cu
 import 'package:movie_app/feature/detail_movie/presentation/bloc/detail_movie_state.dart';
 import 'package:movie_app/feature/detail_movie/presentation/pages/movie_detail_page.dart';
 import 'package:movie_app/feature/detail_movie/presentation/pages/movie_player_page.dart';
+import 'package:movie_app/feature/detail_movie/presentation/bloc/player_cubit.dart';
 import 'package:skeletonizer/skeletonizer.dart';
 import 'package:youtube_player_flutter/youtube_player_flutter.dart';
 
@@ -691,13 +692,16 @@ class _DialogContentState extends State<_DialogContent> {
                 Navigator.push(
                   context,
                   NoBackSwipeRoute(
-                    builder: (_) => MoviePlayerPage(
-                      slug: movie.slug,
-                      movieName: movie.name,
-                      thumbnailUrl: movie.poster_url,
-                      episodes: episodes,
-                      movie: movie,
-                      initialServerIndex: 0,
+                    builder: (ctx) => BlocProvider.value(
+                      value: context.read<PlayerCubit>(),
+                      child: MoviePlayerPage(
+                        slug: movie.slug,
+                        movieName: movie.name,
+                        thumbnailUrl: movie.poster_url,
+                        episodes: episodes,
+                        movie: movie,
+                        initialServerIndex: 0,
+                      ),
                     ),
                   ),
                 );

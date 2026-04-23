@@ -8,7 +8,9 @@ import 'package:movie_app/core/config/utils/blocking_back_page.dart';
 import 'package:movie_app/core/config/utils/cover_map.dart';
 import 'package:movie_app/core/mini_player_manager.dart';
 import 'package:movie_app/feature/detail_movie/data/model/detail_movie_model.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:movie_app/feature/detail_movie/presentation/pages/movie_player_page.dart';
+import 'package:movie_app/feature/detail_movie/presentation/bloc/player_cubit.dart';
 
 class EpisodesSliver extends StatefulWidget {
   final List<EpisodesModel> episodes;
@@ -95,16 +97,19 @@ class _EpisodesSliverState extends State<EpisodesSliver> {
     Navigator.push(
       context,
       NoBackSwipeRoute(
-        builder: (_) => MoviePlayerPage(
-          movie: widget.movie,
-          episodes: widget.episodes,
-          movieName: widget.movie.name,
-          slug: widget.movie.slug,
-          initialEpisodeIndex: episodeIndex,
-          initialServer: _currentServerModel.server_name,
-          thumbnailUrl: widget.movie.thumb_url,
-          initialEpisodeLink: link,
-          initialServerIndex: _selectedServerIndex,
+        builder: (ctx) => BlocProvider.value(
+          value: context.read<PlayerCubit>(),
+          child: MoviePlayerPage(
+            movie: widget.movie,
+            episodes: widget.episodes,
+            movieName: widget.movie.name,
+            slug: widget.movie.slug,
+            initialEpisodeIndex: episodeIndex,
+            initialServer: _currentServerModel.server_name,
+            thumbnailUrl: widget.movie.thumb_url,
+            initialEpisodeLink: link,
+            initialServerIndex: _selectedServerIndex,
+          ),
         ),
       ),
     );
@@ -161,8 +166,9 @@ class _EpisodesSliverState extends State<EpisodesSliver> {
                   Navigator.push(
                     context,
                     NoBackSwipeRoute(
-                      builder: (context) {
-                        return MoviePlayerPage(
+                      builder: (ctx) => BlocProvider.value(
+                        value: context.read<PlayerCubit>(),
+                        child: MoviePlayerPage(
                           movie: widget.movie,
                           episodes: widget.episodes,
                           movieName: widget.movie.name,
@@ -172,8 +178,8 @@ class _EpisodesSliverState extends State<EpisodesSliver> {
                           thumbnailUrl: widget.movie.thumb_url,
                           initialEpisodeLink: link,
                           initialServerIndex: index,
-                        );
-                      },
+                        ),
+                      ),
                     ),
                   );
                 },
@@ -441,16 +447,19 @@ class _EpisodesSliverState extends State<EpisodesSliver> {
                 Navigator.push(
                   context,
                   NoBackSwipeRoute(
-                    builder: (_) => MoviePlayerPage(
-                      movie: widget.movie,
-                      episodes: widget.episodes,
-                      movieName: widget.movie.name,
-                      slug: widget.movie.slug,
-                      initialEpisodeIndex: index,
-                      initialServer: selectedModel.server_name,
-                      initialServerIndex: _selectedServerIndex,
-                      thumbnailUrl: widget.movie.thumb_url,
-                      initialEpisodeLink: link,
+                    builder: (ctx) => BlocProvider.value(
+                      value: context.read<PlayerCubit>(),
+                      child: MoviePlayerPage(
+                        movie: widget.movie,
+                        episodes: widget.episodes,
+                        movieName: widget.movie.name,
+                        slug: widget.movie.slug,
+                        initialEpisodeIndex: index,
+                        initialServer: selectedModel.server_name,
+                        initialServerIndex: _selectedServerIndex,
+                        thumbnailUrl: widget.movie.thumb_url,
+                        initialEpisodeLink: link,
+                      ),
                     ),
                   ),
                 );

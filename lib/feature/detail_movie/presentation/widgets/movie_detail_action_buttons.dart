@@ -4,7 +4,9 @@ import 'package:go_router/go_router.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
 import 'package:movie_app/core/config/utils/blocking_back_page.dart';
 import 'package:movie_app/feature/detail_movie/data/model/detail_movie_model.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:movie_app/feature/detail_movie/presentation/pages/movie_player_page.dart';
+import 'package:movie_app/feature/detail_movie/presentation/bloc/player_cubit.dart';
 
 class MovieDetailActionButtons extends StatefulWidget {
   final MovieModel movie;
@@ -63,16 +65,19 @@ class _MovieDetailActionButtonsState extends State<MovieDetailActionButtons> {
     if (widget.episodes.isEmpty) return;
     Navigator.of(context).push(
       NoBackSwipeRoute(
-        builder: (_) => MoviePlayerPage(
-          slug: widget.movie.slug,
-          movieName: widget.movie.name,
-          thumbnailUrl: widget.movie.poster_url,
-          episodes: widget.episodes,
-          movie: widget.movie,
-          initialEpisodeLink: episodeLink,
-          initialEpisodeIndex: episodeIndex,
-          initialServer: widget.episodes[serverIndex].server_name,
-          initialServerIndex: serverIndex,
+        builder: (ctx) => BlocProvider.value(
+          value: context.read<PlayerCubit>(),
+          child: MoviePlayerPage(
+            slug: widget.movie.slug,
+            movieName: widget.movie.name,
+            thumbnailUrl: widget.movie.poster_url,
+            episodes: widget.episodes,
+            movie: widget.movie,
+            initialEpisodeLink: episodeLink,
+            initialEpisodeIndex: episodeIndex,
+            initialServer: widget.episodes[serverIndex].server_name,
+            initialServerIndex: serverIndex,
+          ),
         ),
       ),
     );

@@ -77,16 +77,16 @@ class _SearchResultViewState extends State<SearchResultView> {
               child: SliverGrid(
                 delegate: SliverChildBuilderDelegate((context, index) {
                   final movie = widget.movies[index];
-      
+
                   final firstTime = _animatedOnce.add(
                     movie.slug,
                   ); // true nếu lần đầu gặp
-                  final shouldAnimate = firstTime && _animatedOnce.length <= 10;
-      
+                  final shouldAnimate = firstTime && _animatedOnce.length <= 15;
+
                   final child = _buildItem(movie, context);
-      
+
                   if (!shouldAnimate) return child;
-      
+
                   return AnimationConfiguration.staggeredGrid(
                     position: index,
                     columnCount: 3,
@@ -109,7 +109,7 @@ class _SearchResultViewState extends State<SearchResultView> {
               ),
             ),
           ),
-      
+
           if (widget.isLoadingMore)
             SliverToBoxAdapter(child: _buildLoadingMoreIndicator()),
         ],

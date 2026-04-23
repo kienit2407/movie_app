@@ -6,6 +6,8 @@ class HomeSkeleton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Lấy padding top (safearea) để tính toán vị trí chính xác nếu cần,
+    // nhưng ở đây ta dùng SafeArea(top: false) như code cũ của bạn.
     final h = MediaQuery.of(context).size.height;
     final w = MediaQuery.of(context).size.width;
 
@@ -16,43 +18,42 @@ class HomeSkeleton extends StatelessWidget {
         highlightColor: const Color(0xff191A24).withOpacity(0.2),
       ),
       child: SafeArea(
-        top: false,
+        top:
+            false, // Giữ nguyên theo thiết kế của bạn để background tràn lên status bar
         child: SingleChildScrollView(
-          physics: const NeverScrollableScrollPhysics(),
+          physics:
+              const NeverScrollableScrollPhysics(), // Skeleton không nên cuộn được
           padding: const EdgeInsets.only(bottom: 100),
           child: Column(
             children: [
-              // Poster/Hero
+              // 1. Poster/Hero chính
               SizedBox(
                 height: h * 0.60,
                 width: w,
-                child: Stack(
-                  children: [
-                    // background image giả
-                    Positioned.fill(
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(10),
-                        child: Image.network(
-                          'https://dummyimage.com/800x1200/000/fff',
-                          fit: BoxFit.cover,
-                        ),
-                      ),
-                    ),
-
-                    //
-                  ],
+                child: ClipRRect(
+                  borderRadius: const BorderRadius.only(
+                    bottomLeft: Radius.circular(20),
+                    bottomRight: Radius.circular(20),
+                  ),
+                  // 👇 SỬA TỪ IMAGE.NETWORK THÀNH CONTAINER
+                  child: Container(
+                    // Bí quyết: Phải có color để Skeletonizer nhận diện khối
+                    color: Colors.white,
+                    width: double.infinity,
+                    height: double.infinity,
+                  ),
                 ),
               ),
 
-              const SizedBox(height: 14),
+              const SizedBox(height: 18),
 
-              // category chips (dùng Text thật)
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
+              // 2. Category chips (Dùng text thật để lấy shape)
+              const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 16),
                 child: Wrap(
                   alignment: WrapAlignment.center,
                   spacing: 8,
-                  children: const [
+                  children: [
                     _ChipFake('Action'),
                     _ChipFake('Drama'),
                     _ChipFake('Comedy'),
@@ -60,43 +61,41 @@ class HomeSkeleton extends StatelessWidget {
                 ),
               ),
 
-              const SizedBox(height: 14),
+              const SizedBox(height: 16),
 
-              // title + subtitle (Text thật)
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 40),
+              // 3. Title + Subtitle (Text thật)
+              const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 40),
                 child: Column(
-                  children: const [
+                  children: [
                     Text(
                       'Movie title placeholder',
                       maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
                       style: TextStyle(
-                        fontSize: 20,
+                        fontSize: 22,
                         fontWeight: FontWeight.w800,
                       ),
                     ),
-                    SizedBox(height: 6),
+                    SizedBox(height: 8),
                     Text(
-                      'Original name placeholder',
+                      'Original name placeholder name',
                       maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(fontSize: 12),
+                      style: TextStyle(fontSize: 13),
                     ),
                   ],
                 ),
               ),
 
-              const SizedBox(height: 14),
+              const SizedBox(height: 16),
 
-              // info chips
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
+              // 4. Info pills
+              const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 20),
                 child: Wrap(
                   alignment: WrapAlignment.center,
-                  spacing: 8,
+                  spacing: 10,
                   runSpacing: 8,
-                  children: const [
+                  children: [
                     _PillFake('iMdB 8.8'),
                     _PillFake('HD'),
                     _PillFake('2025'),
@@ -105,52 +104,65 @@ class HomeSkeleton extends StatelessWidget {
                 ),
               ),
 
-              const SizedBox(height: 12),
+              const SizedBox(height: 14),
 
-              // dot indicators (circle containers thật)
+              // 5. Dot indicators
               SizedBox(
                 height: 30,
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: List.generate(
-                    6,
+                    5,
                     (_) => Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 6),
+                      padding: const EdgeInsets.symmetric(horizontal: 5),
                       child: Container(
-                        width: 40,
-                        height: 40,
-                        decoration: BoxDecoration(
-                         
+                        width: 10, // Sửa lại size cho giống dot indicator thật
+                        height: 10,
+                        decoration: const BoxDecoration(
                           shape: BoxShape.circle,
+                          // 👇 BẮT BUỘC PHẢI THÊM COLOR VÀO ĐÂY
+                          color: Colors.transparent,
                         ),
                       ),
                     ),
                   ),
                 ),
               ),
-              const SizedBox(height: 14),
+              const SizedBox(height: 16),
 
-              // buttons (Container thật)
+              // 6. Buttons
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 50),
+                padding: const EdgeInsets.symmetric(horizontal: 40),
                 child: Row(
                   children: [
                     Expanded(
                       child: SizedBox(
-                        height: 42,
+                        height: 46,
                         child: ElevatedButton(
-                          onPressed: null,
-                          child: Text('Xem phim'),
+                          onPressed: null, // Disable để hiện skeleton block
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.transparent, // Cần màu nền
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          child: const Text('Xem phim'),
                         ),
                       ),
                     ),
-                    const SizedBox(width: 10),
+                    const SizedBox(width: 12),
                     Expanded(
                       child: SizedBox(
-                        height: 42,
+                        height: 46,
                         child: ElevatedButton(
                           onPressed: null,
-                          child: Text('Thông tin'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.transparent,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          child: const Text('Thông tin'),
                         ),
                       ),
                     ),
@@ -158,17 +170,17 @@ class HomeSkeleton extends StatelessWidget {
                 ),
               ),
 
-              const SizedBox(height: 24),
+              const SizedBox(height: 28),
 
-              // 1 section preview (vừa màn hình)
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
+              // 7. Section preview list
+              const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 16),
                 child: Row(
-                  children: const [
+                  children: [
                     Text(
                       'Phim Hàn Quốc',
                       style: TextStyle(
-                        fontSize: 18,
+                        fontSize: 19,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
@@ -177,39 +189,44 @@ class HomeSkeleton extends StatelessWidget {
                   ],
                 ),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 14),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: SizedBox(
-                  height: h * .30,
+                  height: h * .28,
                   child: Row(
                     children: List.generate(3, (i) {
                       return Expanded(
                         child: Padding(
-                          padding: EdgeInsets.only(right: i == 2 ? 0 : 10),
+                          padding: EdgeInsets.only(right: i == 2 ? 0 : 12),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Expanded(
                                 child: ClipRRect(
-                                  borderRadius: BorderRadius.circular(10),
-                                  child: Image.network(
-                                    'https://dummyimage.com/400x600/000/fff',
-                                    fit: BoxFit.cover,
+                                  borderRadius: BorderRadius.circular(12),
+                                  // 👇 SỬA TỪ IMAGE.NETWORK THÀNH CONTAINER
+                                  child: Container(
+                                    // Bí quyết: Phải có color
+                                    color: Colors.transparent,
+                                    width: double.infinity,
                                   ),
                                 ),
                               ),
                               const SizedBox(height: 10),
                               const Text(
-                                'Movie name',
+                                'Movie name placeholder',
                                 maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                ),
                               ),
                               const SizedBox(height: 6),
                               const Text(
                                 'Origin name',
                                 maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(fontSize: 11),
                               ),
                             ],
                           ),
@@ -227,6 +244,7 @@ class HomeSkeleton extends StatelessWidget {
   }
 }
 
+// Helper widget cho category chips
 class _ChipFake extends StatelessWidget {
   final String t;
   const _ChipFake(this.t);
@@ -234,16 +252,25 @@ class _ChipFake extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(6),
-        border: Border.all(),
+        color:
+            Colors.transparent, // 👉 Cần color nền để hiện khối block hoàn toàn
+        borderRadius: BorderRadius.circular(8),
+        // Không cần border nữa vì màu nền sẽ tạo ra khối shimmer đẹp hơn
       ),
-      child: Text(t, style: const TextStyle(fontSize: 10)),
+      child: Text(
+        t,
+        style: const TextStyle(
+          fontSize: 11,
+          color: Colors.transparent,
+        ), // Chữ trong suốt để lấy shape
+      ),
     );
   }
 }
 
+// Helper widget cho info pills
 class _PillFake extends StatelessWidget {
   final String t;
   const _PillFake(this.t);
@@ -251,12 +278,18 @@ class _PillFake extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(7),
-        border: Border.all(),
+        color: Colors.transparent, // 👉 Cần color nền
+        borderRadius: BorderRadius.circular(20), // Bo tròn dạng pill
       ),
-      child: Text(t, style: const TextStyle(fontSize: 10)),
+      child: Text(
+        t,
+        style: const TextStyle(
+          fontSize: 11,
+          color: Colors.transparent,
+        ), // Chữ trong suốt
+      ),
     );
   }
 }

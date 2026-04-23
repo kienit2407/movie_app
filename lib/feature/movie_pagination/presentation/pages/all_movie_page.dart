@@ -326,7 +326,6 @@ class _AllMoviePageState extends State<AllMoviePage> {
                       children: [
                         const SliverToBoxAdapter(child: SizedBox(height: 10)),
                         SliverGrid(
-                        
                           delegate: SliverChildBuilderDelegate((
                             context,
                             index,
@@ -352,7 +351,7 @@ class _AllMoviePageState extends State<AllMoviePage> {
 
                             return _buildItem(item);
                           }, childCount: state.items.length),
-                          
+
                           gridDelegate:
                               const SliverGridDelegateWithMaxCrossAxisExtent(
                                 mainAxisSpacing: 20,
@@ -395,7 +394,7 @@ class _AllMoviePageState extends State<AllMoviePage> {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           CupertinoActivityIndicator(
-           // Bạn có thể chỉnh độ lớn nhỏ ở đây
+            // Bạn có thể chỉnh độ lớn nhỏ ở đây
             color: Colors.grey, // Màu sắc của loading
           ),
           Text('Loading...'),
@@ -507,7 +506,9 @@ class _AllMoviePageState extends State<AllMoviePage> {
 
                           return FastCachedImage(
                             key: ValueKey(itemEntity.slug), // ✅ ổn định widget
-                            url: AppUrl.convertImageAddition(itemEntity.posterUrl),
+                            url: AppUrl.convertImageAddition(
+                              itemEntity.posterUrl,
+                            ),
                             fit: BoxFit.cover,
                             // cacheWidth: cw,
                             // cacheHeight: ch,
