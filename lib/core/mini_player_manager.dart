@@ -1,5 +1,8 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:chewie/chewie.dart';
+import 'package:movie_app/core/ios_picture_in_picture_service.dart';
 import 'package:movie_app/feature/detail_movie/data/model/detail_movie_model.dart';
 
 class MiniPlayerLaunchData {
@@ -158,6 +161,7 @@ class MiniPlayerManager extends ChangeNotifier {
   void disposeMiniPlayer({bool notify = true}) {
     final oldMain = _chewieController;
     final oldHandoff = _handoffController;
+    unawaited(IosPictureInPictureService.detach());
 
     _chewieController = null;
     _launch = null;
@@ -182,6 +186,7 @@ class MiniPlayerManager extends ChangeNotifier {
   }
 
   void hideMiniPlayer() {
+    unawaited(IosPictureInPictureService.detach());
     _chewieController = null;
     _launch = null;
     _initialPos = null;

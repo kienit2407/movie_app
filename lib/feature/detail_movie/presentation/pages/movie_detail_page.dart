@@ -11,6 +11,7 @@ import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
 import 'package:intl/intl.dart';
 import 'package:lottie/lottie.dart';
+import 'package:movie_app/common/components/app_auto_scroll_text.dart';
 import 'package:movie_app/common/components/alert_dialog/app_alert_dialog.dart';
 import 'package:movie_app/common/helpers/contants/app_url.dart';
 import 'package:movie_app/common/helpers/navigation/app_navigation.dart';
@@ -947,18 +948,14 @@ class _RecommendationItem extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 5),
-            Text(
+            AppAutoScrollText(
               itemEntity.name,
               textAlign: TextAlign.center,
-              overflow: TextOverflow.ellipsis,
-              maxLines: 1,
               style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
             ),
-            Text(
+            AppAutoScrollText(
               itemEntity.originName,
               textAlign: TextAlign.center,
-              overflow: TextOverflow.ellipsis,
-              maxLines: 1,
               style: const TextStyle(fontSize: 10, color: Colors.grey),
             ),
           ],

@@ -35,7 +35,6 @@ import 'package:movie_app/feature/intro/presentation/splash/bloc/splash_cubit.da
 import 'package:movie_app/feature/movie_pagination/presentation/bloc/fetch_fillter_cubit.dart';
 import 'package:movie_app/feature/search/presentation/bloc/search_cubit.dart';
 import 'package:path_provider/path_provider.dart';
-import 'dart:io';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -51,18 +50,7 @@ Future<void> main() async {
   // await dotenv.load(fileName: 'assets/.env');
   debugPrint('=== [3/8] Dotenv loaded ===');
   final dir = await getApplicationDocumentsDirectory();
-  // ... giữ logic xóa dir và init Hive cũ của bạn ở đây
   HydratedBloc.storage = await HydratedStorage.build(storageDirectory: dir);
-  try {
-    final dir = await getApplicationDocumentsDirectory();
-    final hiveDir = Directory('${dir.path}/hive');
-    if (await hiveDir.exists()) {
-      await hiveDir.delete(recursive: true);
-      debugPrint('=== Cleared Hive data directory ===');
-    }
-  } catch (e) {
-    debugPrint('=== Failed to clear Hive directory: $e ===');
-  }
 
   await Hive.initFlutter();
 

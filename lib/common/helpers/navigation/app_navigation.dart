@@ -1,35 +1,39 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/widgets.dart';
 
 class AppNavigator {
-  static void pushReplacement (BuildContext context, Widget newRoute){
-    Navigator.pushReplacement(
-      context, MaterialPageRoute(
-        builder: (context) => newRoute
-      )
+  static Future<T?> pushReplacement<T extends Object?>(
+    BuildContext context,
+    Widget newRoute,
+  ) {
+    return Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (context) => newRoute),
     );
   }
 
-  static void pop (BuildContext context) {
+  static void pop(BuildContext context) {
     Navigator.pop(context);
   }
 
-  static void push (BuildContext context, Widget newRoute){
-    Navigator.push(
+  static Future<T?> push<T extends Object?>(
+    BuildContext context,
+    Widget newRoute,
+  ) {
+    return Navigator.push(
       context,
-      MaterialPageRoute(builder: (context) => newRoute
-      ) 
+      MaterialPageRoute(builder: (context) => newRoute),
     );
   }
 
-  static void pushAndRemoveUtil (BuildContext context, Widget newRoute){
-    Navigator.pushAndRemoveUntil(
+  static Future<T?> pushAndRemoveUtil<T extends Object?>(
+    BuildContext context,
+    Widget newRoute,
+  ) {
+    return Navigator.pushAndRemoveUntil(
       context,
-      MaterialPageRoute(builder: (context) => newRoute
-      ),
-      (route) => false, //<- dòng này báo cho flutter rằng hãy xoá hết những route cũ trong stack mà chỉ giữ lại những cái mới mà thôi. Nếu là true thì nó cũng giống push thông thường
+      MaterialPageRoute(builder: (context) => newRoute),
+      (route) =>
+          false, //<- dòng này báo cho flutter rằng hãy xoá hết những route cũ trong stack mà chỉ giữ lại những cái mới mà thôi. Nếu là true thì nó cũng giống push thông thường
     );
   }
-
-
 }

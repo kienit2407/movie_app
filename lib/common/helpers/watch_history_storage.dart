@@ -1,18 +1,32 @@
-import 'package:hive_ce/hive_ce.dart';
+import 'package:flutter/foundation.dart';
+import 'package:hive_ce_flutter/hive_flutter.dart';
 import 'package:movie_app/common/models/watch_history_entry.dart';
 
 class WatchHistoryStorage {
   static const String _boxName = 'watchHistory';
   static const int _maxItems = 20;
-  static const int _minItemsToCleanup = 10;
 
-  Box<WatchHistoryEntry>? _box;
+  static Box<WatchHistoryEntry>? _box;
 
   Future<Box<WatchHistoryEntry>> _getBox() async {
     if (_box == null || !_box!.isOpen) {
       _box = await Hive.openBox<WatchHistoryEntry>(_boxName);
     }
     return _box!;
+  }
+
+  Future<ValueListenable<Box<WatchHistoryEntry>>> listenable() async {
+    final box = await _getBox();
+    return box.listenable();
+  }
+
+  List<WatchHistoryEntry> sortEntries(
+    Iterable<WatchHistoryEntry> entries, {
+    int limit = 20,
+  }) {
+    final sortedEntries = entries.toList()
+      ..sort((a, b) => b.watchedAt.compareTo(a.watchedAt));
+    return sortedEntries.take(limit).toList();
   }
 
   Future<void> addToHistory({
@@ -54,16 +68,7 @@ class WatchHistoryStorage {
       categoryName: categoryName,
     );
 
-    // Check if this slug already exists using box.get directly
-    final existingEntry = box.get(slug);
-
-    if (existingEntry != null) {
-      // Update existing entry
-      await box.put(slug, entry);
-    } else {
-      // Add new entry
-      await box.put(slug, entry);
-    }
+    await box.put(slug, entry);
 
     // Cleanup if too many items
     if (box.length > _maxItems) {
@@ -83,10 +88,7 @@ class WatchHistoryStorage {
 
   Future<List<WatchHistoryEntry>> getHistory({int limit = 20}) async {
     final box = await _getBox();
-    final sortedEntries = box.values.toList()
-      ..sort((a, b) => b.watchedAt.compareTo(a.watchedAt));
-    
-    return sortedEntries.take(limit).toList();
+    return sortEntries(box.values, limit: limit);
   }
 
   Future<WatchHistoryEntry?> getEntry(String slug) async {
@@ -116,7 +118,7 @@ class WatchHistoryStorage {
   }) async {
     final box = await _getBox();
     final existing = box.get(slug);
-    
+
     if (existing != null) {
       final updated = WatchHistoryEntry(
         slug: existing.slug,

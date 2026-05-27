@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:movie_app/common/components/app_auto_scroll_text.dart';
 import 'package:movie_app/common/helpers/contants/app_url.dart';
 import 'package:movie_app/core/config/themes/app_color.dart';
 import 'package:movie_app/core/config/utils/animated_dialog.dart';
-import 'package:movie_app/core/config/utils/format_episode.dart';
 import 'package:movie_app/core/config/utils/show_detail_movie_dialog.dart';
 import 'package:movie_app/feature/home/domain/entities/new_movie_entity.dart';
 
@@ -14,12 +14,12 @@ class MovieItemCard extends StatelessWidget {
   final bool enableQuickPreview;
 
   const MovieItemCard({
-    Key? key,
+    super.key,
     required this.item,
     this.onTap,
     this.onLongPress,
     this.enableQuickPreview = true,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -95,10 +95,8 @@ class MovieItemCard extends StatelessWidget {
             const SizedBox(height: 8),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 4),
-              child: Text(
+              child: AppAutoScrollText(
                 item.name,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
                 textAlign: TextAlign.center,
                 style: const TextStyle(
                   fontSize: 13,
@@ -106,10 +104,8 @@ class MovieItemCard extends StatelessWidget {
                 ),
               ),
             ),
-            Text(
+            AppAutoScrollText(
               item.originName,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
               textAlign: TextAlign.center,
               style: const TextStyle(
                 fontSize: 10,

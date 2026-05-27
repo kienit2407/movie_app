@@ -18,6 +18,12 @@ PODS:
     - HLSCachingReverseProxyServer
     - PINCache
   - Cache (6.0.0)
+  - CocoaLumberjack (3.9.1):
+    - CocoaLumberjack/Core (= 3.9.1)
+  - CocoaLumberjack/Core (3.9.1)
+  - cupertino_native_better (0.0.1):
+    - Flutter
+    - SVGKit (~> 3.0)
   - FBAEMKit (18.0.2):
     - FBSDKCoreKit_Basics (= 18.0.2)
   - FBSDKCoreKit (18.0.2):
@@ -113,6 +119,8 @@ PODS:
   - sqflite_darwin (0.0.4):
     - Flutter
     - FlutterMacOS
+  - SVGKit (3.0.0):
+    - CocoaLumberjack (~> 3.0)
   - url_launcher_ios (0.0.1):
     - Flutter
   - video_player_avfoundation (0.0.1):
@@ -127,6 +135,7 @@ PODS:
 DEPENDENCIES:
   - app_links (from `.symlinks/plugins/app_links/ios`)
   - better_player_plus (from `.symlinks/plugins/better_player_plus/ios`)
+  - cupertino_native_better (from `.symlinks/plugins/cupertino_native_better/ios`)
   - Flutter (from `Flutter`)
   - flutter_facebook_auth (from `.symlinks/plugins/flutter_facebook_auth/ios`)
   - flutter_inappwebview_ios (from `.symlinks/plugins/flutter_inappwebview_ios/ios`)
@@ -150,6 +159,7 @@ SPEC REPOS:
     - AppAuth
     - AppCheckCore
     - Cache
+    - CocoaLumberjack
     - FBAEMKit
     - FBSDKCoreKit
     - FBSDKCoreKit_Basics
@@ -165,12 +175,15 @@ SPEC REPOS:
     - PINCache
     - PINOperation
     - PromisesObjC
+    - SVGKit
 
 EXTERNAL SOURCES:
   app_links:
     :path: ".symlinks/plugins/app_links/ios"
   better_player_plus:
     :path: ".symlinks/plugins/better_player_plus/ios"
+  cupertino_native_better:
+    :path: ".symlinks/plugins/cupertino_native_better/ios"
   Flutter:
     :path: Flutter
   flutter_facebook_auth:
@@ -212,6 +225,8 @@ SPEC CHECKSUMS:
   AppCheckCore: cc8fd0a3a230ddd401f326489c99990b013f0c4f
   better_player_plus: 10794c0ed1b3b4ae058939e22a6172f850a2039b
   Cache: 4ca7e00363fca5455f26534e5607634c820ffc2d
+  CocoaLumberjack: e4ba3b414dfca8c1916c6303d37f63b3a95134c6
+  cupertino_native_better: 1548ee565186534a34a406bf56b7c49510485844
   FBAEMKit: 56a4f5a9607957b547b6458b17a98c5bb2736367
   FBSDKCoreKit: 54f1240567e16862ab71c53c33dc347db5c524c5
   FBSDKCoreKit_Basics: eb530cd6a79030dbb11df460aafb2767bcad9028
@@ -240,6 +255,7 @@ SPEC CHECKSUMS:
   rive_native: 777d743a0b4e4e1cdbdafd80035a44d44771a5fc
   shared_preferences_foundation: 7036424c3d8ec98dfe75ff1667cb0cd531ec82bb
   sqflite_darwin: 20b2a3a3b70e43edae938624ce550a3cbf66a3d0
+  SVGKit: 1ad7513f8c74d9652f94ed64ddecda1a23864dea
   url_launcher_ios: 7a95fa5b60cc718a708b8f2966718e93db0cef1b
   video_player_avfoundation: dd410b52df6d2466a42d28550e33e4146928280a
   video_thumbnail: b637e0ad5f588ca9945f6e2c927f73a69a661140

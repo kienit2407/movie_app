@@ -1,4 +1,6 @@
 import 'dart:async';
+import 'dart:io' show Platform;
+import 'dart:math' as math;
 import 'dart:ui';
 import 'package:flutter/rendering.dart' show ScrollDirection;
 import 'package:go_router/go_router.dart';
@@ -25,6 +27,7 @@ import 'package:shimmer/shimmer.dart';
 import 'package:toastification/toastification.dart';
 import 'package:video_player/video_player.dart';
 import 'package:movie_app/core/config/themes/app_color.dart';
+import 'package:movie_app/core/ios_picture_in_picture_service.dart';
 import 'package:movie_app/core/mini_player_manager.dart';
 import 'package:movie_app/feature/detail_movie/data/model/detail_movie_model.dart';
 import 'package:movie_app/common/helpers/watch_progress_storage.dart';
@@ -63,7 +66,7 @@ class MoviePlayerPage extends StatefulWidget {
 }
 
 class _MoviePlayerPageState extends State<MoviePlayerPage>
-    with TickerProviderStateMixin {
+    with TickerProviderStateMixin, WidgetsBindingObserver {
   VideoPlayerController? _videoPlayerController;
   ChewieController? _chewieController;
   String? _currentEpisodeLink;
@@ -158,7 +161,6 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
   Animation<double>? _videoSnapAnim;
   double _panelDragDy = 0;
   double _videoResizeDragDy = 0;
-  bool _controlsWasVisibleBeforeSeek = false;
   double? _videoSnapTarget;
   AnimationStatusListener? _snapStatusListener;
   double _dragStartHeight = 0;
@@ -168,11 +170,24 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
   String _autoToastText = '';
   VoidCallback? _vpEndListener;
   bool _enteringMiniPlayer = false;
+  static const double _landscapeZoomMin = 1.0;
+  static const double _landscapeZoomMax = 2.0;
+  late final AnimationController _landscapeZoomSnapCtrl;
+  Timer? _landscapeZoomLabelTimer;
+  double _landscapeZoomScale = _landscapeZoomMin;
+  double _landscapeZoomStartScale = _landscapeZoomMin;
+  bool _landscapePinchZooming = false;
+  bool _showLandscapeZoomLabel = false;
+  bool _landscapeAtOrAboveFill = false;
+  bool _landscapeControlsVisibleBeforeZoom = false;
+  bool _startingPictureInPicture = false;
   late final PlayerCubit _playerCubit;
+  bool get _usesNativeIosVideoView => Platform.isIOS;
   @override
   void initState() {
     super.initState();
 
+    WidgetsBinding.instance.addObserver(this);
     MiniPlayerManager.shouldRestorePlayer.addListener(_onRestorePlayer);
     _playerCubit = context.read<PlayerCubit>();
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -208,6 +223,10 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
     _minifyCtrl = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 220),
+    );
+    _landscapeZoomSnapCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 240),
     );
     _selectedServerIndex = widget.initialServerIndex;
     _currentEpisodeIndex = widget.initialEpisodeIndex;
@@ -264,12 +283,14 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _saveProgressTimer?.cancel();
     _saveWatchProgress();
     _isInMiniMode = false;
     MiniPlayerManager.shouldRestorePlayer.removeListener(_onRestorePlayer);
     _hideControlsTimer?.cancel();
     _seekOverlayTimer?.cancel();
+    _landscapeZoomLabelTimer?.cancel();
     _removeVpListeners();
     _autoToastTimer?.cancel();
 
@@ -278,6 +299,7 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
         (_miniPlayerManager.chewieController != null);
 
     if (!controllerOwnedByMini) {
+      unawaited(_detachPictureInPicture());
       try {
         _chewieController?.pause();
       } catch (_) {}
@@ -295,6 +317,7 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
     _arrowCtrl.dispose();
     _videoSnapCtrl.dispose();
     _minifyCtrl.dispose();
+    _landscapeZoomSnapCtrl.dispose();
     _panelCtrl.dispose();
     _searchController.dispose();
 
@@ -308,6 +331,68 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
       if (!mounted) return;
       _videoPlayerController?.seekTo(target);
     });
+  }
+
+  VideoPlayerController _createVideoPlayerController(String videoUrl) {
+    return VideoPlayerController.networkUrl(
+      Uri.parse(videoUrl),
+      videoPlayerOptions: VideoPlayerOptions(
+        allowBackgroundPlayback: _usesNativeIosVideoView,
+      ),
+      viewType: _usesNativeIosVideoView
+          ? VideoViewType.platformView
+          : VideoViewType.textureView,
+    );
+  }
+
+  Future<void> _attachPictureInPicture() async {
+    final controller = _videoPlayerController;
+    if (!_usesNativeIosVideoView ||
+        controller == null ||
+        !controller.value.isInitialized) {
+      return;
+    }
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      unawaited(IosPictureInPictureService.attach(controller));
+    });
+  }
+
+  Future<void> _detachPictureInPicture() async {
+    if (!_usesNativeIosVideoView) return;
+    await IosPictureInPictureService.detach();
+  }
+
+  Future<void> _startPictureInPictureIfNeeded() async {
+    final controller = _videoPlayerController;
+    if (!_usesNativeIosVideoView ||
+        controller == null ||
+        !controller.value.isInitialized ||
+        !controller.value.isPlaying ||
+        _startingPictureInPicture) {
+      return;
+    }
+
+    _startingPictureInPicture = true;
+    try {
+      await IosPictureInPictureService.attach(controller);
+      final started = await IosPictureInPictureService.start();
+      if (started && !controller.value.isPlaying) {
+        await controller.play();
+      }
+    } finally {
+      _startingPictureInPicture = false;
+    }
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    if (state == AppLifecycleState.inactive ||
+        state == AppLifecycleState.paused) {
+      unawaited(_startPictureInPictureIfNeeded());
+    }
   }
 
   void _onRestorePlayer() {
@@ -332,6 +417,8 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
           if (!controller.isPlaying) {
             controller.play();
           }
+
+          _attachPictureInPicture();
         }
       }
 
@@ -385,6 +472,116 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
       _showControlsWithAutoHide();
     }
   }
+
+  void _resetLandscapeZoom() {
+    _landscapeZoomLabelTimer?.cancel();
+    _landscapeZoomSnapCtrl.stop();
+    _landscapeZoomSnapCtrl.value = 0;
+    _landscapePinchZooming = false;
+    _landscapeAtOrAboveFill = false;
+    if (!mounted) return;
+    setState(() {
+      _landscapeZoomScale = _landscapeZoomMin;
+      _landscapeZoomStartScale = _landscapeZoomMin;
+      _showLandscapeZoomLabel = false;
+    });
+  }
+
+  double _landscapeFillScaleFor(Size viewport) {
+    if (viewport.width <= 0 || viewport.height <= 0) return _landscapeZoomMin;
+
+    final value = _videoPlayerController?.value;
+    final aspectRatio =
+        (value != null &&
+            value.isInitialized &&
+            value.aspectRatio.isFinite &&
+            value.aspectRatio > 0)
+        ? value.aspectRatio
+        : 16 / 9;
+
+    final fittedWidth = math.min(viewport.width, viewport.height * aspectRatio);
+    if (fittedWidth <= 0) return _landscapeZoomMin;
+
+    return (viewport.width / fittedWidth).clamp(
+      _landscapeZoomMin,
+      _landscapeZoomMax,
+    );
+  }
+
+  bool _shouldShowLandscapeBlur(double fillScale) {
+    return _landscapeZoomScale < fillScale - 0.001;
+  }
+
+  void _triggerLandscapeBoundaryFeedback() {
+    HapticFeedback.lightImpact();
+    _landscapeZoomSnapCtrl.forward(from: 0);
+  }
+
+  void _handleLandscapeScaleStart(ScaleStartDetails details, double fillScale) {
+    if (details.pointerCount < 2) return;
+    _landscapeZoomLabelTimer?.cancel();
+    _hideControlsTimer?.cancel();
+    setState(() {
+      _landscapePinchZooming = true;
+      _landscapeZoomStartScale = _landscapeZoomScale;
+      _showLandscapeZoomLabel = true;
+      _landscapeAtOrAboveFill = _landscapeZoomScale >= fillScale;
+      _landscapeControlsVisibleBeforeZoom = _showControls;
+    });
+  }
+
+  void _handleLandscapeScaleUpdate(
+    ScaleUpdateDetails details,
+    double fillScale,
+  ) {
+    if (details.pointerCount < 2) return;
+
+    if (!_landscapePinchZooming) {
+      _landscapePinchZooming = true;
+      _landscapeZoomStartScale = _landscapeZoomScale;
+      _landscapeAtOrAboveFill = _landscapeZoomScale >= fillScale;
+    }
+
+    final nextScale = (_landscapeZoomStartScale * details.scale).clamp(
+      _landscapeZoomMin,
+      _landscapeZoomMax,
+    );
+    final nextAtOrAboveFill = nextScale >= fillScale;
+    final crossedFillBoundary = nextAtOrAboveFill != _landscapeAtOrAboveFill;
+
+    setState(() {
+      _landscapeZoomScale = nextScale;
+      _showLandscapeZoomLabel = true;
+      _landscapeAtOrAboveFill = nextAtOrAboveFill;
+    });
+
+    if (crossedFillBoundary) {
+      _triggerLandscapeBoundaryFeedback();
+    }
+  }
+
+  void _handleLandscapeScaleEnd(ScaleEndDetails details) {
+    if (!_landscapePinchZooming) return;
+
+    _landscapePinchZooming = false;
+    if (_landscapeZoomScale <= 1.01) {
+      setState(() {
+        _landscapeZoomScale = _landscapeZoomMin;
+        _landscapeAtOrAboveFill = false;
+      });
+    }
+
+    _landscapeZoomLabelTimer?.cancel();
+    _landscapeZoomLabelTimer = Timer(const Duration(milliseconds: 850), () {
+      if (!mounted) return;
+      setState(() => _showLandscapeZoomLabel = false);
+    });
+    if (_landscapeControlsVisibleBeforeZoom) {
+      _resetHideControlsTimer();
+    }
+  }
+
+  String get _landscapeZoomText => '${_landscapeZoomScale.toStringAsFixed(1)}x';
 
   // 2) icon theo trạng thái
   IconData get _portraitExpandIcon {
@@ -471,6 +668,10 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
           '[WatchProgress] Saved: slug=${widget.slug}, position=${position.inSeconds}s, duration=${duration.inSeconds}s',
         );
 
+        final category = widget.movie.category.isNotEmpty
+            ? widget.movie.category.first
+            : null;
+
         // Save to WatchHistoryStorage (Hive)
         await _watchHistoryStorage.addToHistory(
           slug: widget.slug,
@@ -478,12 +679,7 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
           originName: widget.movie.origin_name,
           posterUrl: widget.movie.poster_url,
           thumbUrl: widget.movie.thumb_url,
-          episodeCurrent: widget.episodes.isNotEmpty
-              ? widget
-                    .episodes[_selectedServerIndex]
-                    .server_data[_currentEpisodeIndex]
-                    .name
-              : 'Full',
+          episodeCurrent: _currentHistoryEpisodeName(),
           quality: null,
           lang: widget.movie.lang,
           year: widget.movie.year?.toString(),
@@ -491,8 +687,8 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
           positionMs: position.inMilliseconds,
           durationMs: duration.inMilliseconds,
           type: widget.movie.type,
-          categoryId: widget.movie.category?.first.id,
-          categoryName: widget.movie.category?.first.name,
+          categoryId: category?.id,
+          categoryName: category?.name,
         );
 
         debugPrint(
@@ -500,6 +696,25 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
         );
       }
     }
+  }
+
+  String _currentHistoryEpisodeName() {
+    final fallback = widget.movie.episode_current.isNotEmpty
+        ? widget.movie.episode_current
+        : 'Full';
+
+    if (widget.episodes.isEmpty ||
+        _selectedServerIndex < 0 ||
+        _selectedServerIndex >= widget.episodes.length) {
+      return fallback;
+    }
+
+    final serverData = widget.episodes[_selectedServerIndex].server_data;
+    if (_currentEpisodeIndex < 0 || _currentEpisodeIndex >= serverData.length) {
+      return fallback;
+    }
+
+    return serverData[_currentEpisodeIndex].name;
   }
 
   void _startSaveProgressTimer() {
@@ -510,9 +725,7 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
   }
 
   Future<void> _initializePlayer(String videoUrl) async {
-    _videoPlayerController = VideoPlayerController.networkUrl(
-      Uri.parse(videoUrl),
-    );
+    _videoPlayerController = _createVideoPlayerController(videoUrl);
     await _videoPlayerController!.initialize();
 
     final savedProgress = await _watchProgressStorage.getProgressV2(
@@ -550,6 +763,7 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
 
     // Setup video listeners after player is initialized
     _attachVpListeners();
+    await _attachPictureInPicture();
 
     setState(() {});
   }
@@ -563,15 +777,14 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
     );
 
     await _chewieController?.pause();
+    await _detachPictureInPicture();
     _chewieController?.dispose();
     _videoPlayerController?.dispose();
 
     debugPrint(
       '_disposeAndInitializePlayer: Creating VideoPlayerController with $videoUrl',
     );
-    _videoPlayerController = VideoPlayerController.networkUrl(
-      Uri.parse(videoUrl),
-    );
+    _videoPlayerController = _createVideoPlayerController(videoUrl);
     await _videoPlayerController!.initialize();
     debugPrint('_disposeAndInitializePlayer: Video initialized');
 
@@ -623,6 +836,7 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
 
     // Setup video listeners after new episode is loaded
     _attachVpListeners();
+    await _attachPictureInPicture();
 
     setState(() {});
   }
@@ -1109,8 +1323,7 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
     final withinWindow =
         _lastSeekTapTime != null &&
         now.difference(_lastSeekTapTime!) <= const Duration(milliseconds: 800);
-    // ✅ ẨN controller khi double tap tua (tránh overlap)
-    _controlsWasVisibleBeforeSeek = _showControls;
+    // Ẩn controls khi tua và chỉ hiện lại khi user tap video.
     _hideControlsTimer?.cancel();
     setState(() {
       _showControls = false; // <- ẩn play/pause + top bar
@@ -1148,10 +1361,6 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
       _arrowCtrl.stop();
       _arrowCtrl.value = 0;
       setState(() => _showSeekOverlay = false);
-      // ✅ (Tuỳ chọn) nếu trước đó controller đang hiện thì hiện lại
-      if (_controlsWasVisibleBeforeSeek) {
-        _showControlsWithAutoHide();
-      }
     });
 
     // _resetHideControlsTimer();
@@ -1218,6 +1427,14 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
 
           if (rotated) {
             _scrollToCurrentEpisode(animated: false);
+          }
+
+          if (orientation == Orientation.portrait &&
+              (_landscapeZoomScale != _landscapeZoomMin ||
+                  _showLandscapeZoomLabel)) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (mounted) _resetLandscapeZoom();
+            });
           }
 
           return orientation == Orientation.landscape
@@ -1480,7 +1697,8 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
           fit: StackFit.expand,
           children: [
             if (_videoPlayerController != null &&
-                _videoPlayerController!.value.isInitialized)
+                _videoPlayerController!.value.isInitialized &&
+                !_usesNativeIosVideoView)
               Positioned.fill(
                 child: Opacity(
                   opacity: 0.8,
@@ -1733,7 +1951,9 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
   // Ambient blur "lụi" xuống đầu panel
   Widget _buildPanelAmbientTop() {
     final vp = _videoPlayerController;
-    if (vp == null || !vp.value.isInitialized) return const SizedBox.shrink();
+    if (vp == null || !vp.value.isInitialized || _usesNativeIosVideoView) {
+      return const SizedBox.shrink();
+    }
 
     return SizedBox(
       height: 150,
@@ -1785,7 +2005,7 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
 
   Widget _buildTopAmbientStrip(double h) {
     final vp = _videoPlayerController;
-    if (vp == null || !vp.value.isInitialized) {
+    if (vp == null || !vp.value.isInitialized || _usesNativeIosVideoView) {
       return SizedBox(height: h);
     }
     return SizedBox(
@@ -2910,9 +3130,11 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
               child: GestureDetector(
                 behavior: HitTestBehavior.opaque,
                 onPanDown: (_) {
-                  setState(() => _isScrubbing = true);
                   _hideControlsTimer?.cancel();
-                  _showControlsWithAutoHide();
+                  setState(() {
+                    _showControls = false;
+                    _isScrubbing = true;
+                  });
                 },
                 onPanUpdate: (d) {
                   final box = context.findRenderObject() as RenderBox?;
@@ -2926,8 +3148,10 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
                 },
                 onPanEnd: (_) {
                   _seekTo(_scrubValue);
-                  setState(() => _isScrubbing = false);
-                  _showControlsWithAutoHide();
+                  setState(() {
+                    _showControls = false;
+                    _isScrubbing = false;
+                  });
                 },
                 child: SizedBox(
                   height: 20, // chừa đủ cho thumb/overlay
@@ -2943,8 +3167,10 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
                       },
                       onChangeEnd: (_) {
                         _seekTo(_scrubValue);
-                        setState(() => _isScrubbing = false);
-                        _showControlsWithAutoHide();
+                        setState(() {
+                          _showControls = false;
+                          _isScrubbing = false;
+                        });
                       },
                     ),
                   ),
@@ -3171,8 +3397,10 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
                     _seekTo(v);
                   },
                   onChangeEnd: (_) {
-                    setState(() => _isScrubbing = false);
-                    _showControlsWithAutoHide();
+                    setState(() {
+                      _showControls = false;
+                      _isScrubbing = false;
+                    });
                   },
                 ),
               ),
@@ -3180,6 +3408,143 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
           ),
         );
       },
+    );
+  }
+
+  Widget _buildLandscapeZoomableVideo({required double fillScale}) {
+    final chewie = _chewieController;
+    if (chewie == null) {
+      return Center(
+        child: LoadingAnimationWidget.stretchedDots(
+          color: AppColor.secondColor,
+          size: 20,
+        ),
+      );
+    }
+
+    return GestureDetector(
+      behavior: HitTestBehavior.translucent,
+      onTap: _toggleControls,
+      onDoubleTapDown: _handleDoubleTap,
+      onScaleStart: (details) => _handleLandscapeScaleStart(details, fillScale),
+      onScaleUpdate: (details) =>
+          _handleLandscapeScaleUpdate(details, fillScale),
+      onScaleEnd: _handleLandscapeScaleEnd,
+      child: ClipRect(
+        child: AnimatedBuilder(
+          animation: _landscapeZoomSnapCtrl,
+          builder: (context, child) {
+            final snapT = Curves.easeOutCubic.transform(
+              _landscapeZoomSnapCtrl.value,
+            );
+            final pulse = math.sin(snapT * math.pi) * 0.035;
+            final shakeDx = math.sin(snapT * math.pi * 4) * 3.5;
+
+            return Transform.translate(
+              offset: Offset(shakeDx, 0),
+              child: Transform.scale(
+                scale: _landscapeZoomScale + pulse,
+                alignment: Alignment.center,
+                child: child,
+              ),
+            );
+          },
+          child: Chewie(controller: chewie),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLandscapeBoundaryFlash() {
+    return IgnorePointer(
+      child: AnimatedBuilder(
+        animation: _landscapeZoomSnapCtrl,
+        builder: (context, _) {
+          final t = _landscapeZoomSnapCtrl.value;
+          if (t == 0 || t == 1) return const SizedBox.shrink();
+
+          final opacity = math.sin(t * math.pi) * 0.26;
+          return Opacity(
+            opacity: opacity,
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.08),
+                  ),
+                ),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Container(
+                    width: 54,
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.centerLeft,
+                        end: Alignment.centerRight,
+                        colors: [
+                          Colors.white.withValues(alpha: 0.95),
+                          Colors.white.withValues(alpha: 0.0),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: Container(
+                    width: 54,
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.centerRight,
+                        end: Alignment.centerLeft,
+                        colors: [
+                          Colors.white.withValues(alpha: 0.95),
+                          Colors.white.withValues(alpha: 0.0),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildLandscapeZoomLabel() {
+    return IgnorePointer(
+      child: Align(
+        alignment: const Alignment(0, -0.58),
+        child: AnimatedOpacity(
+          opacity: _showLandscapeZoomLabel ? 1 : 0,
+          duration: const Duration(milliseconds: 140),
+          child: AnimatedScale(
+            scale: _showLandscapeZoomLabel ? 1 : 0.94,
+            duration: const Duration(milliseconds: 140),
+            curve: Curves.easeOutCubic,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+              decoration: BoxDecoration(
+                color: Colors.black.withValues(alpha: 0.58),
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(color: Colors.white.withValues(alpha: 0.14)),
+              ),
+              child: Text(
+                _landscapeZoomText,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w800,
+                  shadows: [Shadow(blurRadius: 8, color: Colors.black54)],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 
@@ -3206,134 +3571,135 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
       ),
       body: Container(
         color: Colors.black,
-        child: Stack(
-          alignment: Alignment.center,
-          fit: StackFit.expand,
-          children: [
-            if (_videoPlayerController != null &&
-                _videoPlayerController!.value.isInitialized)
-              Positioned.fill(
-                child: Opacity(
-                  opacity: 0.35,
-                  child: ImageFiltered(
-                    imageFilter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
-                    child: FittedBox(
-                      fit: BoxFit.cover,
-                      child: SizedBox(
-                        width: _videoPlayerController!.value.size.width,
-                        height: _videoPlayerController!.value.size.height,
-                        child: VideoPlayer(_videoPlayerController!),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final viewport = Size(constraints.maxWidth, constraints.maxHeight);
+            final fillScale = _landscapeFillScaleFor(viewport);
+            final showLandscapeBlur = _shouldShowLandscapeBlur(fillScale);
+
+            return Stack(
+              alignment: Alignment.center,
+              fit: StackFit.expand,
+              children: [
+                if (showLandscapeBlur &&
+                    _videoPlayerController != null &&
+                    _videoPlayerController!.value.isInitialized &&
+                    !_usesNativeIosVideoView)
+                  Positioned.fill(
+                    child: Opacity(
+                      opacity: 0.35,
+                      child: ImageFiltered(
+                        imageFilter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
+                        child: FittedBox(
+                          fit: BoxFit.cover,
+                          child: SizedBox(
+                            width: _videoPlayerController!.value.size.width,
+                            height: _videoPlayerController!.value.size.height,
+                            child: VideoPlayer(_videoPlayerController!),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                _buildLandscapeZoomableVideo(fillScale: fillScale),
+                _buildLandscapeBoundaryFlash(),
+
+                if (_showControls && _chewieController != null)
+                  _buildPlayPauseOverlay(),
+                _buildLandscapeZoomLabel(),
+                Positioned(
+                  top: 10,
+                  // left: 8,
+                  right: 10,
+                  child: IgnorePointer(
+                    ignoring: !_showControls,
+                    child: AnimatedOpacity(
+                      opacity: _showControls ? 1 : 0,
+                      duration: const Duration(milliseconds: 200),
+                      child: Builder(
+                        builder: (context) {
+                          return Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 50),
+                            child: Row(
+                              children: [
+                                if (widget.movie.episode_current != 'Full')
+                                  _buildAutoPlayToggleButton(),
+                                IconButton(
+                                  icon: const Icon(
+                                    Iconsax.menu,
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                    size: 18,
+                                  ),
+                                  onPressed: () {
+                                    Scaffold.of(context).openEndDrawer();
+
+                                    Future.delayed(
+                                      const Duration(milliseconds: 250),
+                                      () {
+                                        _drawerKey.currentState
+                                            ?.scrollToCurrentEpisode(
+                                              animated: false,
+                                            );
+                                      },
+                                    );
+                                  },
+                                ),
+                              ],
+                            ),
+                          );
+                        },
                       ),
                     ),
                   ),
                 ),
-              ),
-            if (_chewieController != null)
-              GestureDetector(
-                onTap: _toggleControls,
-                onDoubleTapDown: _handleDoubleTap,
-                child: Chewie(controller: _chewieController!),
-              )
-            else
-              Center(
-                child: LoadingAnimationWidget.stretchedDots(
-                  color: AppColor.secondColor,
-                  size: 20,
-                ),
-              ),
-
-            if (_showControls && _chewieController != null)
-              _buildPlayPauseOverlay(),
-            Positioned(
-              top: 10,
-              // left: 8,
-              right: 10,
-              child: IgnorePointer(
-                ignoring: !_showControls,
-                child: AnimatedOpacity(
-                  opacity: _showControls ? 1 : 0,
-                  duration: const Duration(milliseconds: 200),
-                  child: Builder(
-                    builder: (context) {
-                      return Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 50),
-                        child: Row(
-                          children: [
-                            if (widget.movie.episode_current != 'Full')
-                              _buildAutoPlayToggleButton(),
-                            IconButton(
-                              icon: const Icon(
-                                Iconsax.menu,
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold,
-                                size: 18,
-                              ),
-                              onPressed: () {
-                                Scaffold.of(context).openEndDrawer();
-
-                                Future.delayed(
-                                  const Duration(milliseconds: 250),
-                                  () {
-                                    _drawerKey.currentState
-                                        ?.scrollToCurrentEpisode(
-                                          animated: false,
-                                        );
-                                  },
-                                );
-                              },
+                Positioned(
+                  top: 50,
+                  child: IgnorePointer(
+                    child: Center(
+                      child: AnimatedOpacity(
+                        opacity: _showAutoToast ? 1 : 0,
+                        duration: const Duration(milliseconds: 250),
+                        child: AnimatedScale(
+                          scale: _showAutoToast ? 1.0 : 0.95,
+                          duration: const Duration(milliseconds: 250),
+                          child: Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: Colors.black26,
+                              borderRadius: BorderRadius.circular(30),
                             ),
-                          ],
-                        ),
-                      );
-                    },
-                  ),
-                ),
-              ),
-            ),
-            Positioned(
-              top: 50,
-              child: IgnorePointer(
-                child: Center(
-                  child: AnimatedOpacity(
-                    opacity: _showAutoToast ? 1 : 0,
-                    duration: const Duration(milliseconds: 250),
-                    child: AnimatedScale(
-                      scale: _showAutoToast ? 1.0 : 0.95,
-                      duration: const Duration(milliseconds: 250),
-                      child: Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: Colors.black26,
-                          borderRadius: BorderRadius.circular(30),
-                        ),
-                        child: Text(
-                          _autoToastText,
-                          textAlign: TextAlign.center,
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                            fontSize: 12,
+                            child: Text(
+                              _autoToastText,
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                                fontSize: 12,
+                              ),
+                            ),
                           ),
                         ),
                       ),
                     ),
                   ),
                 ),
-              ),
-            ),
-            Positioned(
-              left: 0,
-              right: 0,
-              bottom: 50,
-              child: _showControls
-                  ? Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 50),
-                      child: _buildControlBar(3),
-                    )
-                  : const SizedBox.shrink(),
-            ),
-            if (_showSeekOverlay && _seekDir != null) _buildSeekOverlay(200),
-          ],
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  bottom: 50,
+                  child: _showControls
+                      ? Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 50),
+                          child: _buildControlBar(3),
+                        )
+                      : const SizedBox.shrink(),
+                ),
+                if (_showSeekOverlay && _seekDir != null)
+                  _buildSeekOverlay(200),
+              ],
+            );
+          },
         ),
       ),
     );

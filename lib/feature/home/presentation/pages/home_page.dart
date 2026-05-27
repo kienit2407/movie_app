@@ -1,13 +1,16 @@
 import 'dart:math' as math;
 import 'package:carousel_slider/carousel_slider.dart';
 import 'package:fast_cached_network_image/fast_cached_network_image.dart';
+import 'package:flutter/foundation.dart' show ValueListenable;
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:hive_ce/hive_ce.dart';
 import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
 import 'package:loading_animation_widget/loading_animation_widget.dart';
+import 'package:movie_app/common/components/app_auto_scroll_text.dart';
 import 'package:movie_app/common/components/lost_network.dart';
 import 'package:movie_app/common/helpers/contants/app_url.dart';
 import 'package:movie_app/common/helpers/navigation/app_navigation.dart';
@@ -65,6 +68,9 @@ class _HomePageState extends State<HomePage>
   double itemCount = 0;
   double normalize = 0;
   final ScrollController _scrollController = ScrollController();
+  final WatchHistoryStorage _watchHistoryStorage = WatchHistoryStorage();
+  late final Future<ValueListenable<Box<WatchHistoryEntry>>>
+  _watchHistoryListenableFuture;
   int itemCountStandart = 20;
   String? selectedValue;
   final ValueNotifier<double> _currentPageNotifier = ValueNotifier<double>(0.0);
@@ -78,6 +84,7 @@ class _HomePageState extends State<HomePage>
   @override
   void initState() {
     _homeUiCubit = HomeUiCubit();
+    _watchHistoryListenableFuture = _watchHistoryStorage.listenable();
     _loadPackageInfo();
     indexCarouselController = CarouselSliderController();
     super.initState();
@@ -586,22 +593,18 @@ class _HomePageState extends State<HomePage>
       children: [
         Padding(
           padding: EdgeInsets.symmetric(horizontal: 50.w),
-          child: Text(
+          child: AppAutoScrollText(
             latestMovie[_uiState.currentIndex].name,
             textAlign: TextAlign.justify,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
             style: TextStyle(fontSize: 20.sp, fontWeight: FontWeight.w800),
           ),
         ),
         SizedBox(height: 2.h),
         Padding(
           padding: EdgeInsets.symmetric(horizontal: 50.w),
-          child: Text(
-            textAlign: TextAlign.justify,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
+          child: AppAutoScrollText(
             latestMovie[_uiState.currentIndex].originName,
+            textAlign: TextAlign.justify,
             style: TextStyle(
               fontSize: 10.sp,
               fontWeight: FontWeight.w500,
@@ -1199,46 +1202,63 @@ class _HomePageState extends State<HomePage>
   }
 
   Widget _watchedMoviesSection() {
-    return FutureBuilder<List<WatchHistoryEntry>>(
-      future: WatchHistoryStorage().getHistory(limit: 20),
+    return FutureBuilder<ValueListenable<Box<WatchHistoryEntry>>>(
+      future: _watchHistoryListenableFuture,
       builder: (context, snapshot) {
-        if (!snapshot.hasData || snapshot.data!.isEmpty) {
+        if (!snapshot.hasData) {
           return const SizedBox.shrink();
         }
 
-        final watchedMovies = snapshot.data!;
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
+        return ValueListenableBuilder<Box<WatchHistoryEntry>>(
+          valueListenable: snapshot.data!,
+          builder: (context, box, _) {
+            final watchedMovies = _watchHistoryStorage.sortEntries(
+              box.values,
+              limit: 20,
+            );
+
+            if (watchedMovies.isEmpty) {
+              return const SizedBox.shrink();
+            }
+
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Padding(
-                  padding: EdgeInsets.only(left: 20.w),
-                  child: Text(
-                    'Bạn đã xem gần đây',
-                    style: TextStyle(
-                      fontSize: 18.sp,
-                      fontWeight: FontWeight.w600,
+                Row(
+                  children: [
+                    Padding(
+                      padding: EdgeInsets.only(left: 20.w),
+                      child: Text(
+                        'Bạn đã xem gần đây',
+                        style: TextStyle(
+                          fontSize: 18.sp,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
                     ),
+                    const Spacer(),
+                  ],
+                ),
+                SizedBox(height: 10.h),
+                SizedBox(
+                  height: 260.h,
+                  child: ListView.separated(
+                    padding: EdgeInsets.only(left: 15.w),
+                    scrollDirection: Axis.horizontal,
+                    separatorBuilder: (_, __) => SizedBox(width: 10.w),
+                    itemCount: watchedMovies.length,
+                    itemBuilder: (context, index) {
+                      final entry = watchedMovies[index];
+                      return _ItemWatchedMovie(
+                        key: ValueKey(entry.slug),
+                        entry: entry,
+                      );
+                    },
                   ),
                 ),
-                const Spacer(),
               ],
-            ),
-            SizedBox(height: 10.h),
-            SizedBox(
-              height: 260.h,
-              child: ListView.separated(
-                padding: EdgeInsets.only(left: 15.w),
-                scrollDirection: Axis.horizontal,
-                separatorBuilder: (_, __) => SizedBox(width: 10.w),
-                itemCount: watchedMovies.length,
-                itemBuilder: (context, index) {
-                  return _ItemWatchedMovie(entry: watchedMovies[index]);
-                },
-              ),
-            ),
-          ],
+            );
+          },
         );
       },
     );
@@ -1530,17 +1550,15 @@ class _ItemLatestMovie extends StatelessWidget {
             SizedBox(height: 10.h),
             Padding(
               padding: EdgeInsets.symmetric(horizontal: 10.w),
-              child: Text(
+              child: AppAutoScrollText(
                 items.name,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
                 style: TextStyle(fontSize: 13.sp, fontWeight: FontWeight.w600),
               ),
             ),
-            Text(
+            AppAutoScrollText(
               items.originName,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 10.sp,
                 fontWeight: FontWeight.w400,
@@ -1592,7 +1610,7 @@ class _ItemLatestMovie extends StatelessWidget {
 
 class _ItemWatchedMovie extends StatelessWidget {
   final WatchHistoryEntry entry;
-  const _ItemWatchedMovie({required this.entry});
+  const _ItemWatchedMovie({super.key, required this.entry});
 
   @override
   Widget build(BuildContext context) {
@@ -1629,6 +1647,7 @@ class _ItemWatchedMovie extends StatelessWidget {
                   children: [
                     Positioned.fill(
                       child: FastCachedImage(
+                        key: ValueKey('${entry.slug}:${entry.posterUrl}'),
                         url: AppUrl.convertImageAddition(entry.posterUrl),
                         fit: BoxFit.cover,
                         loadingBuilder: (context, loadingProgress) {
@@ -1804,17 +1823,15 @@ class _ItemWatchedMovie extends StatelessWidget {
             SizedBox(height: 10.h),
             Padding(
               padding: EdgeInsets.symmetric(horizontal: 10.w),
-              child: Text(
+              child: AppAutoScrollText(
                 entry.name,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
                 style: TextStyle(fontSize: 13.sp, fontWeight: FontWeight.w600),
               ),
             ),
-            Text(
+            AppAutoScrollText(
               entry.originName,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 10.sp,
                 fontWeight: FontWeight.w400,

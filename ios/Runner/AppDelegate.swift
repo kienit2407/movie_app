@@ -4,6 +4,7 @@ import Flutter
 @main
 @objc class AppDelegate: FlutterAppDelegate {
     private let storyboardGenerator = StoryboardGenerator()
+    private var pictureInPictureBridge: IosPictureInPictureBridge?
 
     override func application(
         _ application: UIApplication,
@@ -56,6 +57,13 @@ import Flutter
                 }
             }
         }
+
+        pictureInPictureBridge = IosPictureInPictureBridge(
+            binaryMessenger: controller.binaryMessenger,
+            rootViewProvider: { [weak self] in
+                self?.window?.rootViewController?.view
+            }
+        )
 
         print("[Storyboard iOS] channel registered successfully")
         return super.application(application, didFinishLaunchingWithOptions: launchOptions)
