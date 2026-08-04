@@ -1,5 +1,3 @@
-import 'dart:convert';
-
 import 'package:movie_app/common/helpers/contants/app_url.dart';
 import 'package:movie_app/core/config/network/dio_client.dart';
 import 'package:movie_app/core/errol/app_exception.dart';
@@ -20,7 +18,7 @@ class MovieDetailDatasourceImpl implements MovieDetailDatasource {
   Future<DetailMovieModel> getDetailMovie(String slug) async {
     try {
       final response = await dioClient.get(path: AppUrl.getDetailMovie(slug));
-      if (response.data['status'] == true && response.data['msg'] == 'done') {
+      if (_isSuccessResponse(response.data)) {
         try {
           return DetailMovieModel.fromMap(response.data);
         } catch (e) {
@@ -34,5 +32,12 @@ class MovieDetailDatasourceImpl implements MovieDetailDatasource {
     } catch (e) {
       rethrow;
     }
+  }
+
+  bool _isSuccessResponse(dynamic data) {
+    if (data is! Map) return false;
+    if (data['status'] == true) return true;
+    if (data['status'] == 'success') return true;
+    return false;
   }
 }

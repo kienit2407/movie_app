@@ -4,23 +4,19 @@ import 'package:movie_app/core/config/themes/app_color.dart';
 
 class AppTheme {
   static final appTheme = ThemeData(
-    scrollbarTheme: ScrollbarThemeData(
-      radius: Radius.circular(30)
-      
-    ),
+    scrollbarTheme: ScrollbarThemeData(radius: Radius.circular(30)),
     chipTheme: ChipThemeData(
       backgroundColor: Colors.transparent,
       selectedColor: Colors.transparent,
       surfaceTintColor: Colors.transparent, // Đảm bảo loại bỏ tint
       elevation: 0, // Loại bỏ độ
-      
     ),
     appBarTheme: AppBarTheme(
       systemOverlayStyle: SystemUiOverlayStyle(
-          statusBarIconBrightness: Brightness.light,
-          statusBarBrightness:Brightness.dark ,
-        ),
+        statusBarIconBrightness: Brightness.light,
+        statusBarBrightness: Brightness.dark,
       ),
+    ),
     useMaterial3: true,
     textTheme: TextTheme(bodyMedium: TextStyle(color: Colors.white)),
     scaffoldBackgroundColor: AppColor.bgApp, //<- đặt màu theme cho scaffold
@@ -36,6 +32,11 @@ class AppTheme {
     // appBarTheme: AppBarTheme() <- theme cho appbar
     // textTheme: TextTheme() //<- theme cho text
     fontFamily: 'Inter',
+    fontFamilyFallback: const [
+      'Apple Color Emoji',
+      'Noto Color Emoji',
+      'Segoe UI Emoji',
+    ],
     colorScheme: ColorScheme.fromSeed(
       seedColor: AppColor.secondColor,
       brightness: Brightness.dark,
@@ -47,7 +48,7 @@ class AppTheme {
       hintStyle: TextStyle(color: Colors.white),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(10),
-        borderSide: BorderSide(color: Colors.white30.withOpacity(.3))
+        borderSide: BorderSide(color: Colors.white30.withOpacity(.3)),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(10),
@@ -59,7 +60,7 @@ class AppTheme {
       // selectionColor: AppColor.secondColor, //màu phần chọn
       // selectionHandleColor: AppColor.secondColor // màu 2 đầu mút
       cursorColor: Colors.white,
-    )
+    ),
     // colorScheme: ColorScheme(brightness: brightness, primary: primary, onPrimary: onPrimary, secondary: secondary, onSecondary: onSecondary, error: error, onError: onError, surface: surface, onSurface: onSurface) <- định nghĩa các bảng màu
     // brightness: Brightness.dark  <- đùng để cấu hình chế độ sáng tối
     // inputDecorationTheme: InputDecorationTheme() <- dùng để config input

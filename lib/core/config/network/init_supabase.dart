@@ -1,20 +1,19 @@
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-//tạo instance thay thế cách khai báo hàm static thông thường
-InitSupabase supaBaseInit = InitSupabase(); //cách 2
-// InitSupabase get supaBaseInit => InitSupabase(); //cách 1
+
+final InitSupabase supaBaseInit = InitSupabase();
+
 class InitSupabase {
-  Future<void> initSupabase () async {
-    //dùng try catch tránh crash app khi api bị sai 
-  try {
-    await Supabase.initialize(
-    url: dotenv.env['SUPABASE_URL']!, //<- tránh trường hợp null và bị crash app
-    anonKey: dotenv.env['SUPABASE_ANON_KEY']!,
-    
-  );
-    print('Khởi tạo thành công');
-  } catch (e) {
-    print('Lỗi khi khởi tạo env: $e');
-  }
+  Future<void> initSupabase() async {
+    final url = dotenv.env['SUPABASE_URL'];
+    final anonKey = dotenv.env['SUPABASE_ANON_KEY'];
+
+    if (url == null || url.isEmpty || anonKey == null || anonKey.isEmpty) {
+      throw StateError(
+        'Thiếu SUPABASE_URL hoặc SUPABASE_ANON_KEY trong assets/.env',
+      );
+    }
+
+    await Supabase.initialize(url: url, anonKey: anonKey);
   }
 }

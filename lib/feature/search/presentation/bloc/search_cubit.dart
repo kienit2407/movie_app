@@ -1,5 +1,6 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:hive_ce/hive.dart';
+import 'package:movie_app/feature/search/domain/entities/search_filter_params.dart';
 import 'package:movie_app/feature/search/domain/usecases/search_movies_usecase.dart';
 import 'package:movie_app/feature/search/presentation/bloc/search_state.dart';
 
@@ -47,7 +48,11 @@ class SearchCubit extends Cubit<SearchState> {
     }
   }
 
-  Future<void> search(String keyword, {bool isLoadMore = false}) async {
+  Future<void> search(
+    String keyword, {
+    bool isLoadMore = false,
+    SearchFilterParams? filters,
+  }) async {
     final kw = keyword.trim();
     if (kw.isEmpty) {
       _loadHistory();
@@ -55,7 +60,7 @@ class SearchCubit extends Cubit<SearchState> {
     }
 
     int page = 1;
-    const int limit = 21;
+    SearchFilterParams activeFilters = filters ?? SearchFilterParams.defaults;
 
     // ✅ LOAD MORE FLOW
     if (isLoadMore && state is SearchLoaded) {
@@ -65,6 +70,7 @@ class SearchCubit extends Cubit<SearchState> {
       if (!current.hasMore || current.isLoadingMore) return;
 
       page = current.page + 1;
+      activeFilters = filters ?? current.filters;
 
       // ✅ bật indicator load more (giữ list hiện tại)
       emit(current.copyWith(isLoadingMore: true));
@@ -76,7 +82,7 @@ class SearchCubit extends Cubit<SearchState> {
 
     final result = await searchUseCase.call(
       keyword: kw,
-      limit: limit,
+      filters: activeFilters,
       page: page,
     );
 
@@ -94,20 +100,26 @@ class SearchCubit extends Cubit<SearchState> {
         if (isLoadMore && state is SearchLoaded) {
           final current = state as SearchLoaded;
 
-          emit(current.copyWith(
-            movies: [...current.movies, ...movies],
-            page: page,
-            hasMore: movies.length == limit,
-            isLoadingMore: false, // ✅ tắt indicator
-          ));
+          emit(
+            current.copyWith(
+              movies: [...current.movies, ...movies],
+              page: page,
+              hasMore: movies.length == activeFilters.limit,
+              filters: activeFilters,
+              isLoadingMore: false, // ✅ tắt indicator
+            ),
+          );
         } else {
-          emit(SearchLoaded(
-            movies: movies,
-            page: page,
-            hasMore: movies.length == limit,
-            currentKeyword: kw,
-            isLoadingMore: false,
-          ));
+          emit(
+            SearchLoaded(
+              movies: movies,
+              page: page,
+              hasMore: movies.length == activeFilters.limit,
+              currentKeyword: kw,
+              filters: activeFilters,
+              isLoadingMore: false,
+            ),
+          );
         }
       },
     );

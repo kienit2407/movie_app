@@ -2,15 +2,26 @@ import 'dart:async';
 import 'dart:io' show Platform;
 import 'dart:math' as math;
 import 'dart:ui';
+import 'package:battery_plus/battery_plus.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/rendering.dart' show ScrollDirection;
+import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:flutter_svg/svg.dart';
 import 'package:go_router/go_router.dart';
+import 'package:movie_app/core/config/di/service_locator.dart';
 import 'package:movie_app/core/config/routes/app_router.dart';
 import 'package:movie_app/core/config/utils/movie_player_args.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:movie_app/feature/auth/presentation/session/auth_session_cubit.dart';
+import 'package:movie_app/feature/comments/domain/repositories/comment_repository.dart';
+import 'package:movie_app/feature/comments/presentation/bloc/comments_cubit.dart';
+import 'package:movie_app/feature/comments/presentation/bloc/comments_state.dart';
+import 'package:movie_app/feature/comments/presentation/widgets/comments_tab.dart';
 import 'package:movie_app/feature/detail_movie/presentation/bloc/player_cubit.dart';
 import 'package:movie_app/feature/detail_movie/presentation/bloc/player_state.dart';
-import 'package:loading_animation_widget/loading_animation_widget.dart';
 import 'package:movie_app/core/config/utils/episode_drawer.dart';
+import 'package:movie_app/core/config/utils/format_episode.dart';
 import 'package:movie_app/core/config/utils/support_rotate_screen.dart';
 import 'package:fast_cached_network_image/fast_cached_network_image.dart';
 import 'package:flutter/material.dart';
@@ -20,18 +31,19 @@ import 'package:iconsax_flutter/iconsax_flutter.dart';
 import 'package:intl/intl.dart' show DateFormat;
 import 'package:lottie/lottie.dart';
 import 'package:movie_app/common/components/alert_dialog/app_alert_dialog.dart';
-import 'package:movie_app/common/helpers/contants/app_url.dart';
 import 'package:movie_app/core/config/utils/animated_dialog.dart';
 import 'package:movie_app/core/config/utils/cover_map.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:toastification/toastification.dart';
 import 'package:video_player/video_player.dart';
 import 'package:movie_app/core/config/themes/app_color.dart';
+import 'package:movie_app/core/ios_now_playing_service.dart';
 import 'package:movie_app/core/ios_picture_in_picture_service.dart';
 import 'package:movie_app/core/mini_player_manager.dart';
+import 'package:movie_app/core/playback_wakelock.dart';
 import 'package:movie_app/feature/detail_movie/data/model/detail_movie_model.dart';
-import 'package:movie_app/common/helpers/watch_progress_storage.dart';
-import 'package:movie_app/common/helpers/watch_history_storage.dart';
+import 'package:movie_app/feature/library/data/user_library_repository.dart';
+import 'package:movie_app/feature/library/presentation/cubit/user_library_cubit.dart';
 
 enum SeekDirection { forward, backward }
 
@@ -48,18 +60,18 @@ class MoviePlayerPage extends StatefulWidget {
   final String initialServer;
   final int initialServerIndex;
 
-  const MoviePlayerPage({
+  MoviePlayerPage({
     super.key,
     required this.slug,
     required this.movieName,
     this.thumbnailUrl,
-    required this.episodes,
+    required List<EpisodesModel> episodes,
     this.initialEpisodeLink,
     this.initialEpisodeIndex = 0,
     this.initialServer = 'Server 1',
     required this.movie,
     required this.initialServerIndex,
-  });
+  }) : episodes = EpisodeHelper.normalizeEpisodes(episodes);
 
   @override
   State<MoviePlayerPage> createState() => _MoviePlayerPageState();
@@ -96,28 +108,63 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
   bool _isScrubbing = false;
   bool _isExpanded = false;
   Duration? _lastPosition;
+  final Connectivity _connectivity = Connectivity();
+
+  StreamSubscription<List<ConnectivityResult>>? _connectivitySubscription;
+
+  List<ConnectivityResult> _connectivityResults = const [];
+
+  bool _connectivityInitialized = false;
+  Timer? _connectivityConfirmTimer;
+  bool _isCommentsEmptyPressed = false;
   final _drawerKey = GlobalKey<EpisodeDrawerState>();
   int _selectedServerIndex = 0;
-  static const double _episodeHeaderMinH =
-      1; // chỉ giữ divider (border top list)
-  static const double _episodeHeaderMaxH =
-      _serverBarH + _searchBarH + 6; // + spacing nhỏ
   final ScrollController _scrollController = ScrollController();
   final ScrollController _scrollMovie = ScrollController();
   double _scrubValue = 0.0;
   int _seekCount = 0;
-  bool _headerSnapping = false;
-  static const double _seriesHeaderMinH = 92; // chỉnh theo UI của bạn
-  static const double _seriesHeaderMaxH =
-      92 + 65 + 56 + 14; // title + server + textfield + spacing
-  // chiều cao fixed để snap + tránh overflow
-  static const double _pinnedH = 82; // header "đầu list" (title bar)
+  BatteryState _batteryState = BatteryState.unknown;
+
+  StreamSubscription<BatteryState>? _batteryStateSubscription;
+
+  bool get _isCharging => _batteryState == BatteryState.charging;
+  Timer? _wifiQualityTimer;
+
+  int _estimatedWifiLevel = 2;
+
+  DateTime? _lastWifiBufferingAt;
+  bool get _isConnectedToPower =>
+      _batteryState == BatteryState.charging ||
+      _batteryState == BatteryState.full ||
+      _batteryState == BatteryState.connectedNotCharging;
   static const double _serverBarH = 65;
-  static const double _searchBarH =
-      56; // bạn sẽ set SizedBox height cho textfield
-  static const double _collapseH = _serverBarH + _searchBarH + 6; // + spacing
+  static const double _searchBarH = 50;
+  static const double _seriesControlsSpacing = 3;
+  static const double _seriesControlsBottomSpacing = 10;
+  bool _isExitingPlayer = false;
+  static const double _seriesControlsMaxH =
+      _serverBarH +
+      _seriesControlsSpacing +
+      _searchBarH +
+      _seriesControlsBottomSpacing;
   final int _seekStepSeconds = 10;
   final GlobalKey _videoBoxKey = GlobalKey(); // khai báo ở State
+  final GlobalKey _playerSurfaceKey = GlobalKey(
+    debugLabel: 'movie-player-surface',
+  );
+
+  final Battery _battery = Battery();
+
+  Timer? _statusHeaderTimer;
+  DateTime _statusNow = DateTime.now();
+  int _batteryLevel = 100;
+
+  /// Controls luôn phải hiện khi:
+  /// - người dùng vừa chạm màn hình;
+  /// - video đang tải/buffering;
+  /// - video gặp lỗi.
+  bool get _controlsVisible =>
+      _showControls || _isPlayerLoading || _playerLoadError != null;
   static const double _thumbRadius = 6;
   final DraggableScrollableController _panelCtrl =
       DraggableScrollableController();
@@ -145,16 +192,24 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
   DateTime? _lastSeekTapTime;
   late final AnimationController _arrowCtrl;
   final MiniPlayerManager _miniPlayerManager = MiniPlayerManager();
-  final WatchProgressStorage _watchProgressStorage = WatchProgressStorage();
-  final WatchHistoryStorage _watchHistoryStorage = WatchHistoryStorage();
+  Future<void> _historyWriteQueue = Future<void>.value();
   final TextEditingController _searchController = TextEditingController();
   final ScrollController _episodeScrollController = ScrollController();
+
+  bool _isEpisodeUserDragging = false;
+  bool _isProgrammaticEpisodeScroll = false;
+
+  double _lastEpisodeScrollPixels = 0;
+
+  // Ban đầu thanh server hiển thị đầy đủ.
+  double _seriesControlsExtent = _seriesControlsMaxH;
   final ScrollController _landscapeEpisodeScrollController = ScrollController();
   bool _isExpandInfor = false;
   _VideoDragMode? _videoDragMode; // null = undecided
   double _videoGestureDragDy = 0;
   bool _isInMiniMode = false;
   bool _autoPlayTriggered = false;
+  bool _isPlaybackCompleted = false;
   VoidCallback? _vpPositionListener;
   bool _panelResizingFromOverscroll = false;
   late final AnimationController _videoSnapCtrl;
@@ -165,6 +220,10 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
   AnimationStatusListener? _snapStatusListener;
   double _dragStartHeight = 0;
   Orientation? _lastOrientation;
+  bool _orientationChangeInFlight = false;
+  bool _orientationSyncScheduled = false;
+  Orientation? _pendingOrientationSync;
+  Timer? _orientationChangeFallbackTimer;
   Timer? _autoToastTimer;
   bool _showAutoToast = false;
   String _autoToastText = '';
@@ -182,7 +241,30 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
   bool _landscapeControlsVisibleBeforeZoom = false;
   bool _startingPictureInPicture = false;
   late final PlayerCubit _playerCubit;
+  late final UserLibraryCubit? _libraryCubit;
+  int _playerInitGeneration = 0;
+  bool _isVideoLoading = false;
+  bool _isCommentsEmptyHovered = false;
+  bool _isPlaybackBuffering = false;
+  String? _playerLoadError;
+  DateTime? _lastNowPlayingUpdate;
+  bool? _lastNowPlayingIsPlaying;
   bool get _usesNativeIosVideoView => Platform.isIOS;
+  bool get _isPlayerLoading {
+    if (_playerLoadError != null) return false;
+
+    final controller = _videoPlayerController;
+    if (controller == null) return true;
+
+    final value = controller.value;
+    if (value.hasError) return false;
+
+    return _isVideoLoading ||
+        !value.isInitialized ||
+        _isPlaybackBuffering ||
+        value.isBuffering;
+  }
+
   @override
   void initState() {
     super.initState();
@@ -190,6 +272,7 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
     WidgetsBinding.instance.addObserver(this);
     MiniPlayerManager.shouldRestorePlayer.addListener(_onRestorePlayer);
     _playerCubit = context.read<PlayerCubit>();
+    _libraryCubit = context.read<UserLibraryCubit?>();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _playerCubit.updateCurrentEpisode(
         widget.slug,
@@ -197,7 +280,7 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
         _selectedServerIndex,
       );
     });
-
+    _startStatusHeaderTicker();
     final handoffController = _miniPlayerManager.handoffController;
     final handoffLaunch = _miniPlayerManager.handoffLaunch;
 
@@ -243,6 +326,8 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
           _currentEpisodeIndex = handoffLaunch.initialEpisodeIndex;
           _currentServer = handoffLaunch.initialServer;
           _selectedServerIndex = handoffLaunch.initialServerIndex;
+          _isFullscreen = false;
+          _lastOrientation = null;
         });
 
         if (!handoffController.isPlaying) {
@@ -250,6 +335,8 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
         }
 
         _attachVpListeners();
+        unawaited(_attachPictureInPicture());
+        unawaited(_saveWatchProgress());
       }
     } else {
       if (MiniPlayerManager.isVisible.value) {
@@ -259,6 +346,7 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
       if (widget.initialEpisodeLink != null &&
           widget.initialEpisodeLink!.isNotEmpty) {
         _currentEpisodeLink = widget.initialEpisodeLink;
+        unawaited(_saveWatchProgress());
         _initializePlayer(widget.initialEpisodeLink!);
       } else if (widget.episodes.isNotEmpty) {
         _playEpisode(widget.initialEpisodeIndex, widget.episodes.first);
@@ -278,27 +366,34 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _scrollToCurrentEpisode(animated: false);
     });
-    SupportRotateScreen.allowAll();
+    unawaited(SupportRotateScreen.onlyPotrait());
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    _playerInitGeneration++;
     _saveProgressTimer?.cancel();
-    _saveWatchProgress();
+    unawaited(_saveWatchProgress(flushRemote: true));
     _isInMiniMode = false;
     MiniPlayerManager.shouldRestorePlayer.removeListener(_onRestorePlayer);
     _hideControlsTimer?.cancel();
+    _seekThrottle?.cancel();
     _seekOverlayTimer?.cancel();
     _landscapeZoomLabelTimer?.cancel();
+    _orientationChangeFallbackTimer?.cancel();
     _removeVpListeners();
     _autoToastTimer?.cancel();
+    _statusHeaderTimer?.cancel();
 
+    unawaited(SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge));
     final controllerOwnedByMini =
         MiniPlayerManager.isVisible.value &&
         (_miniPlayerManager.chewieController != null);
 
     if (!controllerOwnedByMini) {
+      PlaybackWakelock.unawaitedSetEnabled(false);
+      unawaited(IosNowPlayingService.clear());
       unawaited(_detachPictureInPicture());
       try {
         _chewieController?.pause();
@@ -320,8 +415,17 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
     _landscapeZoomSnapCtrl.dispose();
     _panelCtrl.dispose();
     _searchController.dispose();
+    _scrollController.dispose();
+    _scrollMovie.dispose();
+    _episodeScrollController.dispose();
+    _landscapeEpisodeScrollController.dispose();
 
     SupportRotateScreen.onlyPotrait();
+    _batteryStateSubscription?.cancel();
+    _connectivitySubscription?.cancel();
+    _connectivityConfirmTimer?.cancel();
+    _connectivitySubscription?.cancel();
+    _wifiQualityTimer?.cancel();
     super.dispose();
   }
 
@@ -353,9 +457,264 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
       return;
     }
 
+    await IosNowPlayingService.configureSession();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       unawaited(IosPictureInPictureService.attach(controller));
+    });
+  }
+
+  Widget _buildNetworkIndicator() {
+    // Plugin đang đọc trạng thái lần đầu:
+    // không hiển thị Wi-Fi gạch chéo vội.
+    if (!_connectivityInitialized) {
+      return const _IosWifiStrengthIcon(
+        level: 2,
+        inactiveColor: Color(0x33FFFFFF),
+      );
+    }
+
+    final results = _connectivityResults;
+
+    final isOffline =
+        results.isEmpty || results.contains(ConnectivityResult.none);
+
+    if (isOffline) {
+      return const Icon(
+        CupertinoIcons.wifi_slash,
+        color: Colors.white54,
+        size: 21,
+      );
+    }
+
+    if (results.contains(ConnectivityResult.wifi)) {
+      return _buildDynamicIosWifiQuality();
+    }
+
+    if (results.contains(ConnectivityResult.mobile)) {
+      return const Text('LTE', style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600));
+    }
+
+    if (results.contains(ConnectivityResult.ethernet)) {
+      return const Icon(CupertinoIcons.globe, color: Colors.white, size: 20);
+    }
+
+    return const Icon(CupertinoIcons.globe, color: Colors.white, size: 20);
+  }
+
+  Widget _buildDynamicIosWifiQuality() {
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 180),
+      switchInCurve: Curves.easeOut,
+      switchOutCurve: Curves.easeIn,
+      transitionBuilder: (child, animation) {
+        return FadeTransition(opacity: animation, child: child);
+      },
+      child: _IosWifiStrengthIcon(
+        key: ValueKey<int>(_estimatedWifiLevel),
+        level: _estimatedWifiLevel,
+        size: 22,
+      ),
+    );
+  }
+
+  void _syncPlayerSystemUi() {
+    if (!mounted) return;
+
+    final orientation = MediaQuery.orientationOf(context);
+    final isLandscape = orientation == Orientation.landscape;
+
+    if (isLandscape) {
+      // Ngang: ẩn status bar thật vì mình sẽ dựng header giả.
+      unawaited(
+        SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky),
+      );
+      return;
+    }
+
+    if (_isExpandedPortrait) {
+      // Expand dọc: chỉ giữ thanh điều hướng dưới,
+      // ẩn status bar phía trên.
+      unawaited(
+        SystemChrome.setEnabledSystemUIMode(
+          SystemUiMode.manual,
+          overlays: const [SystemUiOverlay.bottom],
+        ),
+      );
+      return;
+    }
+
+    // Trạng thái xem phim dọc bình thường.
+    unawaited(SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge));
+  }
+
+  void _handleConnectivityChanged(List<ConnectivityResult> results) {
+    final normalized = results.toSet().toList(growable: false);
+
+    final reportsOffline =
+        normalized.isEmpty || normalized.contains(ConnectivityResult.none);
+
+    _connectivityConfirmTimer?.cancel();
+
+    if (reportsOffline) {
+      // Trên iOS đôi khi stream báo none rồi ngay sau đó mới báo wifi.
+      // Chờ một chút rồi kiểm tra lại trước khi hiển thị gạch chéo.
+      _connectivityConfirmTimer = Timer(const Duration(milliseconds: 500), () {
+        unawaited(_refreshConnectivity(confirmOffline: true));
+      });
+
+      return;
+    }
+
+    if (!mounted) return;
+
+    setState(() {
+      _connectivityResults = normalized;
+      _connectivityInitialized = true;
+    });
+  }
+
+  void _startStatusHeaderTicker() {
+    unawaited(_refreshStatusHeader());
+    _wifiQualityTimer?.cancel();
+
+    _wifiQualityTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+      _refreshEstimatedWifiLevel();
+    });
+    // Đọc mạng ngay khi vào màn hình.
+    unawaited(_refreshConnectivity());
+
+    // Theo dõi khi chuyển Wi-Fi/mobile hoặc mất kết nối.
+    _connectivitySubscription = _connectivity.onConnectivityChanged.listen(
+      _handleConnectivityChanged,
+      onError: (_) {
+        unawaited(_refreshConnectivity());
+      },
+    );
+
+    _batteryStateSubscription = _battery.onBatteryStateChanged.listen((state) {
+      if (!mounted) return;
+
+      setState(() {
+        _batteryState = state;
+      });
+
+      unawaited(_refreshStatusHeader());
+    });
+
+    _statusHeaderTimer = Timer.periodic(const Duration(seconds: 10), (_) {
+      unawaited(_refreshStatusHeader());
+    });
+  }
+
+  void _refreshEstimatedWifiLevel() {
+    if (!mounted) return;
+
+    final usingWifi = _connectivityResults.contains(ConnectivityResult.wifi);
+
+    if (!usingWifi) {
+      return;
+    }
+
+    final vp = _videoPlayerController;
+    var nextLevel = 2;
+
+    if (vp == null || !vp.value.isInitialized) {
+      nextLevel = 1;
+    } else {
+      final value = vp.value;
+
+      if (_isPlaybackBuffering || value.isBuffering) {
+        _lastWifiBufferingAt = DateTime.now();
+        nextLevel = 1;
+      } else {
+        var bufferedAhead = Duration.zero;
+
+        if (value.buffered.isNotEmpty) {
+          final bufferedEnd = value.buffered.last.end;
+
+          if (bufferedEnd > value.position) {
+            bufferedAhead = bufferedEnd - value.position;
+          }
+        }
+
+        final recentlyBuffered =
+            _lastWifiBufferingAt != null &&
+            DateTime.now().difference(_lastWifiBufferingAt!) <
+                const Duration(seconds: 8);
+
+        if (recentlyBuffered || bufferedAhead < const Duration(seconds: 6)) {
+          nextLevel = 1;
+        } else if (bufferedAhead < const Duration(seconds: 30)) {
+          nextLevel = 2;
+        } else {
+          nextLevel = 3;
+        }
+      }
+    }
+
+    if (_estimatedWifiLevel == nextLevel) return;
+
+    setState(() {
+      _estimatedWifiLevel = nextLevel;
+    });
+  }
+
+  Future<void> _refreshConnectivity({bool confirmOffline = false}) async {
+    try {
+      final results = await _connectivity.checkConnectivity();
+
+      if (!mounted) return;
+
+      final normalized = results.toSet().toList(growable: false);
+
+      final reportsOffline =
+          normalized.isEmpty || normalized.contains(ConnectivityResult.none);
+
+      // Lần đọc đầu báo none thì kiểm tra lại sau 400 ms,
+      // tránh icon Wi-Fi bị gạch chéo giả trên iOS.
+      if (reportsOffline && !confirmOffline) {
+        _connectivityConfirmTimer?.cancel();
+
+        _connectivityConfirmTimer = Timer(
+          const Duration(milliseconds: 400),
+          () {
+            unawaited(_refreshConnectivity(confirmOffline: true));
+          },
+        );
+
+        return;
+      }
+
+      setState(() {
+        _connectivityResults = normalized;
+        _connectivityInitialized = true;
+      });
+    } catch (error) {
+      debugPrint('Không đọc được trạng thái mạng: $error');
+
+      // Không tự đổi thành offline khi plugin xảy ra lỗi.
+      // Giữ trạng thái gần nhất.
+    }
+  }
+
+  Future<void> _refreshStatusHeader() async {
+    var level = _batteryLevel;
+    var state = _batteryState;
+
+    try {
+      level = await _battery.batteryLevel;
+      state = await _battery.batteryState;
+    } catch (_) {
+      // Giữ dữ liệu cũ nếu platform tạm thời chưa trả kết quả.
+    }
+
+    if (!mounted) return;
+
+    setState(() {
+      _statusNow = DateTime.now();
+      _batteryLevel = level.clamp(0, 100).toInt();
+      _batteryState = state;
     });
   }
 
@@ -389,10 +748,101 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     super.didChangeAppLifecycleState(state);
+    if (state == AppLifecycleState.resumed) {
+      unawaited(_refreshConnectivity());
+      unawaited(_refreshStatusHeader());
+
+      unawaited(IosPictureInPictureService.stop());
+      _syncPlaybackSideEffects(force: true);
+      return;
+    }
+
     if (state == AppLifecycleState.inactive ||
         state == AppLifecycleState.paused) {
+      unawaited(_saveWatchProgress(flushRemote: true));
       unawaited(_startPictureInPictureIfNeeded());
     }
+  }
+
+  String _nowPlayingSubtitle() {
+    final episodeName = _historyEpisodeName(
+      _selectedServerIndex,
+      _currentEpisodeIndex,
+    ).trim();
+    final serverName = _friendlyCurrentServerLabel();
+
+    if (widget.movie.episode_current == 'Full') {
+      return serverName;
+    }
+    if (episodeName.isEmpty) return serverName;
+    if (serverName.isEmpty) return episodeName;
+    return '$episodeName - $serverName';
+  }
+
+  String _friendlyCurrentServerLabel() {
+    var serverName = _currentServer.trim();
+    if (serverName.isEmpty &&
+        _selectedServerIndex >= 0 &&
+        _selectedServerIndex < widget.episodes.length) {
+      serverName = widget.episodes[_selectedServerIndex].server_name.trim();
+    }
+
+    final serverInfo = CoverMap.getConfigFromServerName(serverName);
+    final title = serverInfo['title'];
+    if (title is String && title.trim().isNotEmpty) return title.trim();
+    return 'Phụ Đề';
+  }
+
+  String _currentLandscapePlaybackLine() {
+    if (widget.movie.episode_current == 'Full') {
+      return _friendlyCurrentServerLabel();
+    }
+
+    final episodeName = _historyEpisodeName(
+      _selectedServerIndex,
+      _currentEpisodeIndex,
+    ).trim();
+    if (episodeName.isNotEmpty) return episodeName;
+
+    final fallback = widget.movie.episode_current.trim();
+    if (fallback.isNotEmpty) return fallback;
+    return 'Đang phát';
+  }
+
+  void _syncPlaybackSideEffects({bool force = false}) {
+    final value = _videoPlayerController?.value;
+    if (value == null) {
+      PlaybackWakelock.unawaitedSetEnabled(false);
+      return;
+    }
+
+    final isPlaying = value.isInitialized && value.isPlaying;
+    PlaybackWakelock.unawaitedSetEnabled(isPlaying);
+
+    if (!_usesNativeIosVideoView || !value.isInitialized) {
+      return;
+    }
+
+    final now = DateTime.now();
+    final shouldUpdate =
+        force ||
+        _lastNowPlayingIsPlaying != isPlaying ||
+        _lastNowPlayingUpdate == null ||
+        now.difference(_lastNowPlayingUpdate!) > const Duration(seconds: 1);
+    if (!shouldUpdate) return;
+
+    _lastNowPlayingUpdate = now;
+    _lastNowPlayingIsPlaying = isPlaying;
+    unawaited(
+      IosNowPlayingService.update(
+        title: widget.movieName,
+        subtitle: _nowPlayingSubtitle(),
+        duration: value.duration,
+        position: value.position,
+        isPlaying: isPlaying,
+        assetUrl: _currentEpisodeLink,
+      ),
+    );
   }
 
   void _onRestorePlayer() {
@@ -418,7 +868,8 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
             controller.play();
           }
 
-          _attachPictureInPicture();
+          unawaited(_attachPictureInPicture());
+          unawaited(_saveWatchProgress());
         }
       }
 
@@ -450,12 +901,28 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
   }
 
   void _showControlsWithAutoHide() {
+    if (_orientationChangeInFlight) return;
+
     _hideControlsTimer?.cancel();
-    setState(() => _showControls = true);
+
+    if (!_showControls && mounted) {
+      setState(() {
+        _showControls = true;
+      });
+    }
+
+    // Khi đang tải hoặc có lỗi, giữ controls lại,
+    // không tự ẩn sau 3 giây.
+    if (_isPlayerLoading || _playerLoadError != null) {
+      return;
+    }
 
     _hideControlsTimer = Timer(const Duration(seconds: 3), () {
       if (!mounted) return;
-      setState(() => _showControls = false);
+
+      setState(() {
+        _showControls = false;
+      });
     });
   }
 
@@ -466,6 +933,22 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
   }
 
   void _toggleControls() {
+    if (_orientationChangeInFlight) return;
+
+    // Đang loading: tap luôn làm hiện controls,
+    // không cho tap làm ẩn nút back.
+    if (_isPlayerLoading || _playerLoadError != null) {
+      _hideControlsTimer?.cancel();
+
+      if (!_showControls) {
+        setState(() {
+          _showControls = true;
+        });
+      }
+
+      return;
+    }
+
     if (_showControls) {
       _hideControlsNow();
     } else {
@@ -610,132 +1093,187 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
   }
 
   void _resetHideControlsTimer() {
-    _hideControlsTimer?.cancel();
-    setState(() => _showControls = true);
-    _hideControlsTimer = Timer(const Duration(seconds: 3), () {
-      if (mounted) {
-        setState(() => _showControls = false);
-      }
-    });
+    _showControlsWithAutoHide();
   }
 
   double get _minifyT => _isMinifyAnimating ? _minifyCtrl.value : _miniDragT;
-  bool _onSeriesScrollSnap(ScrollNotification n) {
-    if (_headerSnapping) return false;
 
-    if (n is ScrollEndNotification) {
-      final range = (_seriesHeaderMaxH - _seriesHeaderMinH).clamp(0.0, 99999.0);
-      final o = _episodeScrollController.hasClients
-          ? _episodeScrollController.offset
-          : 0.0;
+  Future<void> _saveWatchProgress({
+    bool useCurrentPlaybackPosition = true,
+    bool preserveExistingProgressWhenUnavailable = true,
+    bool flushRemote = false,
+  }) {
+    final videoValue = _videoPlayerController?.value;
+    final hasPlaybackPosition =
+        useCurrentPlaybackPosition && (videoValue?.isInitialized ?? false);
+    final positionMs = hasPlaybackPosition
+        ? videoValue!.position.inMilliseconds
+        : 0;
+    final durationMs = hasPlaybackPosition
+        ? videoValue!.duration.inMilliseconds
+        : 0;
+    final serverIndex = _selectedServerIndex;
+    final episodeIndex = _currentEpisodeIndex;
+    final episodeLink = _currentEpisodeLink;
+    final serverName = _currentServer;
+    final episodeName = _historyEpisodeName(serverIndex, episodeIndex);
+    final category = widget.movie.category.isNotEmpty
+        ? widget.movie.category.first
+        : null;
+    final library = _libraryCubit;
+    if (library == null) return Future<void>.value();
 
-      // chỉ snap khi đang ở vùng "đang co header"
-      if (o > 0 && o < range) {
-        final target = (o >= range * 0.5) ? range : 0.0; // 50%
-        _headerSnapping = true;
+    final write = _historyWriteQueue
+        .then((_) async {
+          if (library.state.isAuthenticated) {
+            UserWatchHistory? existing;
+            for (final item in library.state.history) {
+              if (item.slug == widget.slug) {
+                existing = item;
+                break;
+              }
+            }
+            final preserve =
+                !hasPlaybackPosition && preserveExistingProgressWhenUnavailable;
+            library.queueWatchHistory(
+              UserWatchHistory(
+                slug: widget.slug,
+                name: widget.movieName,
+                originName: widget.movie.origin_name,
+                posterUrl: widget.movie.poster_url,
+                thumbUrl: widget.movie.thumb_url,
+                episodeCurrent: episodeName,
+                quality: widget.movie.quality,
+                lang: widget.movie.lang,
+                year: widget.movie.year,
+                rating: widget.movie.tmdb?.vote_average?.toDouble(),
+                positionMs: preserve ? existing?.positionMs ?? 0 : positionMs,
+                durationMs: preserve ? existing?.durationMs ?? 0 : durationMs,
+                movieType: widget.movie.type,
+                categoryId: category?.id,
+                categoryName: category?.name,
+                lastServerIndex: serverIndex,
+                lastEpisodeIndex: episodeIndex,
+                lastEpisodeName: episodeName,
+                lastEpisodeLink: episodeLink,
+                lastServerName: serverName,
+                watchedAt: DateTime.now(),
+              ),
+              flush: flushRemote,
+            );
+          }
 
-        _episodeScrollController
-            .animateTo(
-              target,
-              duration: const Duration(milliseconds: 220),
-              curve: Curves.easeOutCubic,
-            )
-            .whenComplete(() => _headerSnapping = false);
-      }
-    }
-    return false; // cho notification nổi lên để _wrapOverscrollToResize vẫn hoạt động
+          debugPrint(
+            '[WatchHistory] Saved: slug=${widget.slug}, server=$serverName, episode=$episodeName, positionMs=$positionMs',
+          );
+        })
+        .catchError((Object error, StackTrace stack) {
+          debugPrint('[WatchHistory] Write failed: $error');
+        });
+
+    _historyWriteQueue = write;
+    return write;
   }
 
-  void _saveWatchProgress() async {
-    if (_videoPlayerController != null &&
-        _videoPlayerController!.value.isInitialized &&
-        _currentEpisodeLink != null) {
-      final position = _videoPlayerController!.value.position;
-      final duration = _videoPlayerController!.value.duration;
-
-      if (position.inSeconds > 5) {
-        // Save to WatchProgressStorage
-        await _watchProgressStorage.saveProgressV2(
-          movieId: widget.slug,
-          serverIndex: _selectedServerIndex,
-          episodeIndex: _currentEpisodeIndex,
-          episodeName: 'Episode ${_currentEpisodeIndex + 1}',
-          positionMs: position.inMilliseconds,
-          durationMs: duration.inMilliseconds,
-        );
-
-        debugPrint(
-          '[WatchProgress] Saved: slug=${widget.slug}, position=${position.inSeconds}s, duration=${duration.inSeconds}s',
-        );
-
-        final category = widget.movie.category.isNotEmpty
-            ? widget.movie.category.first
-            : null;
-
-        // Save to WatchHistoryStorage (Hive)
-        await _watchHistoryStorage.addToHistory(
-          slug: widget.slug,
-          name: widget.movieName,
-          originName: widget.movie.origin_name,
-          posterUrl: widget.movie.poster_url,
-          thumbUrl: widget.movie.thumb_url,
-          episodeCurrent: _currentHistoryEpisodeName(),
-          quality: null,
-          lang: widget.movie.lang,
-          year: widget.movie.year?.toString(),
-          rating: widget.movie.tmdb?.vote_average?.toDouble(),
-          positionMs: position.inMilliseconds,
-          durationMs: duration.inMilliseconds,
-          type: widget.movie.type,
-          categoryId: category?.id,
-          categoryName: category?.name,
-        );
-
-        debugPrint(
-          '[WatchHistory] Saved to Hive: slug=${widget.slug}, name=${widget.movieName}, progress=${(position.inMilliseconds / duration.inMilliseconds * 100).toStringAsFixed(1)}%',
-        );
-      }
-    }
-  }
-
-  String _currentHistoryEpisodeName() {
+  String _historyEpisodeName(int serverIndex, int episodeIndex) {
     final fallback = widget.movie.episode_current.isNotEmpty
         ? widget.movie.episode_current
         : 'Full';
 
     if (widget.episodes.isEmpty ||
-        _selectedServerIndex < 0 ||
-        _selectedServerIndex >= widget.episodes.length) {
+        serverIndex < 0 ||
+        serverIndex >= widget.episodes.length) {
       return fallback;
     }
 
-    final serverData = widget.episodes[_selectedServerIndex].server_data;
-    if (_currentEpisodeIndex < 0 || _currentEpisodeIndex >= serverData.length) {
+    final serverData = widget.episodes[serverIndex].server_data;
+    if (episodeIndex < 0 || episodeIndex >= serverData.length) {
       return fallback;
     }
 
-    return serverData[_currentEpisodeIndex].name;
+    return serverData[episodeIndex].name;
   }
 
   void _startSaveProgressTimer() {
     _saveProgressTimer?.cancel();
     _saveProgressTimer = Timer.periodic(const Duration(seconds: 10), (_) {
-      _saveWatchProgress();
+      unawaited(_saveWatchProgress());
     });
   }
 
   Future<void> _initializePlayer(String videoUrl) async {
-    _videoPlayerController = _createVideoPlayerController(videoUrl);
-    await _videoPlayerController!.initialize();
+    final generation = ++_playerInitGeneration;
+    final sourceUrl = videoUrl.trim();
+    if (mounted) {
+      setState(() {
+        _isVideoLoading = true;
+        _isPlaybackBuffering = false;
+        _playerLoadError = null;
+        _showControls = true;
+      });
+    }
 
-    final savedProgress = await _watchProgressStorage.getProgressV2(
-      movieId: widget.slug,
-      serverIndex: _selectedServerIndex,
-      episodeIndex: _currentEpisodeIndex,
-    );
+    if (sourceUrl.isEmpty) {
+      PlaybackWakelock.unawaitedSetEnabled(false);
+      unawaited(IosNowPlayingService.clear());
+      if (!mounted || generation != _playerInitGeneration) return;
+      setState(() {
+        _isVideoLoading = false;
+        _playerLoadError = 'Server này chưa có nguồn phát.';
+      });
+      return;
+    }
 
-    _chewieController = ChewieController(
-      videoPlayerController: _videoPlayerController!,
+    VideoPlayerController? videoController;
+
+    try {
+      videoController = _createVideoPlayerController(sourceUrl);
+      await videoController.initialize();
+    } catch (error) {
+      try {
+        await videoController?.dispose();
+      } catch (_) {}
+      PlaybackWakelock.unawaitedSetEnabled(false);
+      unawaited(IosNowPlayingService.clear());
+      if (!mounted || generation != _playerInitGeneration) return;
+      setState(() {
+        _isVideoLoading = false;
+        _playerLoadError = 'Không tải được nguồn phim này.';
+      });
+      debugPrint('InitializePlayer failed: $error');
+      return;
+    }
+
+    if (!mounted || generation != _playerInitGeneration) {
+      await videoController.dispose();
+      return;
+    }
+
+    final initializedVideoController = videoController;
+
+    _videoPlayerController = initializedVideoController;
+
+    UserWatchHistory? savedProgress;
+    final libraryState = _libraryCubit?.state;
+    if (libraryState?.isAuthenticated ?? false) {
+      for (final history in libraryState!.history) {
+        if (history.slug == widget.slug &&
+            history.lastServerIndex == _selectedServerIndex &&
+            history.lastEpisodeIndex == _currentEpisodeIndex &&
+            history.progress < .9) {
+          savedProgress = history;
+          break;
+        }
+      }
+    }
+
+    if (!mounted || generation != _playerInitGeneration) {
+      await initializedVideoController.dispose();
+      return;
+    }
+
+    final chewieController = ChewieController(
+      videoPlayerController: initializedVideoController,
       autoPlay: true,
       looping: false,
       aspectRatio: 16 / 9,
@@ -746,50 +1284,116 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
       fullScreenByDefault: false,
     );
 
+    _chewieController = chewieController;
+
     debugPrint('=== Video initialized ===');
 
     if (savedProgress != null) {
       final savedPosition = Duration(milliseconds: savedProgress.positionMs);
-      await _videoPlayerController!.seekTo(savedPosition);
-      if (mounted) {
-        setState(() {});
-      }
+      await initializedVideoController.seekTo(savedPosition);
       debugPrint(
-        'Restored progress: ${savedPosition.inSeconds}s / ${savedProgress.progressPercent * 100}%',
+        'Restored progress: ${savedPosition.inSeconds}s / ${savedProgress.progress * 100}%',
       );
     }
-
-    _startSaveProgressTimer();
 
     // Setup video listeners after player is initialized
     _attachVpListeners();
     await _attachPictureInPicture();
+    _syncPlaybackSideEffects(force: true);
 
-    setState(() {});
+    if (!mounted || generation != _playerInitGeneration) return;
+    _startSaveProgressTimer();
+    unawaited(_saveWatchProgress());
+    setState(() {
+      _isVideoLoading = false;
+      _playerLoadError = null;
+    });
   }
 
   Future<void> _disposeAndInitializePlayer(
     String videoUrl, {
     bool restoreLastPosition = false,
   }) async {
+    final generation = ++_playerInitGeneration;
+    final sourceUrl = videoUrl.trim();
     debugPrint(
       '_disposeAndInitializePlayer: START, restoreLastPosition=$restoreLastPosition, _lastPosition=$_lastPosition',
     );
 
-    await _chewieController?.pause();
+    _removeVpListeners();
+    _hideControlsTimer?.cancel();
+    _seekOverlayTimer?.cancel();
+    _seekThrottle?.cancel();
+    PlaybackWakelock.unawaitedSetEnabled(false);
+
+    final oldChewieController = _chewieController;
+    final oldVideoPlayerController = _videoPlayerController;
+
+    if (mounted) {
+      setState(() {
+        _chewieController = null;
+        _videoPlayerController = null;
+        _showControls = true;
+        _isPlaybackCompleted = false;
+        _showSeekOverlay = false;
+        _isScrubbing = false;
+        _scrubValue = 0.0;
+        _isVideoLoading = true;
+        _isPlaybackBuffering = false;
+        _playerLoadError = null;
+      });
+    } else {
+      _chewieController = null;
+      _videoPlayerController = null;
+    }
+
+    await oldChewieController?.pause();
     await _detachPictureInPicture();
-    _chewieController?.dispose();
-    _videoPlayerController?.dispose();
+    oldChewieController?.dispose();
+    await oldVideoPlayerController?.dispose();
+
+    if (sourceUrl.isEmpty) {
+      unawaited(IosNowPlayingService.clear());
+      if (!mounted || generation != _playerInitGeneration) return;
+      setState(() {
+        _isVideoLoading = false;
+        _playerLoadError = 'Server này chưa có nguồn phát.';
+      });
+      return;
+    }
 
     debugPrint(
-      '_disposeAndInitializePlayer: Creating VideoPlayerController with $videoUrl',
+      '_disposeAndInitializePlayer: Creating VideoPlayerController with $sourceUrl',
     );
-    _videoPlayerController = _createVideoPlayerController(videoUrl);
-    await _videoPlayerController!.initialize();
+    VideoPlayerController? videoController;
+    try {
+      videoController = _createVideoPlayerController(sourceUrl);
+      await videoController.initialize();
+    } catch (error) {
+      try {
+        await videoController?.dispose();
+      } catch (_) {}
+      PlaybackWakelock.unawaitedSetEnabled(false);
+      unawaited(IosNowPlayingService.clear());
+      if (!mounted || generation != _playerInitGeneration) return;
+      setState(() {
+        _isVideoLoading = false;
+        _playerLoadError = 'Không tải được nguồn phim này.';
+      });
+      debugPrint('_disposeAndInitializePlayer failed: $error');
+      return;
+    }
     debugPrint('_disposeAndInitializePlayer: Video initialized');
 
-    _chewieController = ChewieController(
-      videoPlayerController: _videoPlayerController!,
+    final initializedVideoController = videoController;
+
+    if (!mounted || generation != _playerInitGeneration) {
+      await initializedVideoController.dispose();
+      return;
+    }
+
+    final chewieController = ChewieController(
+      videoPlayerController: initializedVideoController,
       autoPlay: false,
       looping: false,
       aspectRatio: 16 / 9,
@@ -799,46 +1403,50 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
       showControls: false,
       fullScreenByDefault: false,
     );
+    _videoPlayerController = initializedVideoController;
+    _chewieController = chewieController;
     debugPrint('_disposeAndInitializePlayer: ChewieController created');
 
     debugPrint(
       '_disposeAndInitializePlayer: Before seek, _lastPosition=$_lastPosition, restoreLastPosition=$restoreLastPosition',
     );
 
-    // Reset scrubbing state to prevent seekbar thumb from staying at old position
-    _scrubValue = 0.0;
-    if (_isScrubbing) {
-      setState(() => _isScrubbing = false);
-    }
-    // Force rebuild to update seekbar
     setState(() {});
 
     if (restoreLastPosition && _lastPosition != null) {
       debugPrint('RestorePosition: Seeking to $_lastPosition');
-      await _videoPlayerController!.seekTo(_lastPosition!);
-      final posAfterSeek = _videoPlayerController!.value.position;
+      await initializedVideoController.seekTo(_lastPosition!);
+      final posAfterSeek = initializedVideoController.value.position;
       debugPrint(
         'RestorePosition: Seek completed, position after seek: $posAfterSeek',
       );
       await Future.delayed(const Duration(milliseconds: 200));
-      await _chewieController!.play();
-      final posAfterPlay = _videoPlayerController!.value.position;
+      await chewieController.play();
+      final posAfterPlay = initializedVideoController.value.position;
       debugPrint('RestorePosition: After play, position: $posAfterPlay');
     } else {
       debugPrint(
         'RestorePosition: Not restoring, _lastPosition=$_lastPosition, restoreLastPosition=$restoreLastPosition',
       );
-      await _chewieController!.play();
+      await chewieController.play();
     }
 
+    if (!mounted || generation != _playerInitGeneration) return;
     _lastPosition = null;
     debugPrint('_disposeAndInitializePlayer: END, cleared _lastPosition');
 
     // Setup video listeners after new episode is loaded
     _attachVpListeners();
     await _attachPictureInPicture();
+    _syncPlaybackSideEffects(force: true);
 
-    setState(() {});
+    if (!mounted || generation != _playerInitGeneration) return;
+    _startSaveProgressTimer();
+    unawaited(_saveWatchProgress());
+    setState(() {
+      _isVideoLoading = false;
+      _playerLoadError = null;
+    });
   }
 
   void _showAutoPlayToast(bool enabled) {
@@ -858,11 +1466,12 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
   void _playEpisode(int index, EpisodesModel episode) {
     if (episode.server_data.isEmpty) return;
 
-    // Lưu vị trí hiện tại trước khi chuyển
+    // Lưu chính xác nội dung cũ trước khi chuyển sang tập mới.
     if (_videoPlayerController != null &&
         _videoPlayerController!.value.isInitialized) {
       _lastPosition = _videoPlayerController!.value.position;
     }
+    unawaited(_saveWatchProgress());
 
     final episodeData = index < episode.server_data.length
         ? episode.server_data[index]
@@ -873,11 +1482,18 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
         : episodeData.link_embed;
 
     setState(() {
+      _isPlaybackCompleted = false;
       _currentEpisodeIndex = index;
       _currentServer = episode.server_name;
       _currentEpisodeLink = link;
       _videoHeight = _minVideoHeight;
     });
+    unawaited(
+      _saveWatchProgress(
+        useCurrentPlaybackPosition: false,
+        preserveExistingProgressWhenUnavailable: false,
+      ),
+    );
     _scrollToCurrentEpisode();
     _lastPosition = null; // <<< quan trọng: không carry qua tập mới
     _disposeAndInitializePlayer(link, restoreLastPosition: false);
@@ -912,7 +1528,15 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
       if (status == AnimationStatus.completed &&
           mounted &&
           _videoSnapTarget != null) {
-        setState(() => _videoHeight = _videoSnapTarget!); // chốt tuyệt đối
+        setState(() {
+          _videoHeight = _videoSnapTarget!;
+        });
+
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) {
+            _syncPlayerSystemUi();
+          }
+        });
       }
     };
     _videoSnapCtrl.addStatusListener(_snapStatusListener!);
@@ -965,6 +1589,7 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
     if (vp == null) return;
 
     _removeVpListeners();
+    _isPlaybackBuffering = vp.value.isBuffering;
 
     // _vpPositionListener = () {
     //   if (!mounted) return;
@@ -974,25 +1599,85 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
 
     _autoPlayTriggered = false;
     _vpEndListener = () {
+      if (!mounted) return;
+
       final value = vp.value;
-      if (value.isInitialized &&
-          !value.isPlaying &&
-          value.duration > Duration.zero &&
-          value.position >= value.duration - const Duration(seconds: 1) &&
-          !_autoPlayTriggered) {
-        final state = _playerCubit.state;
-        if (state is PlayerLoadedState &&
-            state.autoPlayNextEpisode &&
-            widget.movie.episode_current != 'Full') {
-          _autoPlayTriggered = true;
-          _playNextEpisode();
+      final isBuffering = value.isBuffering && !value.hasError;
+
+      if (_isPlaybackBuffering != isBuffering) {
+        if (isBuffering) {
+          _hideControlsTimer?.cancel();
+        }
+
+        setState(() {
+          _isPlaybackBuffering = isBuffering;
+
+          if (isBuffering) {
+            // Giữ header, back và control bar.
+            _showControls = true;
+            _showSeekOverlay = false;
+          }
+        });
+
+        // Mạng ổn trở lại thì bắt đầu đếm 3 giây để ẩn controls.
+        if (!isBuffering) {
+          _resetHideControlsTimer();
         }
       }
+
+      _syncPlaybackSideEffects();
+      final isCompleted =
+          value.isInitialized &&
+          !value.isPlaying &&
+          value.duration > Duration.zero &&
+          value.position >= value.duration - const Duration(seconds: 1);
+
+      if (isCompleted && !_autoPlayTriggered) {
+        _autoPlayTriggered = true;
+        final state = _playerCubit.state;
+        final shouldAutoPlayNext =
+            state is PlayerLoadedState &&
+            state.autoPlayNextEpisode &&
+            widget.movie.episode_current != 'Full';
+
+        if (shouldAutoPlayNext && _hasNextEpisode) {
+          _playNextEpisode();
+          return;
+        }
+
+        if (shouldAutoPlayNext) _playNextEpisode();
+        _setPlaybackCompleted(true);
+      }
+
+      if (!isCompleted && _isPlaybackCompleted) {
+        _setPlaybackCompleted(false);
+      }
+
       if (value.isPlaying) {
         _autoPlayTriggered = false;
       }
     };
     vp.addListener(_vpEndListener!);
+    _syncPlaybackSideEffects(force: true);
+  }
+
+  bool get _hasNextEpisode {
+    if (_selectedServerIndex < 0 ||
+        _selectedServerIndex >= widget.episodes.length) {
+      return false;
+    }
+    final serverData = widget.episodes[_selectedServerIndex].server_data;
+    return _currentEpisodeIndex >= 0 &&
+        _currentEpisodeIndex < serverData.length - 1;
+  }
+
+  void _setPlaybackCompleted(bool completed) {
+    if (!mounted || _isPlaybackCompleted == completed) return;
+    if (completed) _hideControlsTimer?.cancel();
+    setState(() {
+      _isPlaybackCompleted = completed;
+      if (completed) _showControls = true;
+    });
   }
 
   void _playNextEpisode() {
@@ -1068,29 +1753,149 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
   }
 
   void _scrollToCurrentEpisode({bool animated = true}) {
-    // đợi layout xong
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
 
-      // list hiện tại
       final serverData = widget.episodes[_selectedServerIndex].server_data;
+
       if (serverData.isEmpty) return;
 
-      final idx = _currentEpisodeIndex.clamp(0, serverData.length - 1);
+      final index = _currentEpisodeIndex.clamp(0, serverData.length - 1);
 
-      // nếu key chưa sẵn thì thôi
-      if (_episodeKeys.length <= idx) return;
+      if (_episodeKeys.length <= index) return;
 
-      final ctx = _episodeKeys[idx].currentContext;
-      if (ctx == null) return;
+      final itemContext = _episodeKeys[index].currentContext;
+      if (itemContext == null) return;
 
-      Scrollable.ensureVisible(
-        ctx,
+      // Đánh dấu đây là scroll bằng code.
+      // Trong thời gian này không được co thanh server.
+      _isProgrammaticEpisodeScroll = true;
+      _isEpisodeUserDragging = false;
+
+      final scrollFuture = Scrollable.ensureVisible(
+        itemContext,
         duration: animated ? const Duration(milliseconds: 350) : Duration.zero,
         curve: Curves.easeInOutCubic,
-        alignment: 0.5, // 0.0=top, 0.5=center, 1.0=bottom
+        alignment: 0.5,
       );
+
+      scrollFuture.whenComplete(() {
+        // Đợi ScrollNotification cuối cùng chạy xong rồi mới mở lại.
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!mounted) return;
+
+          _isProgrammaticEpisodeScroll = false;
+
+          if (_episodeScrollController.hasClients) {
+            _lastEpisodeScrollPixels = _episodeScrollController.position.pixels;
+          }
+        });
+      });
     });
+  }
+
+  bool _handleEpisodeScrollNotification(ScrollNotification notification) {
+    // Chỉ xử lý scroll chính của danh sách tập.
+    // Không xử lý các ListView con hoặc scroll ngang.
+    if (notification.depth != 0) {
+      return false;
+    }
+
+    if (notification is ScrollStartNotification) {
+      _lastEpisodeScrollPixels = notification.metrics.pixels;
+
+      // dragDetails != null nghĩa là người dùng đang đặt tay vuốt.
+      _isEpisodeUserDragging =
+          notification.dragDetails != null && !_isProgrammaticEpisodeScroll;
+
+      return false;
+    }
+
+    if (notification is ScrollUpdateNotification) {
+      final currentPixels = notification.metrics.pixels;
+
+      final delta =
+          notification.scrollDelta ?? currentPixels - _lastEpisodeScrollPixels;
+
+      _lastEpisodeScrollPixels = currentPixels;
+
+      // ensureVisible, animateTo hoặc jumpTo:
+      // chỉ cuộn grid, không thay đổi thanh server.
+      if (!_isEpisodeUserDragging ||
+          _isProgrammaticEpisodeScroll ||
+          delta.abs() < 0.01) {
+        return false;
+      }
+
+      final oldExtent = _seriesControlsExtent;
+
+      // Vuốt lên:
+      // delta > 0 => extent giảm => thanh ngăn nâng lên.
+      //
+      // Vuốt xuống:
+      // delta < 0 => extent tăng => thanh server hiện lại.
+      final nextExtent = (oldExtent - delta)
+          .clamp(1.0, _seriesControlsMaxH)
+          .toDouble();
+
+      if ((nextExtent - oldExtent).abs() > 0.1) {
+        setState(() {
+          _seriesControlsExtent = nextExtent;
+        });
+      }
+
+      final atTop =
+          notification.metrics.pixels <=
+          notification.metrics.minScrollExtent + 0.5;
+
+      final isExpandingControls =
+          delta < 0 &&
+          oldExtent < _seriesControlsMaxH &&
+          nextExtent > oldExtent;
+
+      // Khi đang ở đầu list và kéo xuống để mở lại thanh server,
+      // chặn notification đi tới _wrapOverscrollToResize.
+      // Như vậy nó mở thanh server trước, chưa kéo giãn video.
+      return atTop && isExpandingControls;
+    }
+
+    if (notification is OverscrollNotification) {
+      if (!_isEpisodeUserDragging || _isProgrammaticEpisodeScroll) {
+        return false;
+      }
+
+      // Kéo xuống ở đầu list khi thanh server chưa mở hết.
+      if (notification.overscroll < 0 &&
+          _seriesControlsExtent < _seriesControlsMaxH) {
+        final nextExtent = (_seriesControlsExtent - notification.overscroll)
+            .clamp(1.0, _seriesControlsMaxH)
+            .toDouble();
+
+        if ((nextExtent - _seriesControlsExtent).abs() > 0.1) {
+          setState(() {
+            _seriesControlsExtent = nextExtent;
+          });
+        }
+
+        // Chặn outer listener kéo giãn video trong lúc
+        // thanh server vẫn đang được mở lại.
+        return true;
+      }
+
+      return false;
+    }
+
+    if (notification is ScrollEndNotification) {
+      _isEpisodeUserDragging = false;
+      return false;
+    }
+
+    if (notification is UserScrollNotification &&
+        notification.direction == ScrollDirection.idle) {
+      _isEpisodeUserDragging = false;
+    }
+
+    return false;
   }
 
   int _findEpisodeIndexByNumber(List<ServerData> list, int targetEp) {
@@ -1138,6 +1943,7 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
 
     final newServer = widget.episodes[newServerIndex];
     if (newServer.server_data.isEmpty) return;
+    unawaited(_saveWatchProgress());
 
     // Chỉ giữ vị trí khi là phim single (Full)
     final isSingleType = widget.movie.episode_current == 'Full';
@@ -1179,6 +1985,12 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
       _currentEpisodeIndex = safeEpisodeIndex;
       _currentEpisodeLink = link;
     });
+    unawaited(
+      _saveWatchProgress(
+        useCurrentPlaybackPosition: isSingleType,
+        preserveExistingProgressWhenUnavailable: false,
+      ),
+    );
     _scrollToCurrentEpisode();
     _disposeAndInitializePlayer(
       link,
@@ -1207,32 +2019,323 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
     return topLeft & box.size;
   }
 
-  void _toggleFullscreen() {
-    setState(() => _isFullscreen = !_isFullscreen);
+  Future<void> _toggleFullscreen() async {
+    if (_orientationChangeInFlight) return;
 
-    if (_isFullscreen) {
-      SystemChrome.setPreferredOrientations([
-        DeviceOrientation.landscapeLeft,
-        DeviceOrientation.landscapeRight,
-      ]);
-      SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
-    } else {
-      SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
-      SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+    final targetLandscape =
+        MediaQuery.orientationOf(context) == Orientation.portrait;
+    _hideControlsTimer?.cancel();
+    _orientationChangeFallbackTimer?.cancel();
+    setState(() {
+      _orientationChangeInFlight = true;
+      _showControls = false;
+      _showSeekOverlay = false;
+    });
+
+    _orientationChangeFallbackTimer = Timer(
+      const Duration(milliseconds: 1200),
+      () {
+        if (!mounted || !_orientationChangeInFlight) return;
+        setState(() => _orientationChangeInFlight = false);
+      },
+    );
+
+    try {
+      if (targetLandscape) {
+        await SupportRotateScreen.onlyLandscape();
+      } else {
+        await SupportRotateScreen.onlyPotrait();
+      }
+    } on PlatformException catch (error) {
+      debugPrint('Không thể đổi hướng màn hình: $error');
+      _orientationChangeFallbackTimer?.cancel();
+      if (!mounted) return;
+      setState(() => _orientationChangeInFlight = false);
     }
+  }
+
+  void _syncFullscreenWithOrientation(Orientation orientation) {
+    final shouldBeFullscreen = orientation == Orientation.landscape;
+    if (_isFullscreen == shouldBeFullscreen && !_orientationChangeInFlight) {
+      return;
+    }
+    _pendingOrientationSync = orientation;
+    if (_orientationSyncScheduled) return;
+    _orientationSyncScheduled = true;
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _orientationSyncScheduled = false;
+      final orientationToSync = _pendingOrientationSync ?? orientation;
+      _pendingOrientationSync = null;
+      if (!mounted) return;
+
+      final fullscreen = orientationToSync == Orientation.landscape;
+      _orientationChangeFallbackTimer?.cancel();
+      setState(() {
+        _isFullscreen = fullscreen;
+        _orientationChangeInFlight = false;
+        _showControls = false;
+        _showSeekOverlay = false;
+      });
+      _syncPlayerSystemUi();
+    });
+  }
+
+  Widget _buildStablePlayerSurface(ChewieController controller) {
+    return RepaintBoundary(
+      key: _playerSurfaceKey,
+      child: Chewie(key: ObjectKey(controller), controller: controller),
+    );
+  }
+
+  Future<void> _togglePlayPause() async {
+    final vp = _videoPlayerController;
+
+    if (vp == null || !vp.value.isInitialized) {
+      return;
+    }
+
+    // Đang buffering thì nút giữa đang là spinner,
+    // không xử lý play/pause.
+    if (vp.value.isBuffering || _isPlaybackBuffering) {
+      return;
+    }
+
+    if (_isPlaybackCompleted) {
+      _autoPlayTriggered = true;
+
+      await vp.seekTo(Duration.zero);
+
+      if (!mounted) return;
+
+      _setPlaybackCompleted(false);
+      await vp.play();
+
+      _autoPlayTriggered = false;
+    } else if (vp.value.isPlaying) {
+      await vp.pause();
+    } else {
+      await vp.play();
+    }
+
+    if (!mounted) return;
+
+    // Bảo đảm những widget ngoài ValueListenableBuilder
+    // cũng nhận được trạng thái mới.
+    setState(() {});
 
     _resetHideControlsTimer();
   }
 
-  void _togglePlayPause() {
-    if (_chewieController == null) return;
+  void _retryCurrentVideo() {
+    final sourceUrl = _currentEpisodeLink?.trim();
+    if (sourceUrl == null || sourceUrl.isEmpty) return;
+    unawaited(_disposeAndInitializePlayer(sourceUrl));
+  }
 
-    if (_chewieController!.isPlaying) {
-      _chewieController!.pause();
-    } else {
-      _chewieController!.play();
+  Widget _buildPlayerError(String message) {
+    final canRetry = _currentEpisodeLink?.trim().isNotEmpty ?? false;
+
+    return Semantics(
+      liveRegion: true,
+      label: message,
+      child: Center(
+        child: Container(
+          constraints: const BoxConstraints(maxWidth: 320),
+          margin: const EdgeInsets.symmetric(horizontal: 24),
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+          decoration: BoxDecoration(
+            color: Colors.black.withValues(alpha: 0.72),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(
+                Icons.signal_wifi_connected_no_internet_4_rounded,
+                color: Colors.white70,
+                size: 30,
+              ),
+              const SizedBox(height: 10),
+              Text(
+                message,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              if (canRetry) ...[
+                const SizedBox(height: 12),
+                FilledButton.icon(
+                  onPressed: _retryCurrentVideo,
+                  icon: const Icon(Icons.refresh_rounded, size: 17),
+                  label: const Text('Thử lại'),
+                  style: FilledButton.styleFrom(
+                    foregroundColor: Colors.black,
+                    backgroundColor: AppColor.secondColor,
+                    visualDensity: VisualDensity.compact,
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLoadingStatus(String message, {bool dimBackground = false}) {
+    return Semantics(
+      liveRegion: true,
+      label: message,
+      child: ColoredBox(
+        color: dimBackground
+            ? Colors.black.withValues(alpha: 0.24)
+            : Colors.transparent,
+        child: Center(
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
+            decoration: BoxDecoration(
+              color: Colors.black.withValues(alpha: 0.68),
+              borderRadius: BorderRadius.circular(999),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.10)),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2.2,
+                    color: AppColor.secondColor,
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Text(
+                  message,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _openCommentsSheet(BuildContext providerContext) async {
+    final videoContext = _videoBoxKey.currentContext;
+    final videoBox = videoContext?.findRenderObject() as RenderBox?;
+
+    if (videoBox == null || !videoBox.hasSize) return;
+
+    // Vị trí video trên toàn màn hình
+    final videoPosition = videoBox.localToGlobal(Offset.zero);
+    final videoBottom = videoPosition.dy + videoBox.size.height;
+
+    final screenHeight = MediaQuery.sizeOf(providerContext).height;
+
+    // Bottom sheet chỉ cao từ mép dưới video đến đáy màn hình
+    final sheetHeight = (screenHeight - videoBottom)
+        .clamp(0.0, screenHeight)
+        .toDouble();
+
+    // Dùng lại CommentsCubit đang có của MoviePlayerPage
+    final commentsCubit = providerContext.read<CommentsCubit>();
+
+    await showModalBottomSheet<void>(
+      context: providerContext,
+      isScrollControlled: true,
+      useSafeArea: false,
+      backgroundColor: Colors.transparent,
+
+      // Không làm tối video phía trên
+      barrierColor: Colors.transparent,
+
+      // Cho phép kéo xuống hoặc chạm video để đóng
+      enableDrag: true,
+      isDismissible: true,
+
+      builder: (sheetContext) {
+        return BlocProvider.value(
+          value: commentsCubit,
+          child: SizedBox(
+            height: sheetHeight,
+            width: double.infinity,
+            child: ClipRRect(
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(18),
+              ),
+              child: Material(
+                color: const Color(0xff191A24),
+                child: Column(
+                  children: [
+                    // Thanh kéo nhỏ giống YouTube
+                    SizedBox(
+                      height: 22,
+                      child: Center(
+                        child: Container(
+                          width: 42,
+                          height: 4,
+                          decoration: BoxDecoration(
+                            color: Colors.white24,
+                            borderRadius: BorderRadius.circular(99),
+                          ),
+                        ),
+                      ),
+                    ),
+
+                    // Dùng nguyên giao diện và chức năng CommentsTab
+                    const Expanded(child: CommentsTab()),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildPlayerPlaceholder() {
+    final errorText = _playerLoadError;
+
+    if (errorText != null) {
+      return _buildPlayerError(errorText);
     }
-    _resetHideControlsTimer();
+
+    // Spinner đã nằm ở vị trí nút play/pause.
+    return const ColoredBox(color: Colors.black);
+  }
+
+  Widget _buildPlaybackStatusOverlay() {
+    final controller = _videoPlayerController;
+
+    if (controller == null) {
+      return const SizedBox.shrink();
+    }
+
+    return ValueListenableBuilder<VideoPlayerValue>(
+      valueListenable: controller,
+      builder: (context, value, _) {
+        if (!value.hasError) {
+          return const SizedBox.shrink(key: ValueKey('playback-ready'));
+        }
+
+        return KeyedSubtree(
+          key: const ValueKey('playback-error'),
+          child: _buildPlayerError('Không thể phát video. Vui lòng thử lại.'),
+        );
+      },
+    );
   }
 
   void _collapseVideo() {
@@ -1241,14 +2344,26 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
         _videoHeight = _minVideoHeight;
         _isExpanded = false;
       });
+
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          _syncPlayerSystemUi();
+        }
+      });
     }
   }
 
-  void _enterMiniPlayer() {
+  Future<void> _enterMiniPlayer() async {
     final controller = _chewieController;
     if (controller == null) return;
 
+    unawaited(_saveWatchProgress());
     _removeVpListeners();
+    _isFullscreen = false;
+    _resetLandscapeZoom();
+    await SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+    await SupportRotateScreen.onlyPotrait();
+    if (!mounted) return;
 
     final launchData = MiniPlayerLaunchData(
       slug: widget.slug,
@@ -1271,12 +2386,10 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
     _chewieController = null;
     _videoPlayerController = null;
 
-    SupportRotateScreen.onlyPotrait();
-
     context.pop();
   }
 
-  void _seekTo(double position) {
+  Future<void> _seekTo(double position) async {
     final controller = _chewieController;
     if (controller == null) return;
 
@@ -1284,7 +2397,84 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
     final newPosition = Duration(
       milliseconds: (position * duration.inMilliseconds).round(),
     );
-    controller.seekTo(newPosition);
+    await controller.seekTo(newPosition);
+  }
+
+  double? _seekFractionFromLocal(double localDx, double width) {
+    if (width <= 0) {
+      return null;
+    }
+
+    return (localDx / width).clamp(0.0, 1.0).toDouble();
+  }
+
+  Duration _seekTargetForFraction(VideoPlayerValue value, double fraction) {
+    final durationMs = value.duration.inMilliseconds;
+    if (durationMs <= 0) return Duration.zero;
+
+    return Duration(milliseconds: (durationMs * fraction).round());
+  }
+
+  void _startSeekbarDrag(
+    double localDx,
+    double width, {
+    required bool keepControlsVisible,
+  }) {
+    final vp = _videoPlayerController;
+    if (vp == null || !vp.value.isInitialized) return;
+
+    final fraction = _seekFractionFromLocal(localDx, width);
+    if (fraction == null) return;
+
+    final target = _seekTargetForFraction(vp.value, fraction);
+
+    _hideControlsTimer?.cancel();
+    _seekThrottle?.cancel();
+    _wasPlayingBeforeScrub = vp.value.isPlaying;
+
+    setState(() {
+      _showControls = keepControlsVisible;
+      _isScrubbing = true;
+      _scrubValue = fraction;
+      _previewPosition = target;
+    });
+
+    _seekToThrottled(target, ms: 45);
+  }
+
+  void _updateSeekbarDrag(double localDx, double width) {
+    final vp = _videoPlayerController;
+    if (vp == null || !vp.value.isInitialized) return;
+
+    final fraction = _seekFractionFromLocal(localDx, width);
+    if (fraction == null) return;
+
+    final target = _seekTargetForFraction(vp.value, fraction);
+
+    setState(() {
+      _scrubValue = fraction;
+      _previewPosition = target;
+    });
+
+    _seekToThrottled(target, ms: 70);
+  }
+
+  Future<void> _finishSeekbarDrag({required bool keepControlsVisible}) async {
+    final vp = _videoPlayerController;
+    if (vp == null || !vp.value.isInitialized) return;
+
+    _seekThrottle?.cancel();
+    await _seekTo(_scrubValue);
+
+    if (_wasPlayingBeforeScrub && !vp.value.isPlaying) {
+      await vp.play();
+    }
+
+    if (!mounted) return;
+    setState(() {
+      _showControls = keepControlsVisible;
+      _isScrubbing = false;
+    });
   }
 
   void _ensureEpisodeKeys(int count) {
@@ -1417,30 +2607,43 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColor.bgApp,
-      body: OrientationBuilder(
-        builder: (context, orientation) {
-          final rotated =
-              _lastOrientation != null && _lastOrientation != orientation;
-          _lastOrientation = orientation;
+    return BlocProvider<CommentsCubit>(
+      create: (_) => CommentsCubit(
+        repository: sl<CommentRepository>(),
+        movieSlug: widget.slug,
+      )..loadInitial(),
+      child: Scaffold(
+        backgroundColor: Colors.black,
+        body: OrientationBuilder(
+          builder: (context, orientation) {
+            final previousOrientation = _lastOrientation;
+            final rotated =
+                previousOrientation != null &&
+                previousOrientation != orientation;
 
-          if (rotated) {
-            _scrollToCurrentEpisode(animated: false);
-          }
+            _lastOrientation = orientation;
 
-          if (orientation == Orientation.portrait &&
-              (_landscapeZoomScale != _landscapeZoomMin ||
-                  _showLandscapeZoomLabel)) {
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              if (mounted) _resetLandscapeZoom();
-            });
-          }
+            if (previousOrientation == null || rotated) {
+              _syncFullscreenWithOrientation(orientation);
+            }
 
-          return orientation == Orientation.landscape
-              ? _buildLandscapePlayer()
-              : _buildPortraitPlayer();
-        },
+            if (rotated) {
+              _scrollToCurrentEpisode(animated: false);
+            }
+
+            if (orientation == Orientation.portrait &&
+                (_landscapeZoomScale != _landscapeZoomMin ||
+                    _showLandscapeZoomLabel)) {
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (mounted) _resetLandscapeZoom();
+              });
+            }
+
+            return orientation == Orientation.landscape
+                ? _buildLandscapePlayer()
+                : _buildPortraitPlayer();
+          },
+        ),
       ),
     );
   }
@@ -1496,6 +2699,115 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
           ),
         );
       },
+    );
+  }
+
+  Widget _buildBatteryIndicator() {
+    final level = _batteryLevel.clamp(0, 100);
+    final fraction = level / 100.0;
+
+    final Color fillColor;
+
+    if (_isCharging || _batteryState == BatteryState.full) {
+      fillColor = const Color(0xff34C759); // Xanh khi sạc hoặc đầy
+    } else if (level <= 15) {
+      fillColor = const Color(0xffFF453A); // Đỏ khi gần hết pin
+    } else if (level <= 30) {
+      fillColor = const Color(0xffFFD60A); // Vàng khi pin yếu
+    } else {
+      fillColor = Colors.white;
+    }
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          '$level%',
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 13,
+            fontWeight: FontWeight.w700,
+            shadows: [Shadow(color: Colors.black87, blurRadius: 5)],
+          ),
+        ),
+        const SizedBox(width: 5),
+
+        // Tổng chiều rộng gồm thân pin và đầu pin.
+        SizedBox(
+          width: 29,
+          height: 18,
+          child: Stack(
+            clipBehavior: Clip.none,
+            alignment: Alignment.centerLeft,
+            children: [
+              // Thân pin
+              Positioned(
+                left: 0,
+                top: 1,
+                bottom: 1,
+                right: 4,
+                child: Container(
+                  padding: const EdgeInsets.all(2),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(3.5),
+                    border: Border.all(color: Colors.white, width: 1.2),
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(1.7),
+                    child: Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        // Nền rỗng của pin
+                        ColoredBox(color: Colors.white.withValues(alpha: 0.13)),
+
+                        // Lượng pin thật theo phần trăm
+                        TweenAnimationBuilder<double>(
+                          tween: Tween<double>(end: fraction),
+                          duration: const Duration(milliseconds: 300),
+                          curve: Curves.easeOutCubic,
+                          builder: (context, animatedFraction, child) {
+                            return Align(
+                              alignment: Alignment.centerLeft,
+                              child: FractionallySizedBox(
+                                widthFactor: animatedFraction,
+                                heightFactor: 1,
+                                child: ColoredBox(color: fillColor),
+                              ),
+                            );
+                          },
+                        ),
+
+                        // Biểu tượng sét khi đang sạc
+                        if (_isCharging)
+                          const Center(
+                            child: Icon(
+                              Icons.bolt_rounded,
+                              size: 10,
+                              color: Colors.white,
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+
+              // Đầu pin
+              Positioned(
+                right: 0,
+                child: Container(
+                  width: 3,
+                  height: 6,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(1.5),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 
@@ -1594,6 +2906,71 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
     );
   }
 
+  Widget _buildLandscapeStatusHeader() {
+    final viewPadding = MediaQuery.viewPaddingOf(context);
+    final time = DateFormat('HH:mm').format(_statusNow);
+
+    return Positioned(
+      top: 0,
+      left: 0,
+      right: 0,
+      height: 42,
+      child: IgnorePointer(
+        child: AnimatedOpacity(
+          opacity: _controlsVisible ? 1 : 0,
+          duration: const Duration(milliseconds: 180),
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  Colors.black.withValues(alpha: 0.72),
+                  Colors.black.withValues(alpha: 0.28),
+                  Colors.transparent,
+                ],
+              ),
+            ),
+            child: Padding(
+              padding: EdgeInsets.only(
+                left: viewPadding.left + 18,
+                right: viewPadding.right + 18,
+                top: 7,
+                bottom: 7,
+              ),
+              child: Row(
+                children: [
+                  // Giờ bên trái
+                  SizedBox(width: 80, child: _buildNetworkIndicator()),
+
+                  // Wi-Fi chính giữa
+                  Expanded(
+                    child: Center(
+                      child: Text(
+                        time,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                          shadows: [
+                            Shadow(color: Colors.black87, blurRadius: 6),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  // Phần trăm pin bên phải
+                  SizedBox(width: 80, child: _buildBatteryIndicator()),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildTopAppbarScrim({required bool isExpanded}) {
     final h = isExpanded ? 160.0 : 110.0; // tuỳ bạn
     return Positioned(
@@ -1603,7 +2980,7 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
       height: h,
       child: IgnorePointer(
         child: AnimatedOpacity(
-          opacity: _showControls ? 1.0 : 0.0,
+          opacity: _controlsVisible ? 1.0 : 0.0,
           duration: const Duration(milliseconds: 180),
           curve: Curves.easeOutCubic,
           child: DecoratedBox(
@@ -1721,19 +3098,13 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
               Center(
                 child: AspectRatio(
                   aspectRatio: 16 / 9,
-                  child: Chewie(controller: _chewieController!),
+                  child: _buildStablePlayerSurface(_chewieController!),
                 ),
               )
             else
-              Center(
-                child: LoadingAnimationWidget.stretchedDots(
-                  color: AppColor.secondColor,
-                  size: 20,
-                ),
-              ),
-
-            if (_showControls && _chewieController != null)
-              _buildPlayPauseOverlay(),
+              _buildPlayerPlaceholder(),
+            _buildPlayPauseOverlay(),
+            _buildPlaybackStatusOverlay(),
             if (_showSeekOverlay && _seekDir != null) _buildSeekOverlay(50),
             // ✅ THÊM scrim cho appbar ở đây (nằm dưới appbar row)
             _buildTopAppbarScrim(isExpanded: isExpanded),
@@ -1742,9 +3113,9 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
               left: 8,
               right: 0,
               child: IgnorePointer(
-                ignoring: !_showControls,
+                ignoring: !_controlsVisible,
                 child: AnimatedOpacity(
-                  opacity: _showControls ? 1 : 0,
+                  opacity: _controlsVisible ? 1 : 0,
                   duration: const Duration(milliseconds: 200),
                   child: Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 10),
@@ -1757,7 +3128,9 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
                             color: Colors.white,
                             size: 18,
                           ),
-                          onPressed: () => context.pop(),
+                          onPressed: () {
+                            unawaited(_exitPlayerPage());
+                          },
                         ),
                         const Spacer(),
                         if (widget.movie.episode_current != 'Full')
@@ -1815,9 +3188,9 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
       left: 30,
       right: 12,
       child: IgnorePointer(
-        ignoring: !_showControls,
+        ignoring: !_controlsVisible,
         child: AnimatedOpacity(
-          opacity: _showControls ? 1 : 0,
+          opacity: _controlsVisible ? 1 : 0,
           duration: const Duration(milliseconds: 180),
           curve: Curves.easeOut,
           child: AnimatedSlide(
@@ -2041,6 +3414,62 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
     );
   }
 
+  Widget _buildCommentPreviewShimmer() {
+    return Shimmer.fromColors(
+      baseColor: const Color(0xff2A2A2A),
+      highlightColor: const Color(0xff454545),
+      period: const Duration(milliseconds: 1100),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          // Avatar giả
+          Container(
+            width: 30.r,
+            height: 30.r,
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              shape: BoxShape.circle,
+            ),
+          ),
+
+          SizedBox(width: 8.w),
+
+          // Nội dung bình luận giả
+          Expanded(
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      width: constraints.maxWidth,
+                      height: 8.h,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(4.r),
+                      ),
+                    ),
+
+                    SizedBox(height: 6.h),
+
+                    Container(
+                      width: constraints.maxWidth * 0.65,
+                      height: 8.h,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(4.r),
+                      ),
+                    ),
+                  ],
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildPortraitPlayer() {
     // Khi expand video, ẩn SafeArea để video nằm chính giữa
     final isExpanded = _videoHeight >= _maxVideoHeight - 100;
@@ -2069,7 +3498,9 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
 
     // CHỐT: bình thường luôn hiện, expand thì phụ thuộc _showControls
     // final showSeekbar = isExpandedNow ? _showControls : true;
-    final showSeekbar = isExpandedNow ? (_showControls || _isScrubbing) : true;
+    final showSeekbar = isExpandedNow
+        ? (_controlsVisible || _isScrubbing)
+        : true;
     return AnimatedPadding(
       duration: const Duration(milliseconds: 140),
       curve: Curves.bounceInOut,
@@ -2119,9 +3550,18 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
                           });
                         });
                       }
+                      final commentsState = context
+                          .watch<CommentsCubit>()
+                          .state;
+
+                      final firstComment = commentsState.comments.isNotEmpty
+                          ? commentsState.comments.first
+                          : null;
+                      final isCommentsLoading =
+                          commentsState.status == CommentsStatus.loading;
                       return Stack(
                         children: [
-                          // Ambient blur ở trên cùng
+                          // Ambient blur cpc  trên cùng
                           if (!isExpanded)
                             Positioned(
                               top: 0,
@@ -2246,25 +3686,294 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
                                                 );
                                               },
                                             ),
+                                          SizedBox(height: 10.h),
+                                          // Bình luận
+                                          Material(
+                                            color: Colors.transparent,
+                                            borderRadius: BorderRadius.circular(
+                                              12.r,
+                                            ),
+                                            clipBehavior: Clip.antiAlias,
+                                            child: Ink(
+                                              width: double.infinity,
+                                              decoration: BoxDecoration(
+                                                color: const Color(0xff1A1A22),
+                                                borderRadius:
+                                                    BorderRadius.circular(12.r),
+                                                border: Border.all(
+                                                  color: Colors.white
+                                                      .withOpacity(0.1),
+                                                ),
+                                              ),
+                                              child: InkWell(
+                                                borderRadius:
+                                                    BorderRadius.circular(12.r),
+                                                splashFactory:
+                                                    InkSplash.splashFactory,
+                                                splashColor: Colors.white
+                                                    .withValues(alpha: 0.045),
+                                                highlightColor: Colors.white
+                                                    .withValues(alpha: 0.025),
+                                                onTap: () =>
+                                                    _openCommentsSheet(context),
+                                                child: Padding(
+                                                  padding: EdgeInsets.all(12.w),
+                                                  child: Column(
+                                                    crossAxisAlignment:
+                                                        CrossAxisAlignment
+                                                            .start,
+                                                    children: [
+                                                      Text.rich(
+                                                        TextSpan(
+                                                          children: [
+                                                            TextSpan(
+                                                              text: 'Bình luận',
+                                                              style: TextStyle(
+                                                                fontSize: 14.sp,
+                                                                fontWeight:
+                                                                    FontWeight
+                                                                        .w600,
+                                                                color: Colors
+                                                                    .white,
+                                                              ),
+                                                            ),
+                                                            WidgetSpan(
+                                                              child: SizedBox(
+                                                                width: 6.w,
+                                                              ),
+                                                            ),
+                                                            TextSpan(
+                                                              text:
+                                                                  isCommentsLoading
+                                                                  ? ''
+                                                                  : '${commentsState.totalCount}',
+                                                              style: TextStyle(
+                                                                fontSize: 12.sp,
+                                                                fontWeight:
+                                                                    FontWeight
+                                                                        .w400,
+                                                                color:
+                                                                    const Color(
+                                                                      0xffAAAAAA,
+                                                                    ),
+                                                              ),
+                                                            ),
+                                                          ],
+                                                        ),
+                                                      ),
+
+                                                      SizedBox(height: 8.h),
+
+                                                      AnimatedSwitcher(
+                                                        duration:
+                                                            const Duration(
+                                                              milliseconds: 220,
+                                                            ),
+                                                        switchInCurve:
+                                                            Curves.easeOut,
+                                                        switchOutCurve:
+                                                            Curves.easeIn,
+                                                        child: isCommentsLoading
+                                                            ? KeyedSubtree(
+                                                                key: const ValueKey(
+                                                                  'comments-loading',
+                                                                ),
+                                                                child:
+                                                                    _buildCommentPreviewShimmer(),
+                                                              )
+                                                            : firstComment !=
+                                                                  null
+                                                            ? Row(
+                                                                key: const ValueKey(
+                                                                  'comments-loaded',
+                                                                ),
+                                                                crossAxisAlignment:
+                                                                    CrossAxisAlignment
+                                                                        .center,
+                                                                children: [
+                                                                  CircleAvatar(
+                                                                    radius:
+                                                                        15.r,
+                                                                    backgroundColor:
+                                                                        const Color(
+                                                                          0xff6155A6,
+                                                                        ),
+                                                                    backgroundImage:
+                                                                        firstComment.authorAvatarUrl !=
+                                                                                null &&
+                                                                            firstComment.authorAvatarUrl!.trim().isNotEmpty
+                                                                        ? NetworkImage(
+                                                                            firstComment.authorAvatarUrl!,
+                                                                          )
+                                                                        : null,
+                                                                    child:
+                                                                        firstComment.authorAvatarUrl ==
+                                                                                null ||
+                                                                            firstComment.authorAvatarUrl!.trim().isEmpty
+                                                                        ? Text(
+                                                                            firstComment.authorName.trim().isEmpty
+                                                                                ? '?'
+                                                                                : firstComment.authorName.trim()[0].toUpperCase(),
+                                                                            style: TextStyle(
+                                                                              color: Colors.white,
+                                                                              fontSize: 11.sp,
+                                                                              fontWeight: FontWeight.w700,
+                                                                            ),
+                                                                          )
+                                                                        : null,
+                                                                  ),
+
+                                                                  SizedBox(
+                                                                    width: 8.w,
+                                                                  ),
+
+                                                                  Expanded(
+                                                                    child: Text(
+                                                                      firstComment
+                                                                              .isDeleted
+                                                                          ? 'Bình luận đã bị xóa'
+                                                                          : firstComment.body,
+                                                                      maxLines:
+                                                                          2,
+                                                                      overflow:
+                                                                          TextOverflow
+                                                                              .ellipsis,
+                                                                      style: TextStyle(
+                                                                        color: Colors
+                                                                            .white
+                                                                            .withOpacity(
+                                                                              0.85,
+                                                                            ),
+                                                                        fontSize:
+                                                                            11.sp,
+                                                                        height:
+                                                                            1.3,
+                                                                      ),
+                                                                    ),
+                                                                  ),
+                                                                ],
+                                                              )
+                                                            : GestureDetector(
+                                                                behavior:
+                                                                    HitTestBehavior
+                                                                        .opaque,
+
+                                                                onTapDown: (_) {
+                                                                  setState(() {
+                                                                    _isCommentsEmptyPressed =
+                                                                        true;
+                                                                  });
+                                                                },
+
+                                                                onTapUp: (_) {
+                                                                  setState(() {
+                                                                    _isCommentsEmptyPressed =
+                                                                        false;
+                                                                  });
+                                                                },
+
+                                                                onTapCancel: () {
+                                                                  setState(() {
+                                                                    _isCommentsEmptyPressed =
+                                                                        false;
+                                                                  });
+                                                                },
+
+                                                                onTap: () =>
+                                                                    _openCommentsSheet(
+                                                                      context,
+                                                                    ),
+
+                                                                child: AnimatedContainer(
+                                                                  key: const ValueKey(
+                                                                    'comments-empty',
+                                                                  ),
+                                                                  duration:
+                                                                      const Duration(
+                                                                        milliseconds:
+                                                                            120,
+                                                                      ),
+                                                                  curve: Curves
+                                                                      .easeOut,
+
+                                                                  width: double
+                                                                      .infinity,
+                                                                  padding: EdgeInsets.symmetric(
+                                                                    vertical:
+                                                                        8.h,
+                                                                    horizontal:
+                                                                        12.w,
+                                                                  ),
+
+                                                                  decoration: BoxDecoration(
+                                                                    color:
+                                                                        _isCommentsEmptyPressed
+                                                                        ? Colors.white.withValues(
+                                                                            alpha:
+                                                                                0.16,
+                                                                          )
+                                                                        : Colors.grey.withValues(
+                                                                            alpha:
+                                                                                0.10,
+                                                                          ),
+
+                                                                    borderRadius:
+                                                                        BorderRadius.circular(
+                                                                          30.r,
+                                                                        ),
+
+                                                                    border: Border.all(
+                                                                      color:
+                                                                          _isCommentsEmptyPressed
+                                                                          ? Colors.white.withValues(
+                                                                              alpha: 0.20,
+                                                                            )
+                                                                          : Colors.transparent,
+                                                                    ),
+
+                                                                    boxShadow:
+                                                                        _isCommentsEmptyPressed
+                                                                        ? [
+                                                                            BoxShadow(
+                                                                              color: Colors.white.withValues(
+                                                                                alpha: 0.12,
+                                                                              ),
+                                                                              blurRadius: 14,
+                                                                              spreadRadius: 1,
+                                                                            ),
+                                                                          ]
+                                                                        : const [],
+                                                                  ),
+
+                                                                  child: Text(
+                                                                    'Chưa có bình luận',
+                                                                    style: TextStyle(
+                                                                      color:
+                                                                          _isCommentsEmptyPressed
+                                                                          ? Colors.white70
+                                                                          : Colors.white38,
+                                                                      fontSize:
+                                                                          11.sp,
+                                                                    ),
+                                                                  ),
+                                                                ),
+                                                              ),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+                                          ),
                                         ],
                                       ),
                                     ),
-                                    const SizedBox(height: 10),
-                                    if (widget.movie.episode_current != 'Full')
-                                      Column(
-                                        spacing: 3,
-                                        children: [
-                                          _buildListServerForSeriesMovie(),
-                                          _textFieldEpisode(),
-                                        ],
-                                      ),
-
                                     const SizedBox(height: 10),
                                     Expanded(
                                       child:
                                           widget.movie.episode_current == 'Full'
                                           ? _buildEpisodeListForSingle()
-                                          : _buidlListEpisodeForSeriesMovie(),
+                                          : _buildEpisodeListForSeriesMovie(),
                                     ),
                                   ],
                                 ),
@@ -2280,7 +3989,7 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
             ],
           ),
           // 1) Info row + fullscreen (only show when _showControls)
-          if (_showControls) ...[
+          if (_controlsVisible) ...[
             Positioned(
               top:
                   _videoHeight -
@@ -2313,101 +4022,247 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
   }
 
   Widget _textFieldEpisode() {
-    // final isSingle = widget.movie.type == 'single';
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 10),
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 16),
-        padding: const EdgeInsets.only(left: 10),
-        decoration: BoxDecoration(
-          color: const Color(0xff1A1A22), // Dark bg like screenshot
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: Colors.white.withOpacity(0.1)),
-        ),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            Expanded(
-              flex: 1,
-              child: Text(
-                'Tập 1 - ${widget.episodes[_selectedServerIndex].server_data.length}',
-                style: const TextStyle(
-                  color: Colors.white70,
-                  fontSize: 11,
-                  fontWeight: FontWeight.bold,
-                  height: 1.0,
-                ),
-              ),
-            ),
-
-            // Vạch ngăn
-            Container(
-              width: 1,
-              height: 24,
-              color: Colors.white.withOpacity(0.1),
-              margin: const EdgeInsets.symmetric(horizontal: 12),
-            ),
-
-            // Ô nhập chiếm 1 phần
-            Expanded(
-              flex: 1,
-              child: SizedBox(
-                height: 32,
-                child: TextField(
-                  onSubmitted: (_) => _submitEpisode(),
-                  controller: _searchController,
-                  textInputAction: TextInputAction.search,
-                  textAlignVertical: TextAlignVertical.center, // quan trọng
+    return SizedBox(
+      key: const ValueKey('series-episode-search'),
+      height: _searchBarH,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 10),
+        child: Container(
+          margin: const EdgeInsets.only(bottom: 16),
+          padding: const EdgeInsets.only(left: 10),
+          decoration: BoxDecoration(
+            color: const Color(0xff1A1A22), // Dark bg like screenshot
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: Colors.white.withOpacity(0.1)),
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Expanded(
+                flex: 1,
+                child: Text(
+                  'Tập 1 - ${widget.episodes[_selectedServerIndex].server_data.length}',
                   style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 10,
+                    color: Colors.white70,
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
                     height: 1.0,
                   ),
-                  decoration: InputDecoration(
-                    isDense: true,
-                    filled: true,
-                    fillColor: Colors.transparent,
-                    hintText: 'Nhập tập',
-                    hintStyle: const TextStyle(
-                      color: Colors.white30,
+                ),
+              ),
+
+              // Vạch ngăn
+              Container(
+                width: 1,
+                height: 24,
+                color: Colors.white.withOpacity(0.1),
+                margin: const EdgeInsets.symmetric(horizontal: 12),
+              ),
+
+              // Ô nhập chiếm 1 phần
+              Expanded(
+                flex: 1,
+                child: SizedBox(
+                  height: 32,
+                  child: TextField(
+                    onSubmitted: (_) => _submitEpisode(),
+                    controller: _searchController,
+                    textInputAction: TextInputAction.search,
+                    textAlignVertical: TextAlignVertical.center, // quan trọng
+                    style: const TextStyle(
+                      color: Colors.white,
                       fontSize: 10,
                       height: 1.0,
                     ),
-
-                    // bỏ border
-                    border: InputBorder.none,
-                    enabledBorder: InputBorder.none,
-                    focusedBorder: InputBorder.none,
-
-                    // ICON: bóp constraints lại để không bị xa + không làm cao field
-                    prefixIcon: const Padding(
-                      padding: EdgeInsets.only(left: 6, right: 6),
-                      child: Icon(
-                        Iconsax.search_normal_1_copy,
-                        color: Colors.white,
-                        size: 16,
+                    decoration: InputDecoration(
+                      isDense: true,
+                      filled: true,
+                      fillColor: Colors.transparent,
+                      hintText: 'Nhập tập',
+                      hintStyle: const TextStyle(
+                        color: Colors.white30,
+                        fontSize: 10,
+                        height: 1.0,
                       ),
-                    ),
-                    prefixIconConstraints: const BoxConstraints(
-                      minWidth: 28,
-                      minHeight: 32,
-                    ),
-                    suffixIcon: IconButton(
-                      icon: const Icon(
-                        Iconsax.arrow_right_3_copy,
-                        color: Colors.white,
-                        size: 16,
+
+                      // bỏ border
+                      border: InputBorder.none,
+                      enabledBorder: InputBorder.none,
+                      focusedBorder: InputBorder.none,
+
+                      // ICON: bóp constraints lại để không bị xa + không làm cao field
+                      prefixIcon: const Padding(
+                        padding: EdgeInsets.only(left: 6, right: 6),
+                        child: Icon(
+                          Iconsax.search_normal_1_copy,
+                          color: Colors.white,
+                          size: 16,
+                        ),
                       ),
-                      onPressed: _submitEpisode,
+                      prefixIconConstraints: const BoxConstraints(
+                        minWidth: 28,
+                        minHeight: 32,
+                      ),
+                      suffixIcon: IconButton(
+                        icon: const Icon(
+                          Iconsax.arrow_right_3_copy,
+                          color: Colors.white,
+                          size: 16,
+                        ),
+                        onPressed: _submitEpisode,
+                      ),
+
+                      // padding nhỏ để text nằm giữa theo chiều dọc
+                      contentPadding: const EdgeInsets.symmetric(vertical: 0),
+
+                      // optional: nếu muốn hint không "bay" lên khi có label
+                      alignLabelWithHint: true,
                     ),
-
-                    // padding nhỏ để text nằm giữa theo chiều dọc
-                    contentPadding: const EdgeInsets.symmetric(vertical: 0),
-
-                    // optional: nếu muốn hint không "bay" lên khi có label
-                    alignLabelWithHint: true,
                   ),
                 ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEpisodeListForSeriesMovie() {
+    final serverData = widget.episodes[_selectedServerIndex].server_data;
+    _ensureEpisodeKeys(serverData.length);
+    final isPlaying = _videoPlayerController?.value.isPlaying ?? false;
+    final currentServer = widget.episodes[_selectedServerIndex];
+
+    return _wrapOverscrollToResize(
+      controller: _episodeScrollController,
+      child: NotificationListener<ScrollNotification>(
+        onNotification: _handleEpisodeScrollNotification,
+        child: CustomScrollView(
+          key: const ValueKey('series-episode-scroll'),
+          controller: _episodeScrollController,
+          keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+          physics: const AlwaysScrollableScrollPhysics(
+            parent: ClampingScrollPhysics(),
+          ),
+          slivers: [
+            SliverPersistentHeader(
+              floating: false,
+              pinned: true,
+              delegate: _FloatingSeriesControlsDelegate(
+                extent: _seriesControlsExtent,
+                contentHeight: _seriesControlsMaxH,
+                child: Column(
+                  children: [
+                    _buildListServerForSeriesMovie(),
+                    const SizedBox(height: _seriesControlsSpacing),
+                    _textFieldEpisode(),
+                    const SizedBox(height: _seriesControlsBottomSpacing),
+                  ],
+                ),
+              ),
+            ),
+            SliverPadding(
+              key: const ValueKey('series-episode-grid'),
+              padding: EdgeInsets.only(
+                left: 10,
+                right: 10,
+                top: 10,
+                bottom: MediaQuery.of(context).padding.bottom + 20,
+              ),
+              sliver: SliverGrid(
+                gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                  maxCrossAxisExtent: 120,
+                  mainAxisSpacing: 5,
+                  crossAxisSpacing: 5,
+                  mainAxisExtent: 40,
+                  childAspectRatio: 16 / 9,
+                ),
+                delegate: SliverChildBuilderDelegate((context, index) {
+                  final key = _episodeKeys[index];
+                  final episode = serverData[index];
+                  final isActive = _currentEpisodeIndex == index;
+
+                  return KeyedSubtree(
+                    key: key,
+                    child: InkWell(
+                      onTap: () => _playEpisode(index, currentServer),
+                      child: Container(
+                        padding: const EdgeInsets.all(2),
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(
+                          color: const Color(0xff272A39),
+                          borderRadius: BorderRadius.circular(5),
+                          border: Border.all(
+                            color: Colors.white.withValues(alpha: 0.05),
+                          ),
+                          gradient: isActive
+                              ? const LinearGradient(
+                                  colors: [
+                                    Color(0xFFC77DFF),
+                                    Color(0xFFFF9E9E),
+                                    Color(0xFFFFD275),
+                                  ],
+                                  begin: Alignment.topRight,
+                                  end: Alignment.bottomLeft,
+                                )
+                              : null,
+                          boxShadow: isActive
+                              ? const [
+                                  BoxShadow(
+                                    color: Color(0xFFC77DFF),
+                                    blurRadius: 12,
+                                    offset: Offset.zero,
+                                    spreadRadius: -2,
+                                  ),
+                                ]
+                              : null,
+                        ),
+                        child: Row(
+                          spacing: 3,
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            if (isActive) ...[
+                              const SizedBox(width: 3),
+                              SizedBox(
+                                width: 13,
+                                height: 13,
+                                child: Lottie.asset(
+                                  'assets/icons/now_playing.json',
+                                  animate: isPlaying,
+                                  delegates: LottieDelegates(
+                                    values: [
+                                      ValueDelegate.color(const [
+                                        '**',
+                                      ], value: Colors.white),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ],
+                            Flexible(
+                              child: Text(
+                                episode.name,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                softWrap: false,
+                                style: TextStyle(
+                                  color: isActive
+                                      ? Colors.white
+                                      : Colors.white70,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 12,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  );
+                }, childCount: serverData.length),
               ),
             ),
           ],
@@ -2416,132 +4271,9 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
     );
   }
 
-  Widget _buidlListEpisodeForSeriesMovie() {
-    final serverData = widget.episodes[_selectedServerIndex].server_data;
-    _ensureEpisodeKeys(serverData.length); //  BẮT BUỘC
-    final isPlaying = _videoPlayerController?.value.isPlaying ?? false;
-    return Container(
-      decoration: BoxDecoration(
-        border: Border(
-          top: BorderSide(color: Colors.white.withValues(alpha: 0.1)),
-        ),
-      ),
-      child: _wrapOverscrollToResize(
-        controller: _episodeScrollController,
-        child: GridView.builder(
-          controller: _episodeScrollController,
-          physics: const AlwaysScrollableScrollPhysics(
-            parent: ClampingScrollPhysics(),
-          ),
-          padding: EdgeInsets.only(
-            left: 10,
-            right: 10,
-            top: 10,
-            bottom: MediaQuery.of(context).padding.bottom + 20,
-          ),
-          gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
-            maxCrossAxisExtent: 120, // Một ô rộng tối đa 250px.
-            mainAxisSpacing: 5,
-            crossAxisSpacing: 5,
-            mainAxisExtent: 40,
-            childAspectRatio: 16 / 9,
-          ),
-          itemCount: serverData.length,
-          itemBuilder: (context, index) {
-            final key = _episodeKeys[index];
-            final episode = serverData[index];
-
-            // Kiểm tra đang phát: Đúng tập index VÀ đúng Server name
-            // ĐIỂM QUAN TRỌNG:
-            // Chỉ cần index của GridView trùng với _currentEpisodeIndex là nó sẽ sáng đèn,
-            // bất kể bạn đang nhấn xem ở Server nào.
-            final bool isActive = _currentEpisodeIndex == index;
-            final currentServer = widget.episodes[_selectedServerIndex];
-            return KeyedSubtree(
-              key: key,
-              child: InkWell(
-                onTap: () => {_playEpisode(index, currentServer)},
-                child: Container(
-                  padding: const EdgeInsets.all(2),
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    color: const Color(0xff272A39),
-                    borderRadius: BorderRadius.circular(5),
-                    border: Border.all(
-                      color: Colors.white.withValues(alpha: 0.05),
-                    ),
-                    gradient: isActive
-                        ? LinearGradient(
-                            colors: [
-                              Color(0xFFC77DFF), // Tím
-                              Color(0xFFFF9E9E), // Hồng cam (ở giữa)
-                              Color(0xFFFFD275),
-                            ], // Vàng],
-                            begin: Alignment.topRight,
-                            end: Alignment.bottomLeft,
-                          )
-                        : null,
-                    boxShadow: isActive
-                        ? [
-                            BoxShadow(
-                              color: Color(0xFFC77DFF),
-                              blurRadius: 12,
-                              offset: Offset(0, 0),
-                              spreadRadius: -2,
-                            ),
-                          ]
-                        : null,
-                  ),
-                  child: Row(
-                    spacing: 3,
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      if (isActive) ...[
-                        const SizedBox(width: 3),
-                        SizedBox(
-                          width: 13,
-                          height: 13,
-                          child: Lottie.asset(
-                            'assets/icons/now_playing.json',
-                            animate: isPlaying, // ✅ không phát -> đứng yên
-                            delegates: LottieDelegates(
-                              values: [
-                                ValueDelegate.color(const [
-                                  '**',
-                                ], value: Colors.white),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ],
-                      Flexible(
-                        child: Text(
-                          episode.name,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          softWrap: false,
-                          style: TextStyle(
-                            color: isActive ? Colors.white : Colors.white70,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 12,
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            );
-          },
-        ),
-      ),
-    );
-  }
-
   Widget _buildListServerForSeriesMovie() {
     return Container(
+      key: const ValueKey('series-server-bar'),
       padding: const EdgeInsets.only(top: 5, bottom: 5),
       height: 65,
       decoration: BoxDecoration(
@@ -2603,76 +4335,144 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
   }
 
   Widget _buildPlayPauseOverlay() {
-    if (_chewieController == null) return const SizedBox.shrink();
+    final vp = _videoPlayerController;
     final isSeries = widget.movie.episode_current != 'Full';
-    return IgnorePointer(
-      ignoring: !_showControls, // controls ẩn thì nút không bắt sự kiện
-      child: Center(
-        child: ClipRSuperellipse(
-          borderRadius: BorderRadiusGeometry.circular(999),
+
+    Widget buildOverlay({
+      required bool isLoading,
+      required bool isPlaying,
+      required bool canTogglePlayback,
+    }) {
+      final visible = _controlsVisible;
+
+      return IgnorePointer(
+        // Chỉ khóa toàn bộ khi controls đang ẩn.
+        // Loading không được khóa previous/next.
+        ignoring: !visible,
+        child: Center(
           child: AnimatedOpacity(
-            opacity: _showControls ? 1.0 : 0.0,
-            duration: const Duration(milliseconds: 250),
+            opacity: visible ? 1 : 0,
+            duration: const Duration(milliseconds: 180),
             child: Row(
-              spacing: 30,
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                /// 🔙 PREVIOUS EPISODE
-                if (isSeries)
+                // Previous vẫn hiện và vẫn bấm được khi loading.
+                if (isSeries) ...[
                   _buildSideEpisodeButton(
                     icon: Iconsax.previous_copy,
                     onTap: _playPreviousEpisode,
                   ),
-                GestureDetector(
-                  onTap: _togglePlayPause,
-                  child: Container(
-                    padding: const EdgeInsets.all(13),
-                    decoration: BoxDecoration(
-                      color: Colors.black.withValues(alpha: 0.3),
-                      shape: BoxShape.circle,
-                    ),
-                    child: SizedBox(
-                      width: 35, // ✅ cố định
-                      height: 35, // ✅ cố định
-                      child: Center(
-                        child: AnimatedSwitcher(
-                          duration: const Duration(milliseconds: 80),
-                          transitionBuilder: (child, anim) =>
-                              ScaleTransition(scale: anim, child: child),
-                          child: _chewieController!.isPlaying
-                              ? const Icon(
-                                  Iconsax.pause_copy,
-                                  key: ValueKey('pause'),
+                  const SizedBox(width: 30),
+                ],
+
+                // Chỉ riêng nút play/pause đổi thành loading.
+                IgnorePointer(
+                  ignoring: isLoading || !canTogglePlayback,
+                  child: GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: isLoading || !canTogglePlayback
+                        ? null
+                        : () {
+                            unawaited(_togglePlayPause());
+                          },
+                    child: Container(
+                      width: 61,
+                      height: 61,
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        color: Colors.black.withValues(alpha: 0.35),
+                        shape: BoxShape.circle,
+                      ),
+                      child: AnimatedSwitcher(
+                        duration: const Duration(milliseconds: 150),
+                        reverseDuration: const Duration(milliseconds: 120),
+                        transitionBuilder: (child, animation) {
+                          return FadeTransition(
+                            opacity: animation,
+                            child: ScaleTransition(
+                              scale: animation,
+                              child: child,
+                            ),
+                          );
+                        },
+                        child: isLoading
+                            ? SizedBox(
+                                key: const ValueKey('loading'),
+                                width: 29,
+                                height: 29,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2.6,
+                                  color: AppColor.secondColor,
+                                ),
+                              )
+                            : _isPlaybackCompleted
+                            ? const Icon(
+                                Icons.replay_rounded,
+                                key: ValueKey('replay'),
+                                color: Colors.white,
+                                size: 35,
+                              )
+                            : isPlaying
+                            ? const Icon(
+                                Iconsax.pause_copy,
+                                key: ValueKey('pause'),
+                                color: Colors.white,
+                                size: 35,
+                              )
+                            : Transform.translate(
+                                key: const ValueKey('play'),
+                                offset: const Offset(1.5, 0),
+                                child: const Icon(
+                                  Iconsax.play_copy,
                                   color: Colors.white,
                                   size: 35,
-                                )
-                              : Transform.translate(
-                                  // ✅ chỉ dịch hình, KHÔNG đổi kích thước layout
-                                  offset: const Offset(1.5, 0),
-                                  child: const Icon(
-                                    Iconsax.play_copy,
-                                    key: ValueKey('play'),
-                                    color: Colors.white,
-                                    size: 35,
-                                  ),
                                 ),
-                        ),
+                              ),
                       ),
                     ),
                   ),
                 ),
 
-                /// 🔜 NEXT EPISODE
-                if (isSeries)
+                // Next vẫn hiện và vẫn bấm được khi loading.
+                if (isSeries) ...[
+                  const SizedBox(width: 30),
                   _buildSideEpisodeButton(
                     icon: Iconsax.next_copy,
                     onTap: _playNextEpisode,
                   ),
+                ],
               ],
             ),
           ),
         ),
-      ),
+      );
+    }
+
+    // Chưa tạo xong controller:
+    // vẫn hiện back + previous + spinner + next.
+    if (vp == null) {
+      return buildOverlay(
+        isLoading: _playerLoadError == null,
+        isPlaying: false,
+        canTogglePlayback: false,
+      );
+    }
+
+    return ValueListenableBuilder<VideoPlayerValue>(
+      valueListenable: vp,
+      builder: (context, value, _) {
+        final isLoading =
+            _isVideoLoading ||
+            !value.isInitialized ||
+            _isPlaybackBuffering ||
+            value.isBuffering;
+
+        return buildOverlay(
+          isLoading: isLoading,
+          isPlaying: value.isPlaying,
+          canTogglePlayback: value.isInitialized && !value.hasError,
+        );
+      },
     );
   }
 
@@ -2766,10 +4566,10 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
                               right: Radius.circular(10),
                             ),
                             child: FastCachedImage(
-                              url: AppUrl.convertImageDirect(
-                                widget.movie.poster_url,
-                              ),
+                              url: widget.movie.poster_url,
                               fit: BoxFit.cover,
+                              cacheWidth: 600,
+                              cacheHeight: 900,
                               loadingBuilder: (context, loadingProgress) {
                                 return _buildSkeletonForposter();
                               },
@@ -3002,11 +4802,74 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
     );
   }
 
-  Widget _buildControlBar(double? trackHeight) {
-    final chewie = _chewieController;
-    if (chewie == null) return const SizedBox();
+  Widget _buildLoadingControlBar(double? trackHeight) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 10),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 5,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.black.withValues(alpha: 0.2),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: const Text(
+                  '00:00 / 00:00',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              const Spacer(),
+              Container(
+                width: 34,
+                height: 34,
+                decoration: BoxDecoration(
+                  color: Colors.black.withValues(alpha: 0.2),
+                  shape: BoxShape.circle,
+                ),
+                child: IconButton(
+                  padding: const EdgeInsets.all(5),
+                  onPressed: _toggleFullscreen,
+                  icon: SvgPicture.asset(
+                    _isFullscreen
+                        ? 'assets/icons/fullscreen_exit.svg'
+                        : 'assets/icons/fullscreen.svg',
+                    width: 25,
+                    height: 25,
+                    colorFilter: const ColorFilter.mode(
+                      Colors.white,
+                      BlendMode.srcIn,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 8),
+        Container(
+          height: trackHeight ?? _seekbarVisualHeight,
+          color: Colors.white.withValues(alpha: 0.15),
+        ),
+      ],
+    );
+  }
 
-    final vp = chewie.videoPlayerController;
+  Widget _buildControlBar(double? trackHeight) {
+    final vp = _videoPlayerController;
+
+    if (vp == null) {
+      return _buildLoadingControlBar(trackHeight);
+    }
 
     return ValueListenableBuilder<VideoPlayerValue>(
       valueListenable: vp,
@@ -3026,7 +4889,7 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
         return Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            if (_showControls)
+            if (_controlsVisible)
               Padding(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 10,
@@ -3088,15 +4951,19 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
                         shape: BoxShape.circle,
                       ),
                       child: IconButton(
-                        padding: EdgeInsets.zero,
-                        iconSize: 25,
-                        icon: Icon(
-                          _isFullscreen
-                              ? Icons.fullscreen_exit
-                              : Icons.fullscreen,
-                          color: Colors.white,
-                        ),
+                        padding: EdgeInsets.all(5),
                         onPressed: _toggleFullscreen,
+                        icon: SvgPicture.asset(
+                          _isFullscreen
+                              ? 'assets/icons/fullscreen_exit.svg'
+                              : 'assets/icons/fullscreen.svg',
+                          width: 25,
+                          height: 25,
+                          colorFilter: const ColorFilter.mode(
+                            Colors.white,
+                            BlendMode.srcIn,
+                          ),
+                        ),
                       ),
                     ),
                   ],
@@ -3105,7 +4972,9 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
             SliderTheme(
               data: SliderThemeData(
                 padding: EdgeInsets.zero,
-                trackHeight: _isScrubbing ? 4 : trackHeight ?? 2,
+                trackHeight: _isScrubbing
+                    ? 4
+                    : trackHeight ?? _seekbarVisualHeight,
                 trackShape: GradientBufferedSliderTrackShape(
                   buffered: buffered,
                   bufferedColor: Colors.white.withValues(alpha: 0.35),
@@ -3127,54 +4996,54 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
                 overlayColor: AppColor.secondColor.withValues(alpha: 0.2),
                 showValueIndicator: ShowValueIndicator.never,
               ),
-              child: GestureDetector(
-                behavior: HitTestBehavior.opaque,
-                onPanDown: (_) {
-                  _hideControlsTimer?.cancel();
-                  setState(() {
-                    _showControls = false;
-                    _isScrubbing = true;
-                  });
-                },
-                onPanUpdate: (d) {
-                  final box = context.findRenderObject() as RenderBox?;
-                  if (box == null) return;
-
-                  final local = box.globalToLocal(d.globalPosition);
-                  final w = box.size.width;
-                  final v = (local.dx / w).clamp(0.0, 1.0);
-
-                  setState(() => _scrubValue = v);
-                },
-                onPanEnd: (_) {
-                  _seekTo(_scrubValue);
-                  setState(() {
-                    _showControls = false;
-                    _isScrubbing = false;
-                  });
-                },
-                child: SizedBox(
-                  height: 20, // chừa đủ cho thumb/overlay
-                  child: Align(
-                    alignment: Alignment.bottomCenter,
-                    child: Slider(
-                      value: sliderValue.clamp(0.0, 1.0),
-                      onChanged: (v) {
-                        setState(() {
-                          _isScrubbing = true;
-                          _scrubValue = v;
-                        });
-                      },
-                      onChangeEnd: (_) {
-                        _seekTo(_scrubValue);
-                        setState(() {
-                          _showControls = false;
-                          _isScrubbing = false;
-                        });
-                      },
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final seekbarWidth = constraints.maxWidth;
+                  return GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTapDown: (details) {
+                      _startSeekbarDrag(
+                        details.localPosition.dx,
+                        seekbarWidth,
+                        keepControlsVisible: false,
+                      );
+                    },
+                    onTapUp: (_) => unawaited(
+                      _finishSeekbarDrag(keepControlsVisible: false),
                     ),
-                  ),
-                ),
+                    onHorizontalDragStart: (details) {
+                      _startSeekbarDrag(
+                        details.localPosition.dx,
+                        seekbarWidth,
+                        keepControlsVisible: false,
+                      );
+                    },
+                    onHorizontalDragUpdate: (details) {
+                      _updateSeekbarDrag(
+                        details.localPosition.dx,
+                        seekbarWidth,
+                      );
+                    },
+                    onHorizontalDragEnd: (_) => unawaited(
+                      _finishSeekbarDrag(keepControlsVisible: false),
+                    ),
+                    onHorizontalDragCancel: () => unawaited(
+                      _finishSeekbarDrag(keepControlsVisible: false),
+                    ),
+                    child: SizedBox(
+                      height: 20, // chừa đủ cho thumb/overlay
+                      child: Align(
+                        alignment: Alignment.bottomCenter,
+                        child: IgnorePointer(
+                          child: Slider(
+                            value: sliderValue.clamp(0.0, 1.0).toDouble(),
+                            onChanged: (_) {},
+                          ),
+                        ),
+                      ),
+                    ),
+                  );
+                },
               ),
             ),
           ],
@@ -3246,13 +5115,19 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
                   shape: BoxShape.circle,
                 ),
                 child: IconButton(
-                  padding: EdgeInsets.zero,
-                  iconSize: 25,
-                  icon: Icon(
-                    _isFullscreen ? Icons.fullscreen_exit : Icons.fullscreen,
-                    color: Colors.white,
-                  ),
+                  padding: EdgeInsets.all(5),
                   onPressed: _toggleFullscreen,
+                  icon: SvgPicture.asset(
+                    _isFullscreen
+                        ? 'assets/icons/exit_fullscreen.svg'
+                        : 'assets/icons/fullscreen.svg',
+                    width: 25,
+                    height: 25,
+                    colorFilter: const ColorFilter.mode(
+                      Colors.white,
+                      BlendMode.srcIn,
+                    ),
+                  ),
                 ),
               ),
             ],
@@ -3286,7 +5161,7 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
         return SliderTheme(
           data: SliderThemeData(
             padding: EdgeInsets.zero,
-            trackHeight: _isScrubbing ? 4 : 2,
+            trackHeight: _isScrubbing ? 4 : _seekbarVisualHeight,
             trackShape: GradientBufferedSliderTrackShape(
               buffered: buffered,
               bufferedColor: Colors.white.withValues(alpha: 0.35),
@@ -3312,98 +5187,49 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
           ),
           child: SizedBox(
             height: 18,
-            child: GestureDetector(
-              behavior: HitTestBehavior.opaque,
-              onPanDown: (_) {
-                final vp = _videoPlayerController;
-                if (vp == null || !vp.value.isInitialized) return;
-
-                _hideControlsTimer?.cancel();
-                //  Không bật _showControls
-                setState(() {
-                  _showControls = false;
-                  _isScrubbing = true;
-                  _wasPlayingBeforeScrub = vp.value.isPlaying;
-                });
-
-                // Giống YouTube: kéo thì pause để mượt + đỡ decode
-                // if (_wasPlayingBeforeScrub) vp.pause();
-              },
-
-              onPanUpdate: (d) {
-                final vp = _videoPlayerController;
-                if (vp == null || !vp.value.isInitialized) return;
-
-                final box = context.findRenderObject() as RenderBox?;
-                if (box == null) return;
-
-                final local = box.globalToLocal(d.globalPosition);
-                final w = box.size.width;
-                final v = (local.dx / w).clamp(0.0, 1.0);
-
-                final dur = vp.value.duration;
-                final target = Duration(
-                  milliseconds: (dur.inMilliseconds * v).round(),
-                );
-
-                setState(() {
-                  _scrubValue = v;
-                  _previewPosition = target;
-                });
-
-                // ✅ lựa chọn A: throttle seek (mượt hơn seek mỗi pixel)
-                _seekToThrottled(target, ms: 90);
-
-                // ✅ nếu có storyboard: cập nhật url thumbnail theo target
-                // _previewThumbUrl = AppUrl.storyboardThumb(widget.slug, target.inSeconds);
-              },
-
-              onPanEnd: (_) async {
-                final vp = _videoPlayerController;
-                if (vp == null || !vp.value.isInitialized) return;
-
-                final dur = vp.value.duration;
-                final target = Duration(
-                  milliseconds: (dur.inMilliseconds * _scrubValue).round(),
-                );
-
-                _seekThrottle?.cancel();
-                await vp.seekTo(target);
-
-                if (_wasPlayingBeforeScrub) {
-                  await vp.play();
-                }
-
-                if (!mounted) return;
-                setState(() => _isScrubbing = false);
-
-                // YouTube: thả tay xong mới auto-hide controls (nếu bạn muốn)
-                // _showControlsWithAutoHide();
-              },
-
-              child: SizedBox(
-                height: lerpDouble(
-                  _thumbRadius * 2,
-                  28,
-                  _expandT,
-                )!, // tăng hit area khi expand
-                child: Slider(
-                  value: sliderValue.clamp(0.0, 1.0),
-                  onChanged: (v) {
-                    setState(() {
-                      _isScrubbing = true;
-                      _scrubValue = v;
-                    });
-                    _seekTo(v);
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final seekbarWidth = constraints.maxWidth;
+                return GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTapDown: (details) {
+                    _startSeekbarDrag(
+                      details.localPosition.dx,
+                      seekbarWidth,
+                      keepControlsVisible: false,
+                    );
                   },
-                  onChangeEnd: (_) {
-                    setState(() {
-                      _showControls = false;
-                      _isScrubbing = false;
-                    });
+                  onTapUp: (_) =>
+                      unawaited(_finishSeekbarDrag(keepControlsVisible: false)),
+                  onHorizontalDragStart: (details) {
+                    _startSeekbarDrag(
+                      details.localPosition.dx,
+                      seekbarWidth,
+                      keepControlsVisible: false,
+                    );
                   },
-                ),
-              ),
+                  onHorizontalDragUpdate: (details) {
+                    _updateSeekbarDrag(details.localPosition.dx, seekbarWidth);
+                  },
+                  onHorizontalDragEnd: (_) =>
+                      unawaited(_finishSeekbarDrag(keepControlsVisible: false)),
+                  onHorizontalDragCancel: () =>
+                      unawaited(_finishSeekbarDrag(keepControlsVisible: false)),
+                  child: SizedBox(
+                    height: lerpDouble(
+                      _thumbRadius * 2,
+                      _seekbarHitHeight,
+                      _expandT,
+                    )!, // tăng hit area khi expand
+                    child: IgnorePointer(
+                      child: Slider(
+                        value: sliderValue.clamp(0.0, 1.0).toDouble(),
+                        onChanged: (_) {},
+                      ),
+                    ),
+                  ),
+                );
+              },
             ),
           ),
         );
@@ -3414,12 +5240,7 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
   Widget _buildLandscapeZoomableVideo({required double fillScale}) {
     final chewie = _chewieController;
     if (chewie == null) {
-      return Center(
-        child: LoadingAnimationWidget.stretchedDots(
-          color: AppColor.secondColor,
-          size: 20,
-        ),
-      );
+      return _buildPlayerPlaceholder();
     }
 
     return GestureDetector(
@@ -3449,7 +5270,7 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
               ),
             );
           },
-          child: Chewie(controller: chewie),
+          child: _buildStablePlayerSurface(chewie),
         ),
       ),
     );
@@ -3548,6 +5369,117 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
     );
   }
 
+  Widget _buildLandscapeTitleOverlay() {
+    final serverInfo = CoverMap.getConfigFromServerName(_currentServer);
+    final isSingleMovie = widget.movie.episode_current == 'Full';
+    final metaColor = isSingleMovie
+        ? (serverInfo['color'] as Color? ?? const Color(0xFF5F6070))
+        : const Color(0xFFC77DFF);
+    final metaIcon = isSingleMovie
+        ? (serverInfo['icon'] as IconData? ?? Iconsax.subtitle)
+        : Iconsax.video_play;
+    final originName = widget.movie.origin_name.trim();
+
+    return Positioned(
+      top: 52,
+      left: 50,
+      right: 240,
+      child: IgnorePointer(
+        child: AnimatedOpacity(
+          opacity: _controlsVisible ? 1 : 0,
+          duration: const Duration(milliseconds: 180),
+          curve: Curves.easeOut,
+          child: AnimatedSlide(
+            offset: _controlsVisible ? Offset.zero : const Offset(0, -0.08),
+            duration: const Duration(milliseconds: 180),
+            curve: Curves.easeOutCubic,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  widget.movieName,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w800,
+                    shadows: [Shadow(blurRadius: 8, color: Colors.black87)],
+                  ),
+                ),
+                if (originName.isNotEmpty) ...[
+                  const SizedBox(height: 2),
+                  Text(
+                    originName,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: Colors.white.withValues(alpha: 0.78),
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      shadows: const [
+                        Shadow(blurRadius: 8, color: Colors.black87),
+                      ],
+                    ),
+                  ),
+                ],
+                const SizedBox(height: 8),
+                DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: metaColor.withValues(alpha: 0.92),
+                    borderRadius: BorderRadius.circular(999),
+                    border: Border.all(
+                      color: Colors.white.withValues(alpha: 0.18),
+                    ),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 9,
+                      vertical: 5,
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(metaIcon, size: 12, color: Colors.white),
+                        const SizedBox(width: 5),
+                        Flexible(
+                          child: Text(
+                            _currentLandscapePlaybackLine(),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _exitPlayerPage() async {
+    if (_isExitingPlayer || !mounted) return;
+
+    _isExitingPlayer = true;
+    _hideControlsTimer?.cancel();
+
+    // Pop ngay khi màn hình vẫn còn landscape.
+    context.pop();
+
+    // Không xoay màn hình tại đây.
+    // dispose() sẽ khôi phục portrait sau khi trang video được gỡ.
+  }
+
   Widget _buildLandscapePlayer() {
     final isPlayingIocn = _videoPlayerController?.value.isPlaying ?? false;
     return Scaffold(
@@ -3603,52 +5535,59 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
                   ),
                 _buildLandscapeZoomableVideo(fillScale: fillScale),
                 _buildLandscapeBoundaryFlash(),
-
-                if (_showControls && _chewieController != null)
-                  _buildPlayPauseOverlay(),
+                _buildLandscapeStatusHeader(),
+                _buildPlayPauseOverlay(),
+                _buildPlaybackStatusOverlay(),
                 _buildLandscapeZoomLabel(),
+                _buildLandscapeTitleOverlay(),
                 Positioned(
-                  top: 10,
-                  // left: 8,
-                  right: 10,
+                  top: 44,
+                  left: 8,
+                  right: 8,
                   child: IgnorePointer(
-                    ignoring: !_showControls,
+                    ignoring: !_controlsVisible,
                     child: AnimatedOpacity(
-                      opacity: _showControls ? 1 : 0,
+                      opacity: _controlsVisible ? 1 : 0,
                       duration: const Duration(milliseconds: 200),
-                      child: Builder(
-                        builder: (context) {
-                          return Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 50),
-                            child: Row(
-                              children: [
-                                if (widget.movie.episode_current != 'Full')
-                                  _buildAutoPlayToggleButton(),
-                                IconButton(
-                                  icon: const Icon(
-                                    Iconsax.menu,
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.bold,
-                                    size: 18,
-                                  ),
-                                  onPressed: () {
-                                    Scaffold.of(context).openEndDrawer();
-
-                                    Future.delayed(
-                                      const Duration(milliseconds: 250),
-                                      () {
-                                        _drawerKey.currentState
-                                            ?.scrollToCurrentEpisode(
-                                              animated: false,
-                                            );
-                                      },
-                                    );
-                                  },
-                                ),
-                              ],
+                      child: Row(
+                        children: [
+                          IconButton(
+                            tooltip: 'Quay lại',
+                            icon: const Icon(
+                              Iconsax.arrow_down_1_copy,
+                              color: Colors.white,
+                              size: 20,
                             ),
-                          );
-                        },
+                            onPressed: () {
+                              unawaited(_exitPlayerPage());
+                            },
+                          ),
+
+                          const Spacer(),
+
+                          if (widget.movie.episode_current != 'Full')
+                            _buildAutoPlayToggleButton(),
+
+                          IconButton(
+                            tooltip: 'Danh sách tập',
+                            icon: const Icon(
+                              Iconsax.menu,
+                              color: Colors.white,
+                              size: 20,
+                            ),
+                            onPressed: () {
+                              Scaffold.of(context).openEndDrawer();
+
+                              Future.delayed(
+                                const Duration(milliseconds: 250),
+                                () {
+                                  _drawerKey.currentState
+                                      ?.scrollToCurrentEpisode(animated: false);
+                                },
+                              );
+                            },
+                          ),
+                        ],
                       ),
                     ),
                   ),
@@ -3688,7 +5627,7 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
                   left: 0,
                   right: 0,
                   bottom: 50,
-                  child: _showControls
+                  child: (_controlsVisible || _isScrubbing)
                       ? Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 50),
                           child: _buildControlBar(3),
@@ -3839,29 +5778,23 @@ class BufferedSliderTrackShape extends SliderTrackShape
   }
 }
 
-class _PinnedBarDelegate extends SliverPersistentHeaderDelegate {
-  _PinnedBarDelegate({this.h = 1, required this.color});
-  final double h;
-  final Color color;
+class _ComposerAvatar extends StatelessWidget {
+  const _ComposerAvatar({this.avatarUrl});
+
+  final String? avatarUrl;
 
   @override
-  double get minExtent => h;
-
-  @override
-  double get maxExtent => h;
-
-  @override
-  Widget build(
-    BuildContext context,
-    double shrinkOffset,
-    bool overlapsContent,
-  ) {
-    return Container(color: color); // chỉ 1 thanh
+  Widget build(BuildContext context) {
+    final validUrl = avatarUrl != null && avatarUrl!.trim().isNotEmpty;
+    return CircleAvatar(
+      radius: 17,
+      backgroundColor: Colors.white10,
+      backgroundImage: validUrl ? NetworkImage(avatarUrl!) : null,
+      child: validUrl
+          ? null
+          : const Icon(Icons.person_rounded, color: Colors.white54, size: 20),
+    );
   }
-
-  @override
-  bool shouldRebuild(covariant _PinnedBarDelegate oldDelegate) =>
-      oldDelegate.h != h || oldDelegate.color != color;
 }
 
 class GradientBufferedSliderTrackShape extends SliderTrackShape
@@ -4036,7 +5969,12 @@ class ScrubPreview extends StatelessWidget {
             child: SizedBox(
               width: 140,
               height: 80,
-              child: FastCachedImage(url: thumbUrl!, fit: BoxFit.cover),
+              child: FastCachedImage(
+                url: thumbUrl!,
+                fit: BoxFit.cover,
+                cacheWidth: 420,
+                cacheHeight: 240,
+              ),
             ),
           ),
         const SizedBox(height: 6),
@@ -4060,28 +5998,28 @@ class ScrubPreview extends StatelessWidget {
   }
 }
 
-class _CollapsingHeaderDelegate extends SliverPersistentHeaderDelegate {
-  _CollapsingHeaderDelegate({
-    required this.minH,
-    required this.maxH,
-    required this.title,
-    required this.collapsible,
-    required this.bgColor,
-    required this.dividerColor,
+class _FloatingSeriesControlsDelegate extends SliverPersistentHeaderDelegate {
+  const _FloatingSeriesControlsDelegate({
+    required this.extent,
+    required this.contentHeight,
+    required this.child,
   });
 
-  final double minH;
-  final double maxH;
-  final Widget title; // phần luôn hiện (giống "Comments")
-  final Widget collapsible; // phần sẽ mờ + co lại (server + textfield)
-  final Color bgColor;
-  final Color dividerColor;
+  /// Chiều cao đang hiển thị.
+  /// Giá trị này chỉ thay đổi khi người dùng vuốt.
+  final double extent;
+
+  /// Chiều cao đầy đủ của server + ô nhập tập.
+  /// Nội dung vẫn giữ nguyên kích thước và chỉ bị ClipRect che đi.
+  final double contentHeight;
+
+  final Widget child;
 
   @override
-  double get minExtent => minH;
+  double get minExtent => extent;
 
   @override
-  double get maxExtent => maxH;
+  double get maxExtent => extent;
 
   @override
   Widget build(
@@ -4089,59 +6027,285 @@ class _CollapsingHeaderDelegate extends SliverPersistentHeaderDelegate {
     double shrinkOffset,
     bool overlapsContent,
   ) {
-    final range = (maxExtent - minExtent).clamp(0.0, double.infinity);
-    final t = range == 0 ? 1.0 : (shrinkOffset / range).clamp(0.0, 1.0);
+    return ClipRect(
+      child: Stack(
+        key: const ValueKey('series-floating-controls'),
+        clipBehavior: Clip.hardEdge,
+        fit: StackFit.expand,
+        children: [
+          // Luôn giữ nội dung ở chiều cao đầy đủ.
+          // Khi extent giảm, ClipRect sẽ cắt từ dưới lên:
+          // ô tìm tập mất trước, sau đó tới chip server.
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            height: contentHeight,
+            child: ColoredBox(color: AppColor.bgApp, child: child),
+          ),
 
-    // fade + slide giống YouTube
-    final fade = 1.0 - Curves.easeOutCubic.transform(t);
-    final slideY = lerpDouble(0, -14, t)!;
-
-    return Material(
-      color: Colors.transparent,
-      child: Container(
-        color: AppColor.bgApp,
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                title,
-
-                // phần co lại + mờ dần
-                ClipRect(
-                  child: Transform.translate(
-                    offset: Offset(0, slideY),
-                    child: Align(
-                      alignment: Alignment.topCenter,
-                      heightFactor: fade.clamp(0.0, 1.0), // co chiều cao
-                      child: Opacity(opacity: fade, child: collapsible),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-
-            // divider nằm đáy header => khi header co lại, divider tự “chạy lên”
-            Positioned(
-              left: 0,
-              right: 0,
-              bottom: 0,
-              child: Container(height: 1, color: dividerColor),
-            ),
-          ],
-        ),
+          // Thanh ngăn luôn nằm ở đáy phần còn hiển thị,
+          // nên nó sẽ nâng lên cùng thao tác scroll.
+          Positioned(
+            key: const ValueKey('series-list-top-border'),
+            left: 0,
+            right: 0,
+            bottom: 0,
+            height: 1,
+            child: ColoredBox(color: Colors.white.withValues(alpha: 0.1)),
+          ),
+        ],
       ),
     );
   }
 
   @override
-  bool shouldRebuild(covariant _CollapsingHeaderDelegate oldDelegate) {
-    return oldDelegate.minH != minH ||
-        oldDelegate.maxH != maxH ||
-        oldDelegate.bgColor != bgColor ||
-        oldDelegate.dividerColor != dividerColor ||
-        oldDelegate.title != title ||
-        oldDelegate.collapsible != collapsible;
+  bool shouldRebuild(covariant _FloatingSeriesControlsDelegate oldDelegate) {
+    return oldDelegate.extent != extent ||
+        oldDelegate.contentHeight != contentHeight ||
+        oldDelegate.child != child;
+  }
+}
+
+class _IosWifiStrengthIcon extends StatelessWidget {
+  const _IosWifiStrengthIcon({
+    super.key,
+    required this.level,
+    this.size = 22,
+    this.activeColor = Colors.white,
+    this.inactiveColor = const Color(0x38FFFFFF),
+  });
+
+  /// 0: không có tín hiệu
+  /// 1: nấc dưới
+  /// 2: nấc dưới + cung giữa
+  /// 3: đầy đủ ba nấc
+  final int level;
+  final double size;
+  final Color activeColor;
+  final Color inactiveColor;
+
+  @override
+  Widget build(BuildContext context) {
+    return RepaintBoundary(
+      child: SizedBox(
+        width: size,
+        height: size * 0.75,
+        child: CustomPaint(
+          painter: _IosWifiStrengthPainter(
+            level: level.clamp(0, 3).toInt(),
+            activeColor: activeColor,
+            inactiveColor: inactiveColor,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _IosWifiStrengthPainter extends CustomPainter {
+  const _IosWifiStrengthPainter({
+    required this.level,
+    required this.activeColor,
+    required this.inactiveColor,
+  });
+
+  final int level;
+  final Color activeColor;
+  final Color inactiveColor;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final sx = size.width / 24;
+    final sy = size.height / 18;
+
+    double x(double value) => value * sx;
+    double y(double value) => value * sy;
+
+    // Vì canvas 24 × 18 và widget cũng cùng tỷ lệ,
+    // sx và sy gần như bằng nhau.
+    double radius(double value) => value * sx;
+
+    Paint paintForLevel(int requiredLevel) {
+      return Paint()
+        ..color = level >= requiredLevel
+            ? activeColor
+            : inactiveColor
+        ..style = PaintingStyle.fill
+        ..isAntiAlias = true;
+    }
+
+    Path addRoundCaps({
+      required Path path,
+      required Offset leftCenter,
+      required Offset rightCenter,
+      required double capRadius,
+    }) {
+      final leftCap = Path()
+        ..addOval(
+          Rect.fromCircle(
+            center: leftCenter,
+            radius: capRadius,
+          ),
+        );
+
+      final rightCap = Path()
+        ..addOval(
+          Rect.fromCircle(
+            center: rightCenter,
+            radius: capRadius,
+          ),
+        );
+
+      final withLeftCap = Path.combine(
+        PathOperation.union,
+        path,
+        leftCap,
+      );
+
+      return Path.combine(
+        PathOperation.union,
+        withLeftCap,
+        rightCap,
+      );
+    }
+
+    // =========================
+    // CUNG NGOÀI
+    // =========================
+
+    final outerBasePath = Path()
+      ..moveTo(x(1.7), y(6.2))
+      ..cubicTo(
+        x(7.2),
+        y(0.8),
+        x(16.8),
+        y(0.8),
+        x(22.3),
+        y(6.2),
+      )
+      ..lineTo(x(19.55), y(8.85))
+      ..cubicTo(
+        x(15.45),
+        y(4.95),
+        x(8.55),
+        y(4.95),
+        x(4.45),
+        y(8.85),
+      )
+      ..close();
+
+    final outerBand = addRoundCaps(
+      path: outerBasePath,
+
+      // Trung điểm của hai cạnh đầu bên trái.
+      leftCenter: Offset(
+        x(3.08),
+        y(7.52),
+      ),
+
+      // Trung điểm của hai cạnh đầu bên phải.
+      rightCenter: Offset(
+        x(20.92),
+        y(7.52),
+      ),
+
+      // Tăng lên 2.0 nếu muốn đầu tròn hơn nữa.
+      capRadius: radius(1.85),
+    );
+
+    // =========================
+    // CUNG GIỮA
+    // =========================
+
+    final middleBasePath = Path()
+      ..moveTo(x(5.8), y(10.15))
+      ..cubicTo(
+        x(9.15),
+        y(6.95),
+        x(14.85),
+        y(6.95),
+        x(18.2),
+        y(10.15),
+      )
+      ..lineTo(x(15.45), y(12.75))
+      ..cubicTo(
+        x(13.55),
+        y(10.95),
+        x(10.45),
+        y(10.95),
+        x(8.55),
+        y(12.75),
+      )
+      ..close();
+
+    final middleBand = addRoundCaps(
+      path: middleBasePath,
+      leftCenter: Offset(
+        x(7.18),
+        y(11.45),
+      ),
+      rightCenter: Offset(
+        x(16.82),
+        y(11.45),
+      ),
+      capRadius: radius(1.82),
+    );
+
+    // =========================
+    // NẤC DƯỚI
+    // =========================
+
+    final bottomBand = Path()
+      ..moveTo(x(9.45), y(14.7))
+      ..cubicTo(
+        x(10.75),
+        y(13.25),
+        x(13.25),
+        y(13.25),
+        x(14.55),
+        y(14.7),
+      )
+      ..cubicTo(
+        x(14.0),
+        y(15.35),
+        x(13.15),
+        y(16.25),
+        x(12),
+        y(17.25),
+      )
+      ..cubicTo(
+        x(10.85),
+        y(16.25),
+        x(10.0),
+        y(15.35),
+        x(9.45),
+        y(14.7),
+      )
+      ..close();
+
+    canvas.drawPath(
+      outerBand,
+      paintForLevel(3),
+    );
+
+    canvas.drawPath(
+      middleBand,
+      paintForLevel(2),
+    );
+
+    canvas.drawPath(
+      bottomBand,
+      paintForLevel(1),
+    );
+  }
+
+  @override
+  bool shouldRepaint(
+    covariant _IosWifiStrengthPainter oldDelegate,
+  ) {
+    return oldDelegate.level != level ||
+        oldDelegate.activeColor != activeColor ||
+        oldDelegate.inactiveColor != inactiveColor;
   }
 }

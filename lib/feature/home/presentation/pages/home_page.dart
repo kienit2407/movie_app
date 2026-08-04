@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math' as math;
 import 'package:carousel_slider/carousel_slider.dart';
 import 'package:fast_cached_network_image/fast_cached_network_image.dart';
@@ -6,19 +7,20 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:hive_ce/hive_ce.dart';
+import 'package:flutter_svg/svg.dart';
+import 'package:go_router/go_router.dart';
 import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
 import 'package:loading_animation_widget/loading_animation_widget.dart';
 import 'package:movie_app/common/components/app_auto_scroll_text.dart';
 import 'package:movie_app/common/components/lost_network.dart';
-import 'package:movie_app/common/helpers/contants/app_url.dart';
 import 'package:movie_app/common/helpers/navigation/app_navigation.dart';
-import 'package:movie_app/common/helpers/watch_history_storage.dart';
-import 'package:movie_app/common/models/watch_history_entry.dart';
+import 'package:movie_app/core/config/constants/const_globals.dart';
+import 'package:movie_app/core/config/routes/app_router.dart';
 import 'package:movie_app/core/config/utils/blocking_back_page.dart';
 import 'package:movie_app/core/config/utils/episode_map.dart';
 import 'package:movie_app/core/config/utils/package_infor.dart';
+import 'package:movie_app/feature/detail_movie/data/model/detail_movie_model.dart';
 import 'package:movie_app/feature/detail_movie/presentation/bloc/player_cubit.dart';
 import 'package:movie_app/feature/detail_movie/presentation/pages/movie_detail_page.dart';
 import 'package:movie_app/core/config/assets/app_image.dart';
@@ -36,6 +38,8 @@ import 'package:movie_app/feature/home/domain/entities/fillterType.dart';
 import 'package:movie_app/feature/home/domain/usecase/get_movies_by_filter_usecase.dart';
 import 'package:movie_app/feature/home/domain/entities/fillter_genre_movie_req.dart';
 import 'package:movie_app/feature/home/domain/entities/new_movie_entity.dart';
+import 'package:movie_app/feature/home/notification/new_movie_notification_coordinator.dart';
+import 'package:movie_app/feature/home/notification/new_movie_inbox.dart';
 import 'package:movie_app/feature/home/presentation/bloc/carousel_display_state.dart';
 import 'package:movie_app/feature/home/presentation/bloc/carousel_display_cubit.dart';
 import 'package:movie_app/feature/home/presentation/bloc/home_ui_cubit.dart';
@@ -48,10 +52,10 @@ import 'package:movie_app/feature/home/presentation/widgets/home_skeleton.dart';
 import 'package:movie_app/feature/home/presentation/widgets/overlay_gadient.dart';
 import 'package:movie_app/feature/home/presentation/widgets/recommend_movie_widget.dart';
 import 'package:movie_app/feature/home/presentation/widgets/year_bottom_sheet.dart';
+import 'package:movie_app/feature/hub/presentation/pages/hub_page.dart';
 import 'package:movie_app/feature/movie_pagination/presentation/bloc/fetch_fillter_cubit.dart';
 import 'package:movie_app/feature/movie_pagination/presentation/bloc/fetch_fillter_state.dart';
 import 'package:movie_app/feature/movie_pagination/presentation/pages/all_movie_page.dart';
-import 'package:movie_app/feature/search/presentation/pages/search_page.dart';
 import 'package:shimmer/shimmer.dart';
 
 class HomePage extends StatefulWidget {
@@ -63,31 +67,90 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage>
     with SingleTickerProviderStateMixin {
   static const double _bannerPosterAspectRatio = 2 / 3;
+  static const int _homePosterPrecacheLimit = 8;
+  static const int _firstPosterPrecacheBatchSize = 3;
+  static const int _dotLoopMultiplier = 201;
+  static const int _dotLoopStartMultiplier = _dotLoopMultiplier ~/ 2;
+  static const double _carouselVirtualPageBase = 10000.0;
   late final HomeUiCubit _homeUiCubit;
   CarouselSliderController? indexCarouselController;
   double itemCount = 0;
   double normalize = 0;
   final ScrollController _scrollController = ScrollController();
-  final WatchHistoryStorage _watchHistoryStorage = WatchHistoryStorage();
-  late final Future<ValueListenable<Box<WatchHistoryEntry>>>
-  _watchHistoryListenableFuture;
+  final ScrollController _dotScrollController = ScrollController();
   int itemCountStandart = 20;
   String? selectedValue;
   final ValueNotifier<double> _currentPageNotifier = ValueNotifier<double>(0.0);
+  final Set<String> _preloadedHomePosterUrls = <String>{};
   int _carouselGen = 0; //  token để ignore callback của carousel cũ
-  bool _pendingResetToFirst = false; //  trì hoãn reset cho tới khi jump xong
   String _lastCarouselKey = '';
+  String _lastDotCarouselKey = '';
+  int _dotVirtualIndex = 0;
+  int? _lastScheduledDotVirtualIndex;
+  double? _lastScheduledDotViewportWidth;
+  double? _lastScheduledDotItemExtent;
   bool _carouselReady = false;
+  bool _carouselReadyFrameScheduled = false;
+  bool _notificationSetupStarted = false;
 
   HomeUiState get _uiState => _homeUiCubit.state;
+
+  int _cacheExtent(double logicalPixels, {int? maxPhysicalPixels}) {
+    final pixelRatio = View.of(context).devicePixelRatio;
+    final physicalPixels = math.max(1, (logicalPixels * pixelRatio).round());
+    return maxPhysicalPixels == null
+        ? physicalPixels
+        : math.min(physicalPixels, maxPhysicalPixels);
+  }
+
+  ImageProvider _optimizedPosterProvider(
+    String url, {
+    required int cacheWidth,
+    int? cacheHeight,
+  }) {
+    return ResizeImage(
+      FastCachedImageProvider(url),
+      width: cacheWidth,
+      height: cacheHeight,
+    );
+  }
+
+  void _setCurrentPageIfChanged(double value, {bool force = false}) {
+    if (!force && (_currentPageNotifier.value - value).abs() < 0.01) return;
+    _currentPageNotifier.value = value;
+  }
+
+  void _setCurrentIndexIfChanged(int index) {
+    if (!mounted || _homeUiCubit.state.currentIndex == index) return;
+    _homeUiCubit.setCurrentIndex(index);
+  }
+
+  double _normalizeCarouselPage(double page, int count) {
+    final normalized = (page - _carouselVirtualPageBase) % count;
+    return normalized < 0 ? normalized + count : normalized;
+  }
+
+  void _scheduleCarouselReady(int buildGen) {
+    if (_carouselReady || _carouselReadyFrameScheduled) return;
+
+    _carouselReadyFrameScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+
+        _carouselReadyFrameScheduled = false;
+        if (buildGen == _carouselGen) _carouselReady = true;
+      });
+    });
+  }
 
   @override
   void initState() {
     _homeUiCubit = HomeUiCubit();
-    _watchHistoryListenableFuture = _watchHistoryStorage.listenable();
     _loadPackageInfo();
     indexCarouselController = CarouselSliderController();
     super.initState();
+    HubTabReselectNotifier.instance.addListener(_onHubTabReselected);
 
     // Theo dõi vị trí cuộn để điều khiển chip buttons
     _scrollController.addListener(() {
@@ -98,22 +161,31 @@ class _HomePageState extends State<HomePage>
 
   @override
   void dispose() {
+    HubTabReselectNotifier.instance.removeListener(_onHubTabReselected);
     _currentPageNotifier.dispose();
     _scrollController.dispose();
+    _dotScrollController.dispose();
     indexCarouselController?.dispose();
     _homeUiCubit.close();
     super.dispose();
   }
 
-  int _safeIndex(int length) {
-    if (length <= 0) return 0;
-    return _uiState.currentIndex.clamp(0, length - 1);
+  void _onHubTabReselected() {
+    if (HubTabReselectNotifier.instance.index != 0) return;
+    if (!_scrollController.hasClients) return;
+    _scrollController.animateTo(
+      0,
+      duration: MediaQuery.disableAnimationsOf(context)
+          ? Duration.zero
+          : const Duration(milliseconds: 320),
+      curve: Curves.easeOutCubic,
+    );
   }
 
   Future<void> _loadPackageInfo() async {
     final packageInfo = await PackageInfor.getPackageInfo();
     if (mounted) {
-      _currentPageNotifier.value = 0.0;
+      _setCurrentPageIfChanged(0.0, force: true);
       _homeUiCubit.setPackageInfo(
         appName: packageInfo.appName,
         packageName: packageInfo.packageName,
@@ -121,6 +193,203 @@ class _HomePageState extends State<HomePage>
         buildNumber: packageInfo.buildNumber,
       );
     }
+  }
+
+  void _precacheHomePosters(List<ItemEntity> latestMovie) {
+    if (!mounted || latestMovie.isEmpty) return;
+
+    final urls = <String>{};
+    for (final movie in latestMovie.take(_homePosterPrecacheLimit)) {
+      if (movie.posterUrl.trim().isEmpty) continue;
+
+      urls.add(movie.posterUrl);
+    }
+
+    final freshUrls = urls
+        .where((url) => url.trim().isNotEmpty)
+        .where(_preloadedHomePosterUrls.add)
+        .toList(growable: false);
+
+    if (freshUrls.isEmpty) return;
+
+    final firstBatch = freshUrls
+        .take(_firstPosterPrecacheBatchSize)
+        .toList(growable: false);
+    final nextBatch = freshUrls
+        .skip(_firstPosterPrecacheBatchSize)
+        .toList(growable: false);
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      unawaited(_precachePosterBatch(firstBatch));
+
+      if (nextBatch.isNotEmpty) {
+        unawaited(_precacheDelayedPosterBatch(nextBatch));
+      }
+    });
+  }
+
+  Future<void> _precacheDelayedPosterBatch(List<String> urls) async {
+    await Future<void>.delayed(const Duration(milliseconds: 700));
+    if (!mounted) return;
+    await _precachePosterBatch(urls);
+  }
+
+  Future<void> _precachePosterBatch(List<String> urls) async {
+    if (!mounted || urls.isEmpty) return;
+
+    final cacheWidth = _cacheExtent(260.w);
+    final cacheHeight = _cacheExtent(390.h);
+
+    for (final url in urls) {
+      if (!mounted) return;
+
+      try {
+        await precacheImage(
+          _optimizedPosterProvider(
+            url,
+            cacheWidth: cacheWidth,
+            cacheHeight: cacheHeight,
+          ),
+          context,
+        );
+      } catch (_) {
+        // Ignore single-image failures; Home should keep rendering normally.
+      }
+
+      await Future<void>.delayed(const Duration(milliseconds: 16));
+    }
+  }
+
+  void _handleCarouselSuccess(CarouselSuccess state) {
+    if (!mounted) return;
+
+    _precacheHomePosters(state.latestMovie);
+    if (!_notificationSetupStarted) {
+      _notificationSetupStarted = true;
+      unawaited(_prepareNewMovieNotifications(state.latestMovie));
+    }
+    _carouselGen++;
+    _carouselReady = false;
+    _carouselReadyFrameScheduled = false;
+    _lastCarouselKey = '';
+    _lastDotCarouselKey = '';
+    _dotVirtualIndex = 0;
+    _lastScheduledDotVirtualIndex = null;
+    _lastScheduledDotViewportWidth = null;
+    _lastScheduledDotItemExtent = null;
+    _setCurrentPageIfChanged(0.0, force: true);
+    _setCurrentIndexIfChanged(0);
+    indexCarouselController = CarouselSliderController();
+    _homeUiCubit.bumpCarouselKeyCounter();
+  }
+
+  Future<void> _prepareNewMovieNotifications(
+    List<ItemEntity> latestMovies,
+  ) async {
+    try {
+      final coordinator = sl<NewMovieNotificationCoordinator>();
+      final setup = await coordinator.prepareHome(latestMovies);
+      if (!mounted || !setup.shouldShowOnboarding) return;
+
+      final shouldEnable = await showDialog<bool>(
+        context: context,
+        barrierDismissible: false,
+        builder: (dialogContext) {
+          return AlertDialog(
+            title: const Text('Nhận thông báo phim mới?'),
+            content: const Text(
+              'Liquid Phim có thể kiểm tra định kỳ trong nền và thông báo '
+              'khi phát hiện phim mới. Hệ điều hành có thể thực hiện việc '
+              'kiểm tra trễ hơn 20 phút để tiết kiệm pin.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(dialogContext).pop(false),
+                child: const Text('Không bật'),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.of(dialogContext).pop(true),
+                child: const Text('Bật thông báo'),
+              ),
+            ],
+          );
+        },
+      );
+
+      if (shouldEnable == true) {
+        final permissionGranted = await coordinator.enableNotifications();
+        if (!mounted || permissionGranted) return;
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Quyền thông báo chưa được bật. Bạn có thể bật lại trong '
+              'Cài đặt của điện thoại.',
+            ),
+          ),
+        );
+      } else {
+        await coordinator.declineNotifications();
+      }
+    } catch (error, stackTrace) {
+      debugPrint(
+        '[NewMovieNotifications] Home setup failed: $error\n$stackTrace',
+      );
+      _notificationSetupStarted = false;
+    }
+  }
+
+  Widget _buildCarouselFailure(String? message) {
+    final normalizedMessage = message?.toLowerCase() ?? '';
+    final isNetworkFailure =
+        normalizedMessage.contains('networkexception') ||
+        normalizedMessage.contains('connection') ||
+        normalizedMessage.contains('network');
+
+    if (isNetworkFailure) {
+      return CustomScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        slivers: [
+          SliverFillRemaining(
+            hasScrollBody: false,
+            child: const Center(child: LostNetworkPage()),
+          ),
+        ],
+      );
+    }
+
+    debugPrint('[HomeCarousel] $message');
+    return CustomScrollView(
+      physics: const AlwaysScrollableScrollPhysics(),
+      slivers: [
+        SliverFillRemaining(
+          hasScrollBody: false,
+          child: Center(
+            child: Padding(
+              padding: EdgeInsets.symmetric(horizontal: 32.w),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.error_outline,
+                    color: Colors.redAccent,
+                    size: 42.sp,
+                  ),
+                  SizedBox(height: 12.h),
+                  Text(
+                    'Không thể tải dữ liệu phim.\n'
+                    'Kéo xuống để thử lại.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 14.sp),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
   }
 
   @override
@@ -189,25 +458,90 @@ class _HomePageState extends State<HomePage>
             children: [
               Row(
                 children: [
-                  Image.asset(AppImage.splashLogo, scale: 28),
-                  Spacer(),
+                  Image.asset(AppImage.splashIcon, scale: 28),
+                  const SizedBox(width: 10),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    spacing: 2.h,
+                    children: [
+                      Text(
+                        Global.instance.appName,
+                        style: TextStyle(
+                          fontSize: 13.sp,
+                          fontWeight: FontWeight.w700,
+                          color: AppColor.secondColor,
+                        ),
+                      ),
+                      Text(
+                        Global.instance.subTilleLogo,
+                        style: TextStyle(
+                          fontSize: 10.sp,
+                          fontWeight: FontWeight.w400,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const Spacer(),
                   IconButton.outlined(
                     onPressed: () {
                       ComprehensiveFilterBottomSheet.show(context);
                     },
                     icon: Icon(Iconsax.filter_copy),
                   ),
-                  SizedBox(width: 15.w),
-                  IconButton.outlined(
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const SearchPage(),
-                        ),
+                  SizedBox(width: 8.w),
+                  BlocBuilder<NewMovieInboxCubit, NewMovieInboxState>(
+                    buildWhen: (previous, current) =>
+                        previous.unreadCount != current.unreadCount,
+                    builder: (context, inboxState) {
+                      final count = inboxState.unreadCount;
+                      return Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          IconButton.outlined(
+                            tooltip: 'Thông báo',
+                            onPressed: () =>
+                                context.push(AppRoutes.notifications),
+                            icon: const Icon(Iconsax.notification_copy),
+                          ),
+                          // SvgPicture.asset(
+                          //   'assets/icons/main_icon.svg',
+                          //   width: 24.w,
+                          //   height: 24.h,
+                          // ),
+                          if (count > 0)
+                            Positioned(
+                              right: 1.w,
+                              top: 1.h,
+                              child: Container(
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: 4.w,
+                                  vertical: 2.h,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: Colors.redAccent,
+                                  borderRadius: BorderRadius.circular(8.r),
+                                ),
+                                constraints: BoxConstraints(
+                                  minWidth: 16.w,
+                                  minHeight: 16.h,
+                                ),
+                                child: Text(
+                                  count > 99 ? '99+' : '$count',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 10.sp,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                  textAlign: TextAlign.center,
+                                ),
+                              ),
+                            ),
+                        ],
                       );
+                      
                     },
-                    icon: Icon(Iconsax.search_normal_1_copy),
                   ),
                 ],
               ),
@@ -281,33 +615,33 @@ class _HomePageState extends State<HomePage>
             // Reset carousel state TRƯỚC khi gọi getLatestMovie
             _carouselGen++;
             _carouselReady = false;
+            _carouselReadyFrameScheduled = false;
             _lastCarouselKey = '';
-            _currentPageNotifier.value = 0.0;
-            _homeUiCubit.setCurrentIndex(0);
+            _lastDotCarouselKey = '';
+            _dotVirtualIndex = 0;
+            _lastScheduledDotVirtualIndex = null;
+            _lastScheduledDotViewportWidth = null;
+            _lastScheduledDotItemExtent = null;
+            _setCurrentPageIfChanged(0.0, force: true);
+            _setCurrentIndexIfChanged(0);
             indexCarouselController = CarouselSliderController();
 
-            context.read<CarouselDisplayCubit>().getLatestMovie();
+            await context.read<CarouselDisplayCubit>().getLatestMovie();
           },
-          child: BlocBuilder<CarouselDisplayCubit, CarouselDisplayState>(
+          child: BlocConsumer<CarouselDisplayCubit, CarouselDisplayState>(
+            listener: (context, state) {
+              if (state is CarouselSuccess) {
+                _handleCarouselSuccess(state);
+              }
+            },
             builder: (context, state) {
               // 1. TRẠNG THÁI ĐANG TẢI
               if (state is CarouselLoading) {
                 return const Center(child: HomeSkeleton());
               }
-              // 2. TRẠNG THÁI LỖI (MẤT MẠNG)
+              // 2. TRẠNG THÁI LỖI
               else if (state is CarouselFalure) {
-                return CustomScrollView(
-                  physics:
-                      const AlwaysScrollableScrollPhysics(), // Bắt buộc để vuốt được
-                  slivers: [
-                    SliverFillRemaining(
-                      hasScrollBody: false,
-                      child: const Center(
-                        child: LostNetworkPage(),
-                      ), // Trang báo lỗi của bạn
-                    ),
-                  ],
-                );
+                return _buildCarouselFailure(state.message);
               }
               // 3. TRẠNG THÁI THÀNH CÔNG
               else if (state is CarouselSuccess) {
@@ -342,6 +676,7 @@ class _HomePageState extends State<HomePage>
       child: Scrollbar(
         controller: _scrollController,
         child: SingleChildScrollView(
+          key: const PageStorageKey<String>('home-scroll-view'),
           // primary: true,
           controller: _scrollController,
           padding: EdgeInsets.only(bottom: 100.h),
@@ -350,16 +685,12 @@ class _HomePageState extends State<HomePage>
             children: [
               BlocBuilder<HomeUiCubit, HomeUiState>(
                 buildWhen: (previous, current) =>
-                    previous.carouselKeyCounter != current.carouselKeyCounter ||
-                    previous.currentIndex != current.currentIndex,
+                    previous.carouselKeyCounter != current.carouselKeyCounter,
                 builder: (context, _) =>
                     _buildCarouselPoster(screenHeight, screenWidth),
               ),
               SizedBox(height: 10.h),
               const MovieSectionWithScroll(),
-              SizedBox(height: 30.h),
-              //HISTORICAL MOVIE
-              _watchedMoviesSection(),
               SizedBox(height: 30.h),
               _lastedMovie(),
               SizedBox(height: 30.h),
@@ -409,6 +740,7 @@ class _HomePageState extends State<HomePage>
             child: Column(
               children: [
                 CountryMovieSection(
+                  key: const ValueKey('country-section-han-quoc'),
                   title: "Phim Hàn Quốc",
                   gradient: LinearGradient(
                     colors: [
@@ -423,6 +755,7 @@ class _HomePageState extends State<HomePage>
                 ),
                 SizedBox(height: 20.h),
                 CountryMovieSection(
+                  key: const ValueKey('country-section-trung-quoc'),
                   title: "Phim Trung Quốc",
                   gradient: LinearGradient(
                     colors: [
@@ -436,6 +769,7 @@ class _HomePageState extends State<HomePage>
                 ),
                 SizedBox(height: 20.h),
                 CountryMovieSection(
+                  key: const ValueKey('country-section-au-my'),
                   title: "Phim Mỹ - UK",
                   gradient: LinearGradient(
                     colors: [
@@ -456,27 +790,7 @@ class _HomePageState extends State<HomePage>
   }
 
   Widget _buildCarouselPoster(double screenHeight, double screenWidth) {
-    return BlocConsumer<CarouselDisplayCubit, CarouselDisplayState>(
-      listener: (context, state) {
-        if (state is CarouselSuccess) {
-          _carouselGen++;
-          _carouselReady = false;
-
-          _pendingResetToFirst = false;
-          _lastCarouselKey = '';
-
-          _currentPageNotifier.value = 0.0;
-          _homeUiCubit.setCurrentIndex(0);
-
-          indexCarouselController = CarouselSliderController();
-          _homeUiCubit.bumpCarouselKeyCounter();
-
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (!mounted) return;
-            _carouselReady = true;
-          });
-        }
-      },
+    return BlocBuilder<CarouselDisplayCubit, CarouselDisplayState>(
       builder: (context, data) {
         if (data is CarouselSuccess) {
           // chiều cao “thiết kế” theo XR: 0.89 * 896 ≈ 797
@@ -488,7 +802,6 @@ class _HomePageState extends State<HomePage>
             child: Stack(
               clipBehavior: Clip.hardEdge, // (2) chặn vẽ tràn đè xuống dưới
               children: [
-                //background image
                 _buildBackgroundImage(data.latestMovie),
                 //Gadient Overlay
                 OverlayGadient(),
@@ -515,7 +828,6 @@ class _HomePageState extends State<HomePage>
     final safeTop = MediaQuery.of(context).padding.top;
     final minTopFromFilters = safeTop + 90.h + 10.h;
     final sectionTop = math.max(heroHeight * .17, minTopFromFilters);
-    final safeIndex = _safeIndex(latestMovie.length);
     return Positioned(
       right: 0,
       left: 0,
@@ -526,35 +838,55 @@ class _HomePageState extends State<HomePage>
           SizedBox(height: 8.h),
           _buildCarousel(heroHeight, latestMovie),
           SizedBox(height: 8.h),
-          _buildCategory(latestMovie[safeIndex].category),
-          SizedBox(height: 12.h),
-          _buildInforMovie(latestMovie),
-          SizedBox(height: 10.h),
-          _buildDotIndicator(latestMovie),
-          SizedBox(height: 8.h),
-          Padding(
-            padding: EdgeInsets.symmetric(horizontal: 50.w),
-            child: Row(
-              spacing: 10.w,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                _buildActionButton(Iconsax.play_circle, 'Xem Phim', () async {
-                  await _navigateToPlayer(
-                    latestMovie[_uiState.currentIndex].slug,
-                  );
-                }),
-                _buildActionButton(Iconsax.info_circle, 'Thông Tin', () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => MovieDetailPage(
-                        slug: latestMovie[_uiState.currentIndex].slug,
-                      ),
+          BlocSelector<HomeUiCubit, HomeUiState, int>(
+            selector: (state) => state.currentIndex,
+            builder: (context, selectedIndex) {
+              if (latestMovie.isEmpty) return const SizedBox.shrink();
+
+              final safeIndex = selectedIndex
+                  .clamp(0, latestMovie.length - 1)
+                  .toInt();
+              final selectedMovie = latestMovie[safeIndex];
+
+              return Column(
+                children: [
+                  _buildCategory(selectedMovie.category),
+                  SizedBox(height: 12.h),
+                  _buildInforMovie(selectedMovie),
+                  SizedBox(height: 10.h),
+                  _buildDotIndicator(latestMovie, safeIndex),
+                  SizedBox(height: 8.h),
+                  Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 50.w),
+                    child: Row(
+                      spacing: 10.w,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        _buildActionButton(
+                          Iconsax.play_circle,
+                          'Xem Phim',
+                          () async {
+                            await _navigateToPlayer(selectedMovie.slug);
+                          },
+                        ),
+                        _buildActionButton(
+                          Iconsax.info_circle,
+                          'Thông Tin',
+                          () {
+                            Navigator.of(context, rootNavigator: true).push(
+                              MaterialPageRoute(
+                                builder: (context) =>
+                                    MovieDetailPage(slug: selectedMovie.slug),
+                              ),
+                            );
+                          },
+                        ),
+                      ],
                     ),
-                  );
-                }),
-              ],
-            ),
+                  ),
+                ],
+              );
+            },
           ),
         ],
       ),
@@ -588,13 +920,13 @@ class _HomePageState extends State<HomePage>
     );
   }
 
-  Widget _buildInforMovie(List<ItemEntity> latestMovie) {
+  Widget _buildInforMovie(ItemEntity movie) {
     return Column(
       children: [
         Padding(
           padding: EdgeInsets.symmetric(horizontal: 50.w),
           child: AppAutoScrollText(
-            latestMovie[_uiState.currentIndex].name,
+            movie.name,
             textAlign: TextAlign.justify,
             style: TextStyle(fontSize: 20.sp, fontWeight: FontWeight.w800),
           ),
@@ -603,7 +935,7 @@ class _HomePageState extends State<HomePage>
         Padding(
           padding: EdgeInsets.symmetric(horizontal: 50.w),
           child: AppAutoScrollText(
-            latestMovie[_uiState.currentIndex].originName,
+            movie.originName,
             textAlign: TextAlign.justify,
             style: TextStyle(
               fontSize: 10.sp,
@@ -639,8 +971,7 @@ class _HomePageState extends State<HomePage>
                           ),
                         ),
                         Text(
-                          latestMovie[_uiState.currentIndex].tmdb.voteAverage
-                              .toStringAsFixed(1),
+                          movie.tmdb.voteAverage.toStringAsFixed(1),
                           style: TextStyle(
                             fontSize: 10.sp,
                             fontWeight: FontWeight.w800,
@@ -654,7 +985,7 @@ class _HomePageState extends State<HomePage>
                     isGadient: true,
                     borderColor: Colors.transparent,
                     child: Text(
-                      latestMovie[_uiState.currentIndex].quality,
+                      movie.quality,
                       style: TextStyle(
                         fontSize: 10.sp,
                         fontWeight: FontWeight.w600,
@@ -664,7 +995,7 @@ class _HomePageState extends State<HomePage>
                   ),
                   _buildInforChip(
                     child: Text(
-                      latestMovie[_uiState.currentIndex].year.toString(),
+                      movie.year.toString(),
                       style: TextStyle(
                         fontSize: 10.sp,
                         fontWeight: FontWeight.w600,
@@ -674,11 +1005,9 @@ class _HomePageState extends State<HomePage>
                   ),
                   _buildInforChip(
                     child: Text(
-                      (latestMovie[_uiState.currentIndex].episodeCurrent ==
-                              'Full')
-                          ? latestMovie[_uiState.currentIndex].time
-                                .toFormatEpisode()
-                          : latestMovie[_uiState.currentIndex].time,
+                      (movie.episodeCurrent == 'Full')
+                          ? movie.time.toFormatEpisode()
+                          : movie.time,
                       style: TextStyle(
                         fontSize: 10.sp,
                         fontWeight: FontWeight.w600,
@@ -695,7 +1024,7 @@ class _HomePageState extends State<HomePage>
                   _buildInforChip(
                     backgroundColor: Colors.white,
                     child: Text(
-                      latestMovie[_uiState.currentIndex].episodeCurrent,
+                      movie.episodeCurrent,
                       style: TextStyle(
                         fontSize: 10.sp,
                         fontWeight: FontWeight.w600,
@@ -703,7 +1032,7 @@ class _HomePageState extends State<HomePage>
                       ),
                     ),
                   ),
-                  // if (latestMovie[_uiState.currentIndex].chieurap == false)
+                  // if (movie.chieurap == false)
                   //   _buildInforChip(
                   //     isGadient: true,
                   //     borderColor: Colors.transparent,
@@ -716,7 +1045,7 @@ class _HomePageState extends State<HomePage>
                   //       ),
                   //     ),
                   //   ),
-                  if (latestMovie[_uiState.currentIndex].subDocquyen == true)
+                  if (movie.subDocquyen == true)
                     _buildInforChip(
                       isGadient: true,
                       borderColor: Colors.transparent,
@@ -731,7 +1060,7 @@ class _HomePageState extends State<HomePage>
                     ),
                   _buildInforChip(
                     child: Text(
-                      latestMovie[_uiState.currentIndex].lang,
+                      movie.lang,
                       style: TextStyle(
                         fontSize: 10.sp,
                         fontWeight: FontWeight.w600,
@@ -798,8 +1127,117 @@ class _HomePageState extends State<HomePage>
     );
   }
 
+  String _episodeLink(ServerData episode) {
+    return episode.link_m3u8.isNotEmpty
+        ? episode.link_m3u8
+        : episode.link_embed;
+  }
+
+  _PlayerEpisodeTarget? _targetFromIndexes(
+    List<EpisodesModel> episodes,
+    int serverIndex,
+    int episodeIndex, {
+    String? fallbackLink,
+  }) {
+    if (serverIndex < 0 || serverIndex >= episodes.length) return null;
+
+    final server = episodes[serverIndex];
+    if (server.server_data.isEmpty) return null;
+    if (episodeIndex < 0 || episodeIndex >= server.server_data.length) {
+      return null;
+    }
+
+    final episode = server.server_data[episodeIndex];
+    final link = _episodeLink(episode).isNotEmpty
+        ? _episodeLink(episode)
+        : fallbackLink;
+    if (link == null || link.isEmpty) return null;
+
+    return _PlayerEpisodeTarget(
+      serverIndex: serverIndex,
+      episodeIndex: episodeIndex,
+      episodeLink: link,
+    );
+  }
+
+  _PlayerEpisodeTarget? _firstPlayableTarget(List<EpisodesModel> episodes) {
+    for (int serverIndex = 0; serverIndex < episodes.length; serverIndex++) {
+      final server = episodes[serverIndex];
+      for (
+        int episodeIndex = 0;
+        episodeIndex < server.server_data.length;
+        episodeIndex++
+      ) {
+        final link = _episodeLink(server.server_data[episodeIndex]);
+        if (link.isNotEmpty) {
+          return _PlayerEpisodeTarget(
+            serverIndex: serverIndex,
+            episodeIndex: episodeIndex,
+            episodeLink: link,
+          );
+        }
+      }
+    }
+    return null;
+  }
+
+  _PlayerEpisodeTarget? _targetFromLatestEpisode(
+    String episodeCurrent,
+    List<EpisodesModel> episodes,
+  ) {
+    if (episodes.isEmpty) return null;
+
+    int? currentEpisodeNum;
+
+    if (episodeCurrent.toLowerCase().contains('hoàn tất')) {
+      final match = RegExp(r'\((\d+)').firstMatch(episodeCurrent);
+      if (match != null) {
+        currentEpisodeNum = int.tryParse(match.group(1)!);
+      }
+    } else {
+      final match = RegExp(r'(\d+)').firstMatch(episodeCurrent);
+      if (match != null) {
+        currentEpisodeNum = int.tryParse(match.group(1)!);
+      }
+    }
+
+    if (currentEpisodeNum != null) {
+      for (int serverIndex = 0; serverIndex < episodes.length; serverIndex++) {
+        final serverEpisodes = episodes[serverIndex].server_data;
+        for (
+          int episodeIndex = 0;
+          episodeIndex < serverEpisodes.length;
+          episodeIndex++
+        ) {
+          final ep = serverEpisodes[episodeIndex];
+          final epMatch = RegExp(r'(\d+)').firstMatch(ep.name);
+          if (epMatch == null) continue;
+
+          final epNum = int.tryParse(epMatch.group(1)!);
+          if (epNum == currentEpisodeNum) {
+            final target = _targetFromIndexes(
+              episodes,
+              serverIndex,
+              episodeIndex,
+            );
+            if (target != null) return target;
+          }
+        }
+      }
+    }
+
+    return _firstPlayableTarget(episodes);
+  }
+
   Future<void> _navigateToPlayer(String slug) async {
     BuildContext? dialogContext;
+    void closeLoadingDialog() {
+      final loadingContext = dialogContext;
+      if (loadingContext != null && loadingContext.mounted) {
+        Navigator.pop(loadingContext);
+      }
+      dialogContext = null;
+    }
 
     showDialog(
       context: context,
@@ -822,9 +1260,7 @@ class _HomePageState extends State<HomePage>
       final cubit = DetailMovieCubit(sl<GetDetailMovieUsecase>());
       await cubit.getDetailMovie(slug);
 
-      if (dialogContext != null && (dialogContext?.mounted ?? false)) {
-        Navigator.pop(dialogContext!);
-      }
+      closeLoadingDialog();
 
       final state = cubit.state;
       if (state is! DetailMovieSuccessed) return;
@@ -835,81 +1271,35 @@ class _HomePageState extends State<HomePage>
 
       if (episodes.isEmpty) return;
 
-      int? currentEpisodeNum;
-      final episodeCurrent = movie.episode_current;
+      final target = _targetFromLatestEpisode(movie.episode_current, episodes);
 
-      if (episodeCurrent.toLowerCase().contains('hoàn tất')) {
-        final match = RegExp(r'\((\d+)').firstMatch(episodeCurrent);
-        if (match != null) {
-          currentEpisodeNum = int.tryParse(match.group(1)!);
-        }
-      } else {
-        final match = RegExp(r'(\d+)').firstMatch(episodeCurrent);
-        if (match != null) {
-          currentEpisodeNum = int.tryParse(match.group(1)!);
-        }
-      }
-
-      int serverIndex = 0;
-      int episodeIndex = 0;
-      String? episodeLink;
-
-      if (currentEpisodeNum != null) {
-        for (int s = 0; s < episodes.length; s++) {
-          final serverEpisodes = episodes[s].server_data;
-          for (int e = 0; e < serverEpisodes.length; e++) {
-            final ep = serverEpisodes[e];
-            final epMatch = RegExp(r'(\d+)').firstMatch(ep.name);
-            if (epMatch != null) {
-              final epNum = int.tryParse(epMatch.group(1)!);
-              if (epNum == currentEpisodeNum) {
-                serverIndex = s;
-                episodeIndex = e;
-                episodeLink = ep.link_m3u8;
-                break;
-              }
-            }
-          }
-          if (episodeLink != null) break;
-        }
-      }
-
-      if (episodeLink == null) {
-        if (episodes.isNotEmpty && episodes[0].server_data.isNotEmpty) {
-          serverIndex = 0;
-          episodeIndex = 0;
-          episodeLink = episodes[0].server_data[0].link_m3u8;
-        }
-      }
-
-      if (!mounted || episodeLink == null) {
+      final selectedTarget = target;
+      if (!mounted || selectedTarget == null) {
         debugPrint('Could not find episode link');
         return;
       }
 
-      Navigator.push(
-        context,
+      final playerCubit = context.read<PlayerCubit>();
+      Navigator.of(context, rootNavigator: true).push(
         NoBackSwipeRoute(
           builder: (ctx) => BlocProvider.value(
-            value: context.read<PlayerCubit>(),
+            value: playerCubit,
             child: MoviePlayerPage(
               slug: movie.slug,
               movieName: movie.name,
               thumbnailUrl: movie.poster_url,
               episodes: episodes,
               movie: movie,
-              initialEpisodeLink: episodeLink,
-              initialEpisodeIndex: episodeIndex,
-              initialServer: episodes[serverIndex].server_name,
-              initialServerIndex: serverIndex,
+              initialEpisodeLink: selectedTarget.episodeLink,
+              initialEpisodeIndex: selectedTarget.episodeIndex,
+              initialServer: episodes[selectedTarget.serverIndex].server_name,
+              initialServerIndex: selectedTarget.serverIndex,
             ),
           ),
         ),
       );
     } catch (e) {
-      if (dialogContext != null && (dialogContext?.mounted ?? false)) {
-        Navigator.pop(dialogContext!);
-      }
+      closeLoadingDialog();
       debugPrint('Error navigating to player: $e');
     }
   }
@@ -965,45 +1355,198 @@ class _HomePageState extends State<HomePage>
     );
   }
 
-  Widget _buildDotIndicator(List<ItemEntity> latestMovie) {
+  Widget _buildDotIndicator(List<ItemEntity> latestMovie, int selectedIndex) {
     final count = math.min(latestMovie.length, 20);
+    if (count == 0) return const SizedBox.shrink();
+
+    final selectedRealIndex = _positiveModulo(selectedIndex, count);
+    final carouselKey = latestMovie.take(count).map((e) => e.slug).join('|');
+
     return SizedBox(
       height: 30.h,
-      child: SingleChildScrollView(
-        padding: EdgeInsets.only(left: 30.w),
-        scrollDirection: Axis.horizontal,
-        child: Row(
-          spacing: 10.w,
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: List.generate(count, (index) {
-            bool isSelected = _uiState.currentIndex == index;
-            return GestureDetector(
-              onTap: () {
-                indexCarouselController?.jumpToPage(index);
-              },
-              child: AnimatedContainer(
-                curve: Curves.easeInOut,
-                duration: Duration(milliseconds: 300),
-                width: isSelected ? 30.w : 25.w,
-                height: isSelected ? 30.w : 25.w,
-                decoration: BoxDecoration(
-                  image: DecorationImage(
-                    image: NetworkImage(
-                      AppUrl.convertImageDirect(latestMovie[index].posterUrl),
-                    ),
-                    fit: BoxFit.cover,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final itemExtent = 40.w;
+          final dataChanged = _lastDotCarouselKey != carouselKey;
+
+          if (dataChanged) {
+            _lastDotCarouselKey = carouselKey;
+            _dotVirtualIndex =
+                (count * _dotLoopStartMultiplier) + selectedRealIndex;
+            _lastScheduledDotVirtualIndex = null;
+            _lastScheduledDotViewportWidth = null;
+            _lastScheduledDotItemExtent = null;
+          }
+
+          _scheduleSelectedDotCenter(
+            selectedIndex: selectedRealIndex,
+            count: count,
+            itemExtent: itemExtent,
+            viewportWidth: constraints.maxWidth,
+            jump: dataChanged,
+          );
+
+          if (count == 1) {
+            final url = latestMovie.first.posterUrl;
+            return Center(child: _buildDotItem(url: url, isSelected: true));
+          }
+
+          return ListView.builder(
+            controller: _dotScrollController,
+            scrollDirection: Axis.horizontal,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: count * _dotLoopMultiplier,
+            itemBuilder: (context, virtualIndex) {
+              final realIndex = _positiveModulo(virtualIndex, count);
+              final isSelected = selectedRealIndex == realIndex;
+              final url = latestMovie[realIndex].posterUrl;
+
+              return SizedBox(
+                width: itemExtent,
+                child: Center(
+                  child: GestureDetector(
+                    onTap: () {
+                      _dotVirtualIndex = virtualIndex;
+                      indexCarouselController?.jumpToPage(realIndex);
+                    },
+                    child: _buildDotItem(url: url, isSelected: isSelected),
                   ),
-                  shape: BoxShape.circle,
-                  border: isSelected
-                      ? Border.all(color: Colors.white, width: 2.w)
-                      : null,
                 ),
-              ),
-            );
-          }),
+              );
+            },
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildDotItem({required String url, required bool isSelected}) {
+    final cacheSize = _cacheExtent(48.w);
+
+    return AnimatedContainer(
+      curve: Curves.easeInOut,
+      duration: const Duration(milliseconds: 300),
+      width: isSelected ? 30.w : 25.w,
+      height: isSelected ? 30.w : 25.w,
+      padding: EdgeInsets.all(isSelected ? 2.w : 0),
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        border: isSelected ? Border.all(color: Colors.white, width: 2.w) : null,
+      ),
+      child: ClipOval(
+        child: Image(
+          key: ValueKey('dot-$url'),
+          image: _optimizedPosterProvider(
+            url,
+            cacheWidth: cacheSize,
+            cacheHeight: cacheSize,
+          ),
+          fit: BoxFit.cover,
+          gaplessPlayback: true,
+          errorBuilder: (context, error, stackTrace) =>
+              Container(color: const Color(0xff191A24)),
         ),
       ),
     );
+  }
+
+  void _scheduleSelectedDotCenter({
+    required int selectedIndex,
+    required int count,
+    required double itemExtent,
+    required double viewportWidth,
+    required bool jump,
+  }) {
+    if (count <= 1 || viewportWidth <= 0) return;
+
+    final currentVirtualIndex = _currentDotVirtualIndex(
+      itemExtent: itemExtent,
+      viewportWidth: viewportWidth,
+    );
+    final targetVirtualIndex = _nearestDotVirtualIndex(
+      selectedIndex: selectedIndex,
+      count: count,
+      currentVirtualIndex: currentVirtualIndex,
+    );
+
+    _dotVirtualIndex = targetVirtualIndex;
+
+    final alreadyScheduled =
+        !jump &&
+        _lastScheduledDotVirtualIndex == targetVirtualIndex &&
+        _lastScheduledDotViewportWidth == viewportWidth &&
+        _lastScheduledDotItemExtent == itemExtent;
+
+    if (alreadyScheduled) return;
+
+    _lastScheduledDotVirtualIndex = targetVirtualIndex;
+    _lastScheduledDotViewportWidth = viewportWidth;
+    _lastScheduledDotItemExtent = itemExtent;
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_dotScrollController.hasClients) return;
+
+      final targetOffset =
+          (targetVirtualIndex * itemExtent) +
+          (itemExtent / 2) -
+          (viewportWidth / 2);
+      final maxScrollExtent = _dotScrollController.position.maxScrollExtent;
+      final offset = targetOffset.clamp(0.0, maxScrollExtent).toDouble();
+
+      if ((_dotScrollController.offset - offset).abs() <= 0.5) return;
+
+      if (jump) {
+        _dotScrollController.jumpTo(offset);
+        return;
+      }
+
+      _dotScrollController.animateTo(
+        offset,
+        duration: const Duration(milliseconds: 280),
+        curve: Curves.easeOutCubic,
+      );
+    });
+  }
+
+  int _currentDotVirtualIndex({
+    required double itemExtent,
+    required double viewportWidth,
+  }) {
+    if (!_dotScrollController.hasClients || itemExtent <= 0) {
+      return _dotVirtualIndex;
+    }
+
+    final centeredOffset =
+        _dotScrollController.offset + (viewportWidth / 2) - (itemExtent / 2);
+    return (centeredOffset / itemExtent).round();
+  }
+
+  int _nearestDotVirtualIndex({
+    required int selectedIndex,
+    required int count,
+    required int currentVirtualIndex,
+  }) {
+    if (count <= 0) return 0;
+
+    final baseIndex =
+        currentVirtualIndex - _positiveModulo(currentVirtualIndex, count);
+    final candidates = <int>[
+      baseIndex + selectedIndex - count,
+      baseIndex + selectedIndex,
+      baseIndex + selectedIndex + count,
+    ];
+
+    return candidates.reduce((best, candidate) {
+      final bestDistance = (best - currentVirtualIndex).abs();
+      final candidateDistance = (candidate - currentVirtualIndex).abs();
+      return candidateDistance < bestDistance ? candidate : best;
+    });
+  }
+
+  int _positiveModulo(int value, int modulo) {
+    if (modulo == 0) return 0;
+    final result = value % modulo;
+    return result < 0 ? result + modulo : result;
   }
 
   Widget _buildInforChip({
@@ -1045,25 +1588,42 @@ class _HomePageState extends State<HomePage>
   }
 
   Widget _buildBackgroundImage(List<ItemEntity> latestMovie) {
-    final safeIndex = _safeIndex(latestMovie.length);
-    final url = AppUrl.convertImageDirect(latestMovie[safeIndex].posterUrl);
-    return Positioned.fill(
-      child: AnimatedSwitcher(
-        duration: const Duration(milliseconds: 300),
-        switchInCurve: Curves.easeInOut,
-        switchOutCurve: Curves.easeInOut,
-        child: Image.network(
-          key: ValueKey(url),
-          url,
-          fit: BoxFit.cover,
-          frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
-            if (wasSynchronouslyLoaded || frame != null) return child;
-            return _buildBannerShimmer(borderRadius: BorderRadius.zero);
-          },
-          errorBuilder: (context, error, stackTrace) =>
-              Container(color: const Color(0xff191A24)),
-        ),
-      ),
+    if (latestMovie.isEmpty) {
+      return Positioned.fill(child: Container(color: const Color(0xff191A24)));
+    }
+
+    final mediaSize = MediaQuery.sizeOf(context);
+    final cacheWidth = _cacheExtent(mediaSize.width, maxPhysicalPixels: 1080);
+    final cacheHeight = _cacheExtent(mediaSize.height, maxPhysicalPixels: 1620);
+
+    return BlocSelector<HomeUiCubit, HomeUiState, int>(
+      selector: (state) => state.currentIndex,
+      builder: (context, selectedIndex) {
+        final safeIndex = selectedIndex
+            .clamp(0, latestMovie.length - 1)
+            .toInt();
+        final url = latestMovie[safeIndex].posterUrl;
+
+        return Positioned.fill(
+          child: AnimatedSwitcher(
+            duration: const Duration(milliseconds: 300),
+            switchInCurve: Curves.easeInOut,
+            switchOutCurve: Curves.easeInOut,
+            child: Image(
+              key: ValueKey(url),
+              image: _optimizedPosterProvider(
+                url,
+                cacheWidth: cacheWidth,
+                cacheHeight: cacheHeight,
+              ),
+              fit: BoxFit.cover,
+              gaplessPlayback: true,
+              errorBuilder: (context, error, stackTrace) =>
+                  Container(color: const Color(0xff191A24)),
+            ),
+          ),
+        );
+      },
     );
   }
 
@@ -1085,29 +1645,29 @@ class _HomePageState extends State<HomePage>
     final int buildGen =
         _carouselGen; //  gen tại thời điểm build (để guard callback)
     final carouselKey = latestMovie.take(count).map((e) => e.slug).join('|');
+    final enableInfiniteScroll = count > 1;
+    final carouselInstanceKey = '$carouselKey-$buildGen';
 
     if (_lastCarouselKey != carouselKey) {
       _lastCarouselKey = carouselKey;
-      _currentPageNotifier.value = 0.0;
+      _setCurrentPageIfChanged(0.0, force: true);
     }
 
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      // Chờ thêm 1 frame nữa để carousel slider hoàn tất khởi tạo internal PageView
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted && buildGen == _carouselGen) _carouselReady = true;
-      });
-    });
+    _scheduleCarouselReady(buildGen);
     final carouselH = math.min(heroHeight * 0.42, 340.h);
     final posterHeight = carouselH;
     final posterWidth = posterHeight * _bannerPosterAspectRatio;
+    final posterCacheWidth = _cacheExtent(posterWidth, maxPhysicalPixels: 900);
+    final posterCacheHeight = _cacheExtent(
+      posterHeight,
+      maxPhysicalPixels: 1350,
+    );
 
     return SizedBox(
       height: carouselH + 5.h,
       child: PrimaryScrollController.none(
         child: CarouselSlider.builder(
-          key: ValueKey(
-            '$carouselKey-${_uiState.carouselKeyCounter}',
-          ), //  key mới mỗi khi data đổi
+          key: ValueKey(carouselInstanceKey), //  key mới mỗi khi data đổi
           carouselController: indexCarouselController!,
           options: CarouselOptions(
             height: carouselH,
@@ -1115,152 +1675,40 @@ class _HomePageState extends State<HomePage>
             autoPlay: true,
             animateToClosest: true,
             initialPage: 0,
+            enableInfiniteScroll: enableInfiniteScroll,
             enlargeCenterPage: true,
+            clipBehavior: Clip.none,
+            pageViewKey: PageStorageKey('page-$carouselInstanceKey'),
             onPageChanged: (index, reason) {
               if (buildGen != _carouselGen) return;
-              _currentPageNotifier.value = index.toDouble();
-              if (!mounted) return;
-              _homeUiCubit.setCurrentIndex(index);
+              _setCurrentPageIfChanged(index.toDouble(), force: true);
+              _setCurrentIndexIfChanged(index);
             },
             onScrolled: (value) {
-              if (value == null || !_carouselReady || buildGen != _carouselGen)
-                return;
-              final normalizedValue = value % count;
-              // Bỏ qua jump lớn bất thường (do carousel internal page math khi khởi tạo)
-              if ((_currentPageNotifier.value - normalizedValue).abs() >
-                  count / 2) {
+              if (value == null ||
+                  !_carouselReady ||
+                  buildGen != _carouselGen) {
                 return;
               }
-              _currentPageNotifier.value = normalizedValue;
+              _setCurrentPageIfChanged(_normalizeCarouselPage(value, count));
             },
           ),
           itemCount: count,
-          itemBuilder: (BuildContext context, int index, int realiindex) {
-            return ValueListenableBuilder<double>(
-              valueListenable: _currentPageNotifier,
-              builder: (context, currentPage, child) {
-                final double itemCount = count.toDouble();
-
-                double diff = index - currentPage;
-                diff = diff - itemCount * (diff / itemCount).round();
-                diff = diff.clamp(-1.0, 1.0);
-
-                final double angle = diff * (math.pi * 0.1);
-                return Center(
-                  child: Transform.rotate(angle: angle, child: child),
-                );
-              },
-              child: GestureDetector(
-                onTap: () {
-                  AppNavigator.push(
-                    context,
-                    MovieDetailPage(slug: latestMovie[index].slug),
-                  );
-                },
-                onLongPress: () {
-                  HapticFeedback.mediumImpact();
-                  showAnimatedDialog(
-                    context: context,
-                    dialog: ShowDetailMovieDialog(
-                      slug: latestMovie[index].slug,
-                    ),
-                  );
-                },
-                child: Container(
-                  width: posterWidth,
-                  margin: EdgeInsets.symmetric(horizontal: 14.w),
-                  decoration: BoxDecoration(
-                    border: Border.all(color: Colors.white, width: 3.w),
-                    borderRadius: BorderRadius.circular(15.r),
-                  ),
-                  child: AspectRatio(
-                    aspectRatio: _bannerPosterAspectRatio,
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(12.r),
-                      child: Image.network(
-                        AppUrl.convertImageDirect(latestMovie[index].posterUrl),
-                        fit: BoxFit.cover,
-                        frameBuilder:
-                            (context, child, frame, wasSynchronouslyLoaded) {
-                              if (wasSynchronouslyLoaded || frame != null) {
-                                return child;
-                              }
-                              return _buildBannerShimmer();
-                            },
-                        errorBuilder: (context, error, stackTrace) =>
-                            _buildBannerShimmer(),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
+          itemBuilder: (context, index, _) {
+            return _HomeCarouselItem(
+              movie: latestMovie[index],
+              index: index,
+              count: count,
+              posterWidth: posterWidth,
+              posterCacheWidth: posterCacheWidth,
+              posterCacheHeight: posterCacheHeight,
+              currentPageListenable: _currentPageNotifier,
+              imageProviderBuilder: _optimizedPosterProvider,
+              errorBuilder: () => _buildBannerShimmer(),
             );
           },
         ),
       ),
-    );
-  }
-
-  Widget _watchedMoviesSection() {
-    return FutureBuilder<ValueListenable<Box<WatchHistoryEntry>>>(
-      future: _watchHistoryListenableFuture,
-      builder: (context, snapshot) {
-        if (!snapshot.hasData) {
-          return const SizedBox.shrink();
-        }
-
-        return ValueListenableBuilder<Box<WatchHistoryEntry>>(
-          valueListenable: snapshot.data!,
-          builder: (context, box, _) {
-            final watchedMovies = _watchHistoryStorage.sortEntries(
-              box.values,
-              limit: 20,
-            );
-
-            if (watchedMovies.isEmpty) {
-              return const SizedBox.shrink();
-            }
-
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Padding(
-                      padding: EdgeInsets.only(left: 20.w),
-                      child: Text(
-                        'Bạn đã xem gần đây',
-                        style: TextStyle(
-                          fontSize: 18.sp,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                    const Spacer(),
-                  ],
-                ),
-                SizedBox(height: 10.h),
-                SizedBox(
-                  height: 260.h,
-                  child: ListView.separated(
-                    padding: EdgeInsets.only(left: 15.w),
-                    scrollDirection: Axis.horizontal,
-                    separatorBuilder: (_, __) => SizedBox(width: 10.w),
-                    itemCount: watchedMovies.length,
-                    itemBuilder: (context, index) {
-                      final entry = watchedMovies[index];
-                      return _ItemWatchedMovie(
-                        key: ValueKey(entry.slug),
-                        entry: entry,
-                      );
-                    },
-                  ),
-                ),
-              ],
-            );
-          },
-        );
-      },
     );
   }
 
@@ -1326,18 +1774,32 @@ class CountryMovieSection extends StatefulWidget {
 }
 
 class _CountryMovieSectionState extends State<CountryMovieSection> {
+  late final FetchFillterCubit _filterCubit;
+
+  @override
+  void initState() {
+    super.initState();
+    _filterCubit =
+        FetchFillterCubit(
+          getMoviesByFilterUsecase: sl<GetMoviesByFilterUsecase>(),
+        )..fetchMovies(
+          FillterMovieReq(
+            typeList: widget.countrySlug,
+            fillterType: Filltertype.country,
+          ),
+        );
+  }
+
+  @override
+  void dispose() {
+    _filterCubit.close();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
-    return BlocProvider(
-      create: (context) =>
-          FetchFillterCubit(
-            getMoviesByFilterUsecase: sl<GetMoviesByFilterUsecase>(),
-          )..fetchMovies(
-            FillterMovieReq(
-              typeList: widget.countrySlug,
-              fillterType: Filltertype.country,
-            ),
-          ),
+    return BlocProvider.value(
+      value: _filterCubit,
       child: BlocBuilder<FetchFillterCubit, FetchFillterState>(
         builder: (context, state) {
           final List<ItemEntity> itemsList = [];
@@ -1409,6 +1871,9 @@ class _CountryMovieSectionState extends State<CountryMovieSection> {
                   height: listH,
                   child: AnimationLimiter(
                     child: ListView.separated(
+                      key: PageStorageKey<String>(
+                        'country-movies-${widget.countrySlug}',
+                      ),
                       padding: EdgeInsets.only(left: 10.w),
                       scrollDirection: Axis.horizontal,
                       addAutomaticKeepAlives: true,
@@ -1417,7 +1882,11 @@ class _CountryMovieSectionState extends State<CountryMovieSection> {
                       itemCount: itemsList.length,
                       cacheExtent: 500,
                       itemBuilder: (context, index) {
-                        return _ItemLatestMovie(items: itemsList[index]);
+                        final item = itemsList[index];
+                        return _ItemLatestMovie(
+                          key: ValueKey(item.slug),
+                          items: item,
+                        );
                       },
                     ),
                   ),
@@ -1432,12 +1901,15 @@ class _CountryMovieSectionState extends State<CountryMovieSection> {
 
 class _ItemLatestMovie extends StatelessWidget {
   final ItemEntity items;
-  const _ItemLatestMovie({required this.items});
+  const _ItemLatestMovie({super.key, required this.items});
 
   @override
   Widget build(BuildContext context) {
     // 1. Parse chuỗi ngôn ngữ sang List các Enum
     final List<MediaTagType> langTags = items.lang.toMediaTags();
+    final pixelRatio = MediaQuery.devicePixelRatioOf(context);
+    final posterCacheWidth = math.min((140.w * pixelRatio).round(), 600);
+    final posterCacheHeight = math.min((200.h * pixelRatio).round(), 900);
 
     // 2. Lấy tập hiện tại (Check null an toàn)
     final String? currentEp = items.episodeCurrent;
@@ -1470,12 +1942,15 @@ class _ItemLatestMovie extends StatelessWidget {
                 child: Stack(
                   children: [
                     Positioned.fill(
-                      child: FastCachedImage(
-                        url: AppUrl.convertImageAddition(items.posterUrl),
+                      child: Image(
+                        key: ValueKey('${items.slug}:${items.posterUrl}'),
+                        image: ResizeImage(
+                          FastCachedImageProvider(items.posterUrl),
+                          width: posterCacheWidth,
+                          height: posterCacheHeight,
+                        ),
                         fit: BoxFit.cover,
-                        loadingBuilder: (context, loadingProgress) {
-                          return _buildSkeletonForposter();
-                        },
+                        gaplessPlayback: true,
                         errorBuilder: (context, error, stackTrace) {
                           return _buildSkeletonForposter();
                         },
@@ -1608,260 +2083,105 @@ class _ItemLatestMovie extends StatelessWidget {
   }
 }
 
-class _ItemWatchedMovie extends StatelessWidget {
-  final WatchHistoryEntry entry;
-  const _ItemWatchedMovie({super.key, required this.entry});
+typedef _PosterImageProviderBuilder =
+    ImageProvider Function(
+      String url, {
+      required int cacheWidth,
+      int? cacheHeight,
+    });
+
+class _HomeCarouselItem extends StatelessWidget {
+  final ItemEntity movie;
+  final int index;
+  final int count;
+  final double posterWidth;
+  final int posterCacheWidth;
+  final int posterCacheHeight;
+  final ValueListenable<double> currentPageListenable;
+  final _PosterImageProviderBuilder imageProviderBuilder;
+  final Widget Function() errorBuilder;
+
+  const _HomeCarouselItem({
+    required this.movie,
+    required this.index,
+    required this.count,
+    required this.posterWidth,
+    required this.posterCacheWidth,
+    required this.posterCacheHeight,
+    required this.currentPageListenable,
+    required this.imageProviderBuilder,
+    required this.errorBuilder,
+  });
+
+  static const double _posterAspectRatio = 2 / 3;
 
   @override
   Widget build(BuildContext context) {
-    final List<MediaTagType> langTags = (entry.lang ?? '').toMediaTags();
-    final progress = entry.progressPercent;
+    return ValueListenableBuilder<double>(
+      valueListenable: currentPageListenable,
+      builder: (context, currentPage, child) {
+        var diff = index - currentPage;
+        diff = diff - count * (diff / count).round();
+        diff = diff.clamp(-1.0, 1.0);
 
-    return GestureDetector(
-      onTap: () {
-        AppNavigator.push(context, MovieDetailPage(slug: entry.slug));
-      },
-      onLongPress: () {
-        HapticFeedback.mediumImpact();
-        showAnimatedDialog(
-          context: context,
-          dialog: ShowDetailMovieDialog(slug: entry.slug),
+        final angle = diff * (math.pi * 0.1);
+        return Center(
+          child: Transform.rotate(angle: angle, child: child),
         );
       },
-      child: SizedBox(
-        width: 140.w,
-        height: 260.h,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            Container(
-              height: 200.h,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(10.r),
-                border: Border.all(color: Colors.white, width: 2.w),
-              ),
+      child: RepaintBoundary(
+        child: GestureDetector(
+          onTap: () {
+            AppNavigator.push(context, MovieDetailPage(slug: movie.slug));
+          },
+          onLongPress: () {
+            HapticFeedback.mediumImpact();
+            showAnimatedDialog(
+              context: context,
+              dialog: ShowDetailMovieDialog(slug: movie.slug),
+            );
+          },
+          child: Container(
+            width: posterWidth,
+            margin: EdgeInsets.symmetric(horizontal: 14.w),
+            decoration: BoxDecoration(
+              border: Border.all(color: Colors.white, width: 3.w),
+              borderRadius: BorderRadius.circular(15.r),
+            ),
+            child: AspectRatio(
+              aspectRatio: _posterAspectRatio,
               child: ClipRRect(
-                borderRadius: BorderRadius.circular(8.r),
-                child: Stack(
-                  children: [
-                    Positioned.fill(
-                      child: FastCachedImage(
-                        key: ValueKey('${entry.slug}:${entry.posterUrl}'),
-                        url: AppUrl.convertImageAddition(entry.posterUrl),
-                        fit: BoxFit.cover,
-                        loadingBuilder: (context, loadingProgress) {
-                          return AspectRatio(
-                            aspectRatio: 2 / 3,
-                            child: Shimmer.fromColors(
-                              baseColor: Color(0xff272A39),
-                              highlightColor: Color(0xff4A4E69),
-                              child: Container(
-                                decoration: BoxDecoration(
-                                  color: Colors.black,
-                                  borderRadius: BorderRadius.circular(8.r),
-                                ),
-                              ),
-                            ),
-                          );
-                        },
-                        errorBuilder: (context, error, stackTrace) {
-                          return AspectRatio(
-                            aspectRatio: 2 / 3,
-                            child: Shimmer.fromColors(
-                              baseColor: Color(0xff272A39),
-                              highlightColor: Color(0xff4A4E69),
-                              child: Container(
-                                decoration: BoxDecoration(
-                                  color: Colors.black,
-                                  borderRadius: BorderRadius.circular(8.r),
-                                ),
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-                    if (entry.rating != null)
-                      Positioned(
-                        top: 5.h,
-                        left: 5.w,
-                        child: Container(
-                          padding: EdgeInsets.symmetric(
-                            horizontal: 6.w,
-                            vertical: 3.h,
-                          ),
-                          decoration: BoxDecoration(
-                            gradient: const LinearGradient(
-                              colors: [
-                                Color(0xFFC77DFF),
-                                Color(0xFFFF9E9E),
-                                Color(0xFFFFD275),
-                              ],
-                              begin: Alignment.topRight,
-                              end: Alignment.bottomLeft,
-                            ),
-                            boxShadow: const [
-                              BoxShadow(
-                                color: Color(0xFFC77DFF),
-                                blurRadius: 12,
-                                offset: Offset(0, 0),
-                                spreadRadius: -2,
-                              ),
-                            ],
-                            borderRadius: BorderRadius.circular(6.r),
-                          ),
-                          child: Text(
-                            entry.rating!.toStringAsFixed(1),
-                            style: TextStyle(
-                              fontSize: 10.sp,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                            ),
-                          ),
-                        ),
-                      ),
-                    Positioned(
-                      bottom: 2.h,
-                      left: 0,
-                      child: Column(
-                        children: [
-                          Container(
-                            padding: EdgeInsets.only(
-                              top: 4.h,
-                              bottom: 4.h,
-                              left: 5.w,
-                              right: 5.w,
-                            ),
-                            decoration: BoxDecoration(
-                              gradient: LinearGradient(
-                                begin: Alignment.topCenter,
-                                end: Alignment.bottomCenter,
-                                colors: [
-                                  Colors.transparent,
-                                  Colors.black.withOpacity(0.8),
-                                ],
-                              ),
-                            ),
-                            child: Column(
-                              spacing: 3.h,
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                ...langTags.map(
-                                  (tag) => _buildBadge(
-                                    text: tag.label,
-                                    color: tag.color,
-                                  ),
-                                ),
-                                if (entry.episodeCurrent.isNotEmpty &&
-                                    entry.episodeCurrent != 'Full')
-                                  _buildBadge(
-                                    text: EpisodeFormatter.toShort(
-                                      entry.episodeCurrent,
-                                    ),
-                                    color: Colors.redAccent,
-                                  ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    if (progress > 0)
-                      Positioned(
-                        left: 1,
-                        right: 1,
-                        bottom: -1,
-                        child: Container(
-                          height: 4,
-                          decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.3),
-                            borderRadius: BorderRadius.circular(2.r),
-                          ),
-                          child: LayoutBuilder(
-                            builder: (context, constraints) {
-                              double p = entry.progressPercent;
-                              if (p > 1) p /= 100; //  phòng trường hợp 0..100
-                              p = p.clamp(0.0, 1.0); //  chặn vượt
-
-                              return Align(
-                                alignment: Alignment.centerLeft,
-                                child: FractionallySizedBox(
-                                  widthFactor: p,
-                                  child: Container(
-                                    decoration: BoxDecoration(
-                                      gradient: const LinearGradient(
-                                        colors: [
-                                          Color(0xFFC77DFF),
-                                          Color(0xFFFF9E9E),
-                                          Color(0xFFFFD275),
-                                        ],
-                                        begin: Alignment.topRight,
-                                        end: Alignment.bottomLeft,
-                                      ),
-                                      boxShadow: const [
-                                        BoxShadow(
-                                          color: Color(0xFFC77DFF),
-                                          blurRadius: 12,
-                                          offset: Offset(0, 0),
-                                          spreadRadius: -2,
-                                        ),
-                                      ],
-                                      borderRadius: BorderRadius.circular(2.r),
-                                    ),
-                                  ),
-                                ),
-                              );
-                            },
-                          ),
-                        ),
-                      ),
-                  ],
+                borderRadius: BorderRadius.circular(12.r),
+                child: Image(
+                  key: ValueKey('carousel-${movie.slug}-${movie.posterUrl}'),
+                  image: imageProviderBuilder(
+                    movie.posterUrl,
+                    cacheWidth: posterCacheWidth,
+                    cacheHeight: posterCacheHeight,
+                  ),
+                  fit: BoxFit.cover,
+                  gaplessPlayback: true,
+                  errorBuilder: (context, error, stackTrace) => errorBuilder(),
                 ),
               ),
             ),
-            SizedBox(height: 10.h),
-            Padding(
-              padding: EdgeInsets.symmetric(horizontal: 10.w),
-              child: AppAutoScrollText(
-                entry.name,
-                textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 13.sp, fontWeight: FontWeight.w600),
-              ),
-            ),
-            AppAutoScrollText(
-              entry.originName,
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 10.sp,
-                fontWeight: FontWeight.w400,
-                color: Colors.grey,
-              ),
-            ),
-          ],
+          ),
         ),
       ),
     );
   }
 }
 
-Widget _buildBadge({required String text, required Color color}) {
-  return Container(
-    padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 0),
-    decoration: BoxDecoration(
-      color: color,
-      border: Border.all(color: color),
-      borderRadius: BorderRadius.circular(10.r),
-    ),
-    child: Text(
-      text,
-      style: TextStyle(
-        color: Colors.white,
-        fontSize: 9.sp,
-        fontWeight: FontWeight.bold,
-      ),
-    ),
-  );
+class _PlayerEpisodeTarget {
+  final int serverIndex;
+  final int episodeIndex;
+  final String episodeLink;
+
+  const _PlayerEpisodeTarget({
+    required this.serverIndex,
+    required this.episodeIndex,
+    required this.episodeLink,
+  });
 }
 
 class _CountrySkeletonList extends StatelessWidget {

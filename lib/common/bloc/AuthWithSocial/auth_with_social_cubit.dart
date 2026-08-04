@@ -13,6 +13,12 @@ class AuthWithSocialCubit extends Cubit<AuthWithSocialState> {
     this.siginWithFacebookUsecase,
   ) : super(AuthWithSocialInitial());
 
+  void reset() {
+    if (state is! AuthWithSocialLoading) {
+      emit(AuthWithSocialInitial());
+    }
+  }
+
   Future<void> signInWithGoogle() async {
     emit(AuthWithSocialLoading());
     final result = await siginWithGoogleUsecase(const NoParams());

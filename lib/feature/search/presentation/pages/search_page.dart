@@ -2,28 +2,37 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
+import 'package:movie_app/common/components/alert_dialog/app_alert_dialog.dart';
 import 'package:movie_app/core/config/di/service_locator.dart';
 import 'package:movie_app/core/config/themes/app_color.dart';
+import 'package:movie_app/core/config/utils/animated_dialog.dart';
+import 'package:movie_app/feature/search/domain/entities/search_filter_params.dart';
 import 'package:movie_app/feature/search/presentation/bloc/search_cubit.dart';
 import 'package:movie_app/feature/search/presentation/bloc/search_state.dart';
+import 'package:movie_app/feature/search/presentation/widgets/search_filter_bottom_sheet.dart';
 import 'package:movie_app/feature/search/presentation/widgets/search_history_view.dart';
 import 'package:movie_app/feature/search/presentation/widgets/search_result_view.dart';
 import 'package:movie_app/feature/search/presentation/widgets/search_shimmer_loading.dart';
+import 'package:movie_app/feature/hub/presentation/pages/hub_page.dart';
 
 class SearchPage extends StatelessWidget {
-  const SearchPage({super.key});
+  const SearchPage({super.key, this.showBackButton = true});
+
+  final bool showBackButton;
 
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
       create: (context) => sl<SearchCubit>(),
-      child: const _SearchPageView(),
+      child: _SearchPageView(showBackButton: showBackButton),
     );
   }
 }
 
 class _SearchPageView extends StatefulWidget {
-  const _SearchPageView();
+  const _SearchPageView({required this.showBackButton});
+
+  final bool showBackButton;
 
   @override
   State<_SearchPageView> createState() => _SearchPageViewState();
@@ -36,11 +45,26 @@ class _SearchPageViewState extends State<_SearchPageView> {
   Timer? _debounce;
 
   bool _hideClear = false;
+  SearchFilterParams _filters = SearchFilterParams.defaults;
 
   @override
   void initState() {
     super.initState();
     _scrollCtrl.addListener(_onScroll);
+    HubTabReselectNotifier.instance.addListener(_onHubTabReselected);
+  }
+
+  void _onHubTabReselected() {
+    if (HubTabReselectNotifier.instance.index != 1 || !_scrollCtrl.hasClients) {
+      return;
+    }
+    _scrollCtrl.animateTo(
+      0,
+      duration: MediaQuery.disableAnimationsOf(context)
+          ? Duration.zero
+          : const Duration(milliseconds: 320),
+      curve: Curves.easeOutCubic,
+    );
   }
 
   void _onScroll() {
@@ -71,13 +95,44 @@ class _SearchPageViewState extends State<_SearchPageView> {
       if (q.isEmpty) {
         cubit.clearSearch();
       } else {
-        cubit.search(q);
+        cubit.search(q, filters: _filters);
       }
     });
   }
 
+  void _showKeywordRequiredMessage() {
+    showAnimatedDialog(
+      context: context,
+      dialog: const AppAlertDialog(
+        title: 'Chú ý!',
+        content: 'Nhập từ khóa trước khi lọc phim.',
+      ),
+    );
+  }
+
+  Future<void> _openFilterSheet() async {
+    FocusScope.of(context).unfocus();
+
+    final keyword = _searchCtrl.text.trim();
+    if (keyword.isEmpty) {
+      _showKeywordRequiredMessage();
+      return;
+    }
+
+    final result = await SearchFilterBottomSheet.show(
+      context,
+      initialFilters: _filters,
+    );
+
+    if (result == null || !mounted) return;
+
+    setState(() => _filters = result);
+    context.read<SearchCubit>().search(keyword, filters: result);
+  }
+
   @override
   void dispose() {
+    HubTabReselectNotifier.instance.removeListener(_onHubTabReselected);
     _debounce?.cancel();
     _searchCtrl.dispose();
     _scrollCtrl.dispose();
@@ -101,8 +156,8 @@ class _SearchPageViewState extends State<_SearchPageView> {
                   decoration: BoxDecoration(
                     gradient: RadialGradient(
                       colors: [
-                        AppColor.firstColor.withOpacity(.4),
-                        AppColor.firstColor.withOpacity(.02),
+                        AppColor.firstColor.withValues(alpha: .4),
+                        AppColor.firstColor.withValues(alpha: .02),
                       ],
                     ),
                   ),
@@ -117,13 +172,14 @@ class _SearchPageViewState extends State<_SearchPageView> {
                     padding: const EdgeInsets.all(16.0),
                     child: Row(
                       children: [
-                        IconButton(
-                          onPressed: () => Navigator.pop(context),
-                          icon: const Icon(
-                            Iconsax.arrow_left_2_copy,
-                            color: Colors.white,
+                        if (widget.showBackButton)
+                          IconButton(
+                            onPressed: () => Navigator.pop(context),
+                            icon: const Icon(
+                              Iconsax.arrow_left_2_copy,
+                              color: Colors.white,
+                            ),
                           ),
-                        ),
                         Expanded(
                           child: TextField(
                             controller: _searchCtrl,
@@ -196,11 +252,16 @@ class _SearchPageViewState extends State<_SearchPageView> {
                             onSubmitted: (val) {
                               final q = val.trim();
                               if (q.isNotEmpty) {
-                                context.read<SearchCubit>().search(q);
+                                context.read<SearchCubit>().search(
+                                  q,
+                                  filters: _filters,
+                                );
                               }
                             },
                           ),
                         ),
+                        const SizedBox(width: 8),
+                        _buildFilterButton(),
                       ],
                     ),
                   ),
@@ -214,6 +275,8 @@ class _SearchPageViewState extends State<_SearchPageView> {
                             movies: state.movies,
                             isLoadingMore: state.isLoadingMore, // ✅ mới
                             scrollController: _scrollCtrl,
+                            resultSignature:
+                                '${state.currentKeyword}|${state.filters.signature}',
                           );
                         } else if (state is SearchInitial) {
                           return SearchHistoryView(
@@ -225,7 +288,10 @@ class _SearchPageViewState extends State<_SearchPageView> {
                                     TextPosition(offset: keyword.length),
                                   );
                               setState(() => _hideClear = keyword.isNotEmpty);
-                              context.read<SearchCubit>().search(keyword);
+                              context.read<SearchCubit>().search(
+                                keyword,
+                                filters: _filters,
+                              );
                             },
                           );
                         } else if (state is SearchError) {
@@ -246,6 +312,48 @@ class _SearchPageViewState extends State<_SearchPageView> {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildFilterButton() {
+    final isActive = _filters.isActive;
+
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        IconButton(
+          tooltip: 'Bộ lọc tìm kiếm',
+          onPressed: _openFilterSheet,
+          style: IconButton.styleFrom(
+            backgroundColor: Colors.white.withValues(alpha: 0.1),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+              side: BorderSide(
+                color: isActive
+                    ? AppColor.secondColor
+                    : Colors.white.withValues(alpha: 0.3),
+              ),
+            ),
+          ),
+          icon: Icon(
+            Iconsax.filter_copy,
+            color: isActive ? AppColor.secondColor : Colors.white,
+          ),
+        ),
+        if (isActive)
+          Positioned(
+            top: 6,
+            right: 6,
+            child: Container(
+              width: 8,
+              height: 8,
+              decoration: const BoxDecoration(
+                color: Color(0xffF1D775),
+                shape: BoxShape.circle,
+              ),
+            ),
+          ),
+      ],
     );
   }
 }

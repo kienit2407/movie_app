@@ -1,218 +1,300 @@
-// import 'package:flutter/material.dart';
-// import 'package:flutter_bloc/flutter_bloc.dart';
-// import 'package:iconsax_flutter/iconsax_flutter.dart';
-// import 'package:liquid_glass_renderer/liquid_glass_renderer.dart';
-// import 'package:movie_app/common/bloc/AuthWithSocial/auth_with_social_cubit.dart';
-// import 'package:movie_app/common/bloc/AuthWithSocial/auth_with_social_state.dart';
-// import 'package:movie_app/common/components/alert_dialog/app_alert_dialog.dart';
-// import 'package:movie_app/common/components/background/app_back_ground.dart';
-// import 'package:movie_app/common/components/button/app_button.dart';
-// import 'package:movie_app/common/components/loading/custom_loading.dart';
-// import 'package:movie_app/common/components/text_field/app_email_textfield.dart';
-// import 'package:movie_app/common/components/text_field/app_password_textfield.dart';
-// import 'package:movie_app/common/helpers/navigation/app_navigation.dart';
-// import 'package:movie_app/core/config/assets/app_image.dart';
-// import 'package:movie_app/core/config/routes/nav_host.dart';
-// import 'package:movie_app/core/config/themes/app_color.dart';
-// import 'package:movie_app/core/config/utils/animated_dialog.dart';
-// import 'package:movie_app/feature/auth/data/models/sign_in_req.dart';
-// import 'package:movie_app/feature/auth/presentation/reset_password/pages/reset_password_page.dart';
-// import 'package:movie_app/feature/auth/presentation/sign_in/bloc/sign_in_cubit.dart';
-// import 'package:movie_app/feature/auth/presentation/sign_in/bloc/sign_in_state.dart';
-// import 'package:movie_app/feature/auth/presentation/sign_in/widgets/app_button_forgot.dart';
-// import 'package:movie_app/feature/auth/presentation/sign_in/widgets/app_divide.dart';
-// import 'package:movie_app/common/components/orther/app_option.dart';
-// import 'package:movie_app/feature/auth/presentation/sign_in/widgets/app_to_sign_up.dart';
+import 'dart:ui';
 
-// class SignInPage extends StatefulWidget {
-//   const SignInPage({super.key});
+import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
+import 'package:movie_app/common/bloc/AuthWithSocial/auth_with_social_cubit.dart';
+import 'package:movie_app/common/bloc/AuthWithSocial/auth_with_social_state.dart';
+import 'package:movie_app/common/components/orther/app_option.dart';
+import 'package:movie_app/core/config/assets/app_image.dart';
+import 'package:movie_app/core/config/routes/app_router.dart';
+import 'package:movie_app/feature/auth/presentation/session/auth_session_cubit.dart';
 
-//   @override
-//   State<SignInPage> createState() => _SignInPageState();
-// }
+enum SignInPresentation { page, sheet }
 
-// class _SignInPageState extends State<SignInPage> {
-//   final _controllorEmail = TextEditingController();
-//   final _controllorPassword = TextEditingController();
+class SignInPage extends StatefulWidget {
+  const SignInPage({super.key, this.presentation = SignInPresentation.page});
 
-//   @override
-//   void dispose() {
-//     _controllorEmail.dispose();
-//     _controllorPassword.dispose();
-//     super.dispose();
-//   }
+  final SignInPresentation presentation;
 
-//   @override
-//   Widget build(BuildContext context) {
-//     return GestureDetector(
-//       onTap: () => FocusScope.of(context).unfocus(),
-//       child: Scaffold(
-//         body: Stack(
-//           children: [
-//             AppBackGround(),
-//             _buildOverlay(),
-//             _buildMainContent(),
-//             _buildLoading()
-//           ],
-//         ),
-//       ),
-//     );
-//   }
+  static Future<bool> showSheet(BuildContext context) async {
+    final result = await showModalBottomSheet<bool>(
+      context: context,
+      useRootNavigator: true,
+      isScrollControlled: true,
+      useSafeArea: true,
+      backgroundColor: Colors.transparent,
+      barrierColor: Colors.black.withValues(alpha: 0.62),
+      sheetAnimationStyle: const AnimationStyle(
+        duration: Duration(milliseconds: 320),
+        reverseDuration: Duration(milliseconds: 240),
+      ),
+      builder: (_) => BlocProvider.value(
+        value: context.read<AuthWithSocialCubit>(),
+        child: const SignInPage(presentation: SignInPresentation.sheet),
+      ),
+    );
+    return result == true;
+  }
 
-//   Widget _buildMainContent() {
-//     return MultiBlocListener(
-//       listeners: [
-//         BlocListener<SignInCubit, SignInState>(
-//           listener: (context, signInState) {
-//             _handleSignUpState(context, signInState);
-//           },
-//         ),
-//         BlocListener<AuthWithSocialCubit, AuthWithSocialState>(
-//           listener: (context, authWithSocialState) {
-//             _handleAuthSocial(context, authWithSocialState);
-//           },
-//         ),
-//       ],
-//       child: Stack(children: [_buildContent()]),
-//     );
-//   }
+  @override
+  State<SignInPage> createState() => _SignInPageState();
+}
 
-//   Widget _buildContent() {
-//     return SingleChildScrollView(
-//       child: Padding(
-//         padding: const EdgeInsets.symmetric(horizontal: 20),
-//         child: SafeArea(
-//           child: Column(
-//             crossAxisAlignment: CrossAxisAlignment.center,
-//             mainAxisAlignment: MainAxisAlignment.center,
-//             children: [
-//               LiquidGlass(
-//                 settings: LiquidGlassSettings(
-//                   blur: 3,
-//                   lightAngle: 120,
-//                   lightIntensity: 1,
-//                 ),
-//                 shape: LiquidRoundedSuperellipse(
-//                   borderRadius: Radius.circular(15),
-//                 ),
-//                 child: Image.asset(AppImage.splashLogo, width: 150),
-//               ),
-//               const SizedBox(height: 20),
-//               //logo a
-//               const Text(
-//                 'Login to Your Account',
-//                 style: TextStyle(fontSize: 25, fontWeight: FontWeight.w600),
-//               ),
-//               const SizedBox(height: 30),
-//               AppEmailTextfield(controller: _controllorEmail),
-//               const SizedBox(height: 20),
-//               AppPasswordTextfield(controller: _controllorPassword),
-//               const SizedBox(height: 45),
-//               AppButton(
-//                 onPressed: () {
-//                   final signInReq = SignInReq(
-//                     email: _controllorEmail.text.trim(),
-//                     password: _controllorPassword.text.trim(),
-//                   );
-//                   context.read<SignInCubit>().signIn(signInReq);
-//                 },
-//                 title: 'Sign in',
-//               ),
-//               AppButtonForgot(onPressed: () {
-//                 AppNavigator.push(context, const ResetPasswordPage());
-//               }),
-//               AppDivide(),
-//               const SizedBox(height: 30),
-//               AppOption(),
-//               const SizedBox(height: 30),
-//               AppToSignUp(),
-//             ],
-//           ),
-//         ),
-//       ),
-//     );
-//   }
-// Widget _buildOverlay() => Container(
-//     decoration: BoxDecoration(
-//       gradient: LinearGradient(
-//         colors: [AppColor.bgApp, AppColor.buttonColor.withOpacity(0.3)],
-//         begin: Alignment.bottomCenter,
-//         end: Alignment.topCenter,
-//       ),
-//     ),
-//   );
-//   void _handleSignUpState(BuildContext context, SignInState state) {
-//     if (state is SignInValidErrol) {
-//       final errols = state.errolSignIn;
-//       final errolKey = errols.keys.first;
-//       if (state.errolSignIn.containsKey(errolKey)) {
-//         showAnimatedDialog(
-//           context: context,
-//           dialog: AppAlertDialog(
-//             content: state.errolSignIn[errolKey],
-//             title: 'Warning!',
-//           ),
-//         );
-//       }
-//     }
-//     if (state is SignInFailure) {
-//       showAnimatedDialog(
-//         context: context,
-//         dialog: AppAlertDialog(content: state.messages, title: 'Warning!'),
-//       );
-//     }
-//     if (state is SignInSuccessfull) {
-//       showAnimatedDialog(
-//         context: context,
-//         dialog: AppAlertDialog(
-//           icon: Icon(Iconsax.tick_circle, size: 30),
-//           content: 'Your account is ready to use!',
-//           title: 'Congratulations',
-//           buttonTitle: 'Continue',
-//         ),
-//       );
-//       _loginSuccessfully();
-//     }
-//   }
+class _SignInPageState extends State<SignInPage> {
+  String? _errorMessage;
 
-//   void _handleAuthSocial(BuildContext context, AuthWithSocialState state) {
-//     if (state is AuthWithSocialFailure) {
-//       showAnimatedDialog(
-//         context: context,
-//         dialog: AppAlertDialog(content: state.messages, title: 'Warning!'),
-//       );
-//     }
-//     if (state is AuthWithSocialSuccessfull) {
-//       showAnimatedDialog(
-//         context: context,
-//         dialog: AppAlertDialog(
-//           icon: Icon(Iconsax.tick_circle, size: 30),
-//           content: 'Your account is ready to use!',
-//           title: 'Congratulations',
-//           buttonTitle: 'Continue',
-//         ),
-//       );
-//       _loginSuccessfully();
-//     }
-//   }
+  bool get _isSheet => widget.presentation == SignInPresentation.sheet;
 
-//   Widget _buildLoading() {
-//     return BlocBuilder<SignInCubit, SignInState>(
-//       builder: (context, signInState) {
-//         return BlocBuilder<AuthWithSocialCubit, AuthWithSocialState>(
-//           builder: (context, authSocialState) {
-//             final isLoading =
-//                 signInState is SignInLoading ||
-//                 authSocialState is AuthWithSocialLoading;
-//             return Visibility(visible: isLoading, child: CustomLoading());
-//           },
-//         );
-//       },
-//     );
-//   }
+  @override
+  void initState() {
+    super.initState();
+    context.read<AuthWithSocialCubit>().reset();
+  }
 
-//   void _loginSuccessfully() {
-//     Future.delayed(Duration(seconds: 1));
-//     AppNavigator.pushAndRemoveUtil(context, const NavHost());
-//   }
-// }
+  @override
+  Widget build(BuildContext context) {
+    final content = BlocConsumer<AuthWithSocialCubit, AuthWithSocialState>(
+      listener: (context, state) {
+        if (state is AuthWithSocialFailure) {
+          setState(() {
+            _errorMessage =
+                state.messages ?? 'Đăng nhập chưa thành công. Hãy thử lại.';
+          });
+        }
+        if (state is AuthWithSocialSuccessfull) {
+          context.read<AuthSessionCubit>().refresh();
+          if (_isSheet) {
+            Navigator.of(context).pop(true);
+          } else if (Navigator.of(context).canPop()) {
+            Navigator.of(context).pop(true);
+          } else {
+            context.go(AppRoutes.home);
+          }
+        }
+      },
+      builder: (context, state) {
+        return _SignInContent(
+          isSheet: _isSheet,
+          isLoading: state is AuthWithSocialLoading,
+          errorMessage: _errorMessage,
+          onClose: () => Navigator.of(context).maybePop(false),
+          onGooglePressed: () {
+            setState(() => _errorMessage = null);
+            context.read<AuthWithSocialCubit>().signInWithGoogle();
+          },
+        );
+      },
+    );
+
+    if (_isSheet) {
+      return content;
+    }
+
+    return Scaffold(backgroundColor: const Color(0xff111119), body: content);
+  }
+}
+
+class _SignInContent extends StatelessWidget {
+  const _SignInContent({
+    required this.isSheet,
+    required this.isLoading,
+    required this.errorMessage,
+    required this.onClose,
+    required this.onGooglePressed,
+  });
+
+  final bool isSheet;
+  final bool isLoading;
+  final String? errorMessage;
+  final VoidCallback onClose;
+  final VoidCallback onGooglePressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final bottomInset = MediaQuery.viewInsetsOf(context).bottom;
+
+    return ClipRRect(
+      borderRadius: isSheet
+          ? const BorderRadius.vertical(top: Radius.circular(30))
+          : BorderRadius.zero,
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
+        child: DecoratedBox(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [Color(0xff251A38), Color(0xff15151E), Color(0xff0E0E14)],
+            ),
+          ),
+          child: SafeArea(
+            top: !isSheet,
+            child: SingleChildScrollView(
+              padding: EdgeInsets.fromLTRB(
+                24,
+                isSheet ? 10 : 18,
+                24,
+                28 + bottomInset,
+              ),
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  minHeight: isSheet
+                      ? 400
+                      : MediaQuery.sizeOf(context).height - 80,
+                ),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    _Header(isSheet: isSheet, onClose: onClose),
+                    SizedBox(height: isSheet ? 22 : 46),
+                    Container(
+                      width: 112,
+                      height: 112,
+                      padding: EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.08),
+                        borderRadius: BorderRadius.circular(30),
+                        border: Border.all(
+                          color: Colors.white.withValues(alpha: 0.12),
+                        ),
+                        boxShadow: const [
+                          BoxShadow(
+                            color: Color(0x557C4DFF),
+                            blurRadius: 42,
+                            spreadRadius: 2,
+                          ),
+                        ],
+                      ),
+                      child: Image.asset(
+                        AppImage.splashIcon,
+                        width: 20,
+                        height: 20,
+                      ),
+                    ),
+                    const SizedBox(height: 26),
+                    const Text(
+                      'Đăng nhập Liquid Phim',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 25,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: -0.4,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    Text(
+                      isSheet
+                          ? 'Đăng nhập để bình luận và tương tác cùng mọi người.'
+                          : 'Tiếp tục với Google để đồng bộ tài khoản và tham gia cộng đồng.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: Colors.white.withValues(alpha: 0.66),
+                        fontSize: 14.5,
+                        height: 1.45,
+                      ),
+                    ),
+                    const SizedBox(height: 30),
+                    AppOption(
+                      isLoading: isLoading,
+                      onGooglePressed: onGooglePressed,
+                    ),
+                    AnimatedSize(
+                      duration: const Duration(milliseconds: 200),
+                      curve: Curves.easeOutCubic,
+                      child: errorMessage == null
+                          ? const SizedBox(height: 18)
+                          : Padding(
+                              padding: const EdgeInsets.only(top: 16),
+                              child: Container(
+                                width: double.infinity,
+                                padding: const EdgeInsets.all(13),
+                                decoration: BoxDecoration(
+                                  color: const Color(
+                                    0xffFF6B81,
+                                  ).withValues(alpha: 0.12),
+                                  borderRadius: BorderRadius.circular(14),
+                                  border: Border.all(
+                                    color: const Color(
+                                      0xffFF6B81,
+                                    ).withValues(alpha: 0.25),
+                                  ),
+                                ),
+                                child: Text(
+                                  errorMessage!,
+                                  textAlign: TextAlign.center,
+                                  style: const TextStyle(
+                                    color: Color(0xffFFB3BE),
+                                    height: 1.35,
+                                  ),
+                                ),
+                              ),
+                            ),
+                    ),
+                    Text(
+                      'Bằng việc tiếp tục, bạn đồng ý sử dụng tài khoản Google cho Liquid Phim.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: Colors.white.withValues(alpha: 0.38),
+                        fontSize: 12,
+                        height: 1.4,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _Header extends StatelessWidget {
+  const _Header({required this.isSheet, required this.onClose});
+
+  final bool isSheet;
+  final VoidCallback onClose;
+
+  @override
+  Widget build(BuildContext context) {
+    if (isSheet) {
+      return Stack(
+        alignment: Alignment.center,
+        children: [
+          Container(
+            width: 44,
+            height: 5,
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.24),
+              borderRadius: BorderRadius.circular(99),
+            ),
+          ),
+          Align(
+            alignment: Alignment.centerRight,
+            child: IconButton(
+              tooltip: 'Đóng',
+              onPressed: onClose,
+              icon: const Icon(Icons.close_rounded, color: Colors.white),
+            ),
+          ),
+        ],
+      );
+    }
+
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: IconButton.filledTonal(
+        tooltip: 'Quay lại',
+        onPressed: onClose,
+        style: IconButton.styleFrom(
+          backgroundColor: Colors.white.withValues(alpha: 0.08),
+          foregroundColor: Colors.white,
+        ),
+        icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 19),
+      ),
+    );
+  }
+}

@@ -2,8 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:movie_app/core/config/assets/app_image.dart';
-import 'package:movie_app/core/config/routes/app_router.dart';
+import 'package:movie_app/core/config/constants/const_globals.dart';
 import 'package:movie_app/core/config/themes/app_color.dart';
+import 'package:movie_app/feature/home/notification/new_movie_notification_navigation.dart';
 import 'package:movie_app/feature/intro/presentation/splash/bloc/splash_cubit.dart';
 import 'package:movie_app/feature/intro/presentation/splash/bloc/splash_state.dart';
 
@@ -24,7 +25,7 @@ class _SplashPageState extends State<SplashPage> {
     await Future.delayed(const Duration(milliseconds: 450));
     if (!mounted) return;
 
-    context.go(AppRoutes.home);
+    context.go(NewMovieNotificationNavigation.takeRouteAfterSplash());
   }
 
   @override
@@ -60,14 +61,28 @@ class _SplashPageState extends State<SplashPage> {
                   child: Transform.scale(scale: scale, child: child),
                 );
               },
-              child: Container(
-                width: 200,
-                height: 200,
-                decoration: BoxDecoration(
-                  image: DecorationImage(
-                    image: AssetImage(AppImage.splashIcon),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                spacing: 16,
+                children: [
+                  Container(
+                    width: 112,
+                    height: 112,
+                    decoration: BoxDecoration(
+                      image: DecorationImage(
+                        image: AssetImage(AppImage.splashIcon),
+                      ),
+                    ),
                   ),
-                ),
+                  Text(
+                    Global.instance.appName,
+                    style: const TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      color: AppColor.secondColor,
+                    ),
+                  ),
+                ],
               ),
             ),
           ],

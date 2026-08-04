@@ -221,40 +221,65 @@ class _CountryBottomSheetState extends State<CountryBottomSheet> {
   }
 
   Widget _buildCountryItem(CountryMovieSuccess state) {
-    return SingleChildScrollView(
-      child: Wrap(
-        spacing: 5,
-        children: List.generate(state.countryMovie.length, (index) {
-          final slug = state.countryMovie[index].slug;
-          bool isSelected = selectedCountry == slug;
-          return ChoiceChip(
-            showCheckmark: false,
-            side: BorderSide(
-              color: isSelected ? Color(0xffF1D775) : Color(0xff5E6070),
-            ),
-            backgroundColor: Color(0xff2F3345), // ← Background trong suốt
-            selectedColor: Color(0xff2F3345),
-            label: Text(
-              state.countryMovie[index].name,
-              style: TextStyle(
-                color: isSelected ? Color(0xffF1D775) : Colors.white,
-                fontSize: 10,
+    return ShaderMask(
+      shaderCallback: (bounds) {
+        return const LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            Colors.transparent,
+            Colors.black,
+            Colors.black,
+            Colors.transparent,
+          ],
+          stops: [0.0, 0.5, 0.8, 1.0],
+        ).createShader(bounds);
+      },
+      blendMode: BlendMode.dstIn,
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        child: Wrap(
+          spacing: 5,
+          runSpacing: 5,
+          children: List.generate(state.countryMovie.length, (index) {
+            final country = state.countryMovie[index];
+            final slug = country.slug;
+            final isSelected = selectedCountry == slug;
+
+            return ChoiceChip(
+              showCheckmark: false,
+              side: BorderSide(
+                color: isSelected
+                    ? const Color(0xffF1D775)
+                    : const Color(0xff5E6070),
               ),
-            ),
-            labelPadding: EdgeInsets.symmetric(horizontal: 2),
-            pressElevation: 2.0,
-            visualDensity: VisualDensity.comfortable,
-            selected: true,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadiusGeometry.circular(20),
-            ),
-            onSelected: (value) {
-              setState(() {
-                selectedCountry = isSelected ? null : slug;
-              });
-            },
-          );
-        }),
+              backgroundColor: const Color(0xff2F3345),
+              selectedColor: const Color(0xff2F3345),
+              label: Text(
+                country.name,
+                style: TextStyle(
+                  color: isSelected ? const Color(0xffF1D775) : Colors.white,
+                  fontSize: 10,
+                ),
+              ),
+              labelPadding: const EdgeInsets.symmetric(horizontal: 2),
+              pressElevation: 2,
+              visualDensity: VisualDensity.comfortable,
+
+              // Chỗ này nên là isSelected, không phải luôn luôn true.
+              selected: isSelected,
+
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
+              onSelected: (_) {
+                setState(() {
+                  selectedCountry = isSelected ? null : slug;
+                });
+              },
+            );
+          }),
+        ),
       ),
     );
   }

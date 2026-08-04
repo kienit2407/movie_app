@@ -15,7 +15,7 @@ class FillterMovieReq {
   FillterMovieReq({
     required this.typeList,
     this.page = '1',
-    this.sortField = '_id',
+    this.sortField = 'modified.time',
     this.sortType = 'desc',
     this.sortLang,
     this.year,

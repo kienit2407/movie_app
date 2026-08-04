@@ -1,7 +1,6 @@
 // ignore_for_file: public_member_api_docs, sort_constructors_first
 import 'dart:convert';
 
-import 'package:collection/collection.dart';
 import 'package:movie_app/feature/home/domain/entities/new_movie_entity.dart';
 
 class NewMovieModel {
@@ -18,14 +17,42 @@ class NewMovieModel {
   }
 
   factory NewMovieModel.fromMap(Map<String, dynamic> map) {
+    final wrappedData = map['data'];
+    final payload = wrappedData is Map
+        ? Map<String, dynamic>.from(wrappedData)
+        : map;
+    final rawItems = payload['items'];
+    final rawParams = payload['params'];
+    final rawPagination =
+        payload['pagination'] ??
+        (rawParams is Map ? rawParams['pagination'] : null);
+
+    if (rawItems is! List) {
+      throw const FormatException('Movie response is missing data.items');
+    }
+    if (rawPagination is! Map) {
+      throw const FormatException(
+        'Movie response is missing data.params.pagination',
+      );
+    }
+
+    final imageDomain = payload['APP_DOMAIN_CDN_IMAGE']?.toString();
+
     return NewMovieModel(
-      items: List<ItemModel>.from(
-        (map['items'] as List<dynamic>).map<ItemModel>(
-          (x) => ItemModel.fromMap(x as Map<String, dynamic>),
-        ),
-      ),
+      items: rawItems
+          .map<ItemModel>((item) {
+            if (item is! Map) {
+              throw const FormatException('Movie item must be a JSON object');
+            }
+
+            return ItemModel.fromMap(
+              Map<String, dynamic>.from(item),
+              imageDomain: imageDomain,
+            );
+          })
+          .toList(growable: false),
       pagination: PaginationModel.fromMap(
-        map['pagination'] as Map<String, dynamic>,
+        Map<String, dynamic>.from(rawPagination),
       ),
     );
   }
@@ -46,6 +73,8 @@ extension NewMovieModelConvert on NewMovieModel {
 }
 
 class ItemModel {
+  static const String _fallbackImageDomain = 'https://phimimg.com';
+
   final TmDbModel tmdb;
   final ModifiedModel modified;
   final String id;
@@ -109,7 +138,7 @@ class ItemModel {
     };
   }
 
-  factory ItemModel.fromMap(Map<String, dynamic> map) {
+  factory ItemModel.fromMap(Map<String, dynamic> map, {String? imageDomain}) {
     return ItemModel(
       tmdb: TmDbModel.fromMap(map['tmdb'] as Map<String, dynamic>),
       modified: ModifiedModel.fromMap(map['modified'] as Map<String, dynamic>),
@@ -118,8 +147,14 @@ class ItemModel {
       slug: map['slug'] as String,
       origin_name: map['origin_name'] as String,
       type: map['type'] != null ? map['type'] as String : null,
-      poster_url: map['poster_url'] as String,
-      thumb_url: map['thumb_url'] as String,
+      poster_url: _resolveImageUrl(
+        map['poster_url']?.toString() ?? '',
+        imageDomain,
+      ),
+      thumb_url: _resolveImageUrl(
+        map['thumb_url']?.toString() ?? '',
+        imageDomain,
+      ),
       time: map['time'] != null ? map['time'] as String : null,
       episode_current: map['episode_current'] != null
           ? map['episode_current'] as String
@@ -152,6 +187,23 @@ class ItemModel {
     );
   }
 
+  static String _resolveImageUrl(String rawUrl, String? imageDomain) {
+    final url = rawUrl.trim();
+    if (url.isEmpty) return url;
+    if (url.startsWith('http://') || url.startsWith('https://')) return url;
+    if (url.startsWith('//')) return 'https:$url';
+
+    final domain = (imageDomain?.trim().isNotEmpty ?? false)
+        ? imageDomain!.trim()
+        : _fallbackImageDomain;
+    final normalizedDomain = domain.endsWith('/')
+        ? domain.substring(0, domain.length - 1)
+        : domain;
+    final normalizedPath = url.startsWith('/') ? url.substring(1) : url;
+
+    return '$normalizedDomain/$normalizedPath';
+  }
+
   String toJson() => json.encode(toMap());
 
   factory ItemModel.fromJson(String source) =>
@@ -177,8 +229,8 @@ extension ItemModelConvert on ItemModel {
       year: year,
       category: (category ?? []).map((e) => e.toEntity()).toList(),
       country: (country ?? []).map((e) => e.toEntity()).toList(),
-      subDocquyen: sub_docquyen ?? false,
-      chieurap: chieurap ?? false,
+      subDocquyen: sub_docquyen,
+      chieurap: chieurap,
     );
   }
 }
@@ -377,11 +429,25 @@ class PaginationModel {
   }
 
   factory PaginationModel.fromMap(Map<String, dynamic> map) {
+    final totalItems = map['totalItems'] is int
+        ? map['totalItems'] as int
+        : int.tryParse(map['totalItems']?.toString() ?? '0') ?? 0;
+    final totalItemsPerPage = map['totalItemsPerPage'] is int
+        ? map['totalItemsPerPage'] as int
+        : int.tryParse(map['totalItemsPerPage']?.toString() ?? '0') ?? 0;
+    final totalPages = map['totalPages'] is int
+        ? map['totalPages'] as int
+        : totalItemsPerPage > 0
+        ? (totalItems / totalItemsPerPage).ceil()
+        : 0;
+
     return PaginationModel(
-      totalItems: map['totalItems'] as int,
-      totalItemsPerPage: map['totalItemsPerPage'] as int,
-      currentPage: map['currentPage'] as int,
-      totalPages: map['totalPages'] as int,
+      totalItems: totalItems,
+      totalItemsPerPage: totalItemsPerPage,
+      currentPage: map['currentPage'] is int
+          ? map['currentPage'] as int
+          : int.tryParse(map['currentPage']?.toString() ?? '0') ?? 0,
+      totalPages: totalPages,
     );
   }
 

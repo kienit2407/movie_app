@@ -52,6 +52,21 @@ class WatchHistoryEntry {
   @HiveField(15)
   final String? categoryName;
 
+  @HiveField(16)
+  final int? lastServerIndex;
+
+  @HiveField(17)
+  final int? lastEpisodeIndex;
+
+  @HiveField(18)
+  final String? lastEpisodeName;
+
+  @HiveField(19)
+  final String? lastEpisodeLink;
+
+  @HiveField(20)
+  final String? lastServerName;
+
   WatchHistoryEntry({
     required this.slug,
     required this.name,
@@ -69,6 +84,11 @@ class WatchHistoryEntry {
     this.type,
     this.categoryId,
     this.categoryName,
+    this.lastServerIndex,
+    this.lastEpisodeIndex,
+    this.lastEpisodeName,
+    this.lastEpisodeLink,
+    this.lastServerName,
   });
 
   double get progressPercent {

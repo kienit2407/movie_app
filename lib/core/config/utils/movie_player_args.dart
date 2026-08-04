@@ -30,6 +30,5 @@ class MoviePlayerArgs {
     this.initialServerName,
   });
 
-  bool get hasFullData =>
-      movie != null && episodes.isNotEmpty;
+  bool get hasFullData => movie != null && episodes.isNotEmpty;
 }

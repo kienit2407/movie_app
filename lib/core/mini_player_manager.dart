@@ -2,8 +2,10 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:chewie/chewie.dart';
+import 'package:movie_app/core/ios_now_playing_service.dart';
 import 'package:movie_app/core/ios_picture_in_picture_service.dart';
 import 'package:movie_app/feature/detail_movie/data/model/detail_movie_model.dart';
+import 'package:movie_app/core/playback_wakelock.dart';
 
 class MiniPlayerLaunchData {
   final String slug;
@@ -65,6 +67,10 @@ class MiniPlayerManager extends ChangeNotifier {
   ChewieController? _handoffController;
   MiniPlayerLaunchData? _handoffLaunch;
   Offset? _handoffPos;
+  ChewieController? _miniPlaybackChewieController;
+  VoidCallback? _miniPlaybackListener;
+  DateTime? _lastNowPlayingUpdate;
+  bool? _lastNowPlayingIsPlaying;
 
   ChewieController? get chewieController => _chewieController;
   MiniPlayerLaunchData? get launch => _launch;
@@ -100,9 +106,91 @@ class MiniPlayerManager extends ChangeNotifier {
       controller.play();
     }
 
+    _attachMiniPlaybackListener(controller);
     shouldRestorePlayer.value = false;
     isVisible.value = true;
     notifyListeners();
+  }
+
+  String _miniNowPlayingSubtitle() {
+    final data = _launch;
+    if (data == null) return '';
+
+    final serverName = data.initialServer.trim();
+    if (data.episodes.isEmpty ||
+        data.initialServerIndex < 0 ||
+        data.initialServerIndex >= data.episodes.length) {
+      return serverName;
+    }
+
+    final episodes = data.episodes[data.initialServerIndex].server_data;
+    if (data.initialEpisodeIndex < 0 ||
+        data.initialEpisodeIndex >= episodes.length) {
+      return serverName;
+    }
+
+    final episodeName = episodes[data.initialEpisodeIndex].name.trim();
+    if (episodeName.isEmpty) return serverName;
+    if (serverName.isEmpty) return episodeName;
+    return '$episodeName - $serverName';
+  }
+
+  void _attachMiniPlaybackListener(ChewieController controller) {
+    _removeMiniPlaybackListener();
+
+    final videoController = controller.videoPlayerController;
+    _miniPlaybackChewieController = controller;
+    _miniPlaybackListener = () => _syncMiniPlaybackSideEffects();
+    videoController.addListener(_miniPlaybackListener!);
+    _syncMiniPlaybackSideEffects(force: true);
+  }
+
+  void _removeMiniPlaybackListener() {
+    final listener = _miniPlaybackListener;
+    final controller = _miniPlaybackChewieController;
+    if (listener != null && controller != null) {
+      try {
+        controller.videoPlayerController.removeListener(listener);
+      } catch (_) {}
+    }
+    _miniPlaybackListener = null;
+    _miniPlaybackChewieController = null;
+    _lastNowPlayingUpdate = null;
+    _lastNowPlayingIsPlaying = null;
+  }
+
+  void _syncMiniPlaybackSideEffects({bool force = false}) {
+    final controller = _chewieController;
+    if (controller == null) return;
+
+    final value = controller.videoPlayerController.value;
+    final isPlaying = value.isInitialized && value.isPlaying;
+    PlaybackWakelock.unawaitedSetEnabled(isPlaying);
+
+    if (!IosNowPlayingService.isSupportedPlatform || !value.isInitialized) {
+      return;
+    }
+
+    final now = DateTime.now();
+    final shouldUpdate =
+        force ||
+        _lastNowPlayingIsPlaying != isPlaying ||
+        _lastNowPlayingUpdate == null ||
+        now.difference(_lastNowPlayingUpdate!) > const Duration(seconds: 1);
+    if (!shouldUpdate) return;
+
+    _lastNowPlayingUpdate = now;
+    _lastNowPlayingIsPlaying = isPlaying;
+    unawaited(
+      IosNowPlayingService.update(
+        title: _launch?.movieName ?? '',
+        subtitle: _miniNowPlayingSubtitle(),
+        duration: value.duration,
+        position: value.position,
+        isPlaying: isPlaying,
+        assetUrl: _launch?.initialEpisodeLink,
+      ),
+    );
   }
 
   void updateMiniPosition(Offset p) {
@@ -128,6 +216,7 @@ class MiniPlayerManager extends ChangeNotifier {
     final c = _chewieController;
     final l = _launch;
     final p = _currentPos;
+    _removeMiniPlaybackListener();
 
     _handoffController = c;
     _handoffLaunch = l;
@@ -161,6 +250,9 @@ class MiniPlayerManager extends ChangeNotifier {
   void disposeMiniPlayer({bool notify = true}) {
     final oldMain = _chewieController;
     final oldHandoff = _handoffController;
+    _removeMiniPlaybackListener();
+    PlaybackWakelock.unawaitedSetEnabled(false);
+    unawaited(IosNowPlayingService.clear());
     unawaited(IosPictureInPictureService.detach());
 
     _chewieController = null;
@@ -186,6 +278,9 @@ class MiniPlayerManager extends ChangeNotifier {
   }
 
   void hideMiniPlayer() {
+    _removeMiniPlaybackListener();
+    PlaybackWakelock.unawaitedSetEnabled(false);
+    unawaited(IosNowPlayingService.clear());
     unawaited(IosPictureInPictureService.detach());
     _chewieController = null;
     _launch = null;

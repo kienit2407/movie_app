@@ -9,9 +9,11 @@ class FillterGenreModel {
   final String titlePage;
   final ParamsModel params;
 
-  FillterGenreModel({required this.items, required this.titlePage, required this.params});
-
-  
+  FillterGenreModel({
+    required this.items,
+    required this.titlePage,
+    required this.params,
+  });
 
   Map<String, dynamic> toMap() {
     return <String, dynamic>{
@@ -22,45 +24,65 @@ class FillterGenreModel {
   }
 
   factory FillterGenreModel.fromMap(Map<String, dynamic> map) {
+    final imageDomain = map['APP_DOMAIN_CDN_IMAGE'] as String?;
+
     return FillterGenreModel(
-      items: map['items'] != null ? List<ItemModel>.from((map['items'] as List<dynamic>).map<ItemModel?>((x) => ItemModel.fromMap(x as Map<String,dynamic>),),) : null,
+      items: map['items'] != null
+          ? List<ItemModel>.from(
+              (map['items'] as List<dynamic>).map<ItemModel?>(
+                (x) => ItemModel.fromMap(
+                  x as Map<String, dynamic>,
+                  imageDomain: imageDomain,
+                ),
+              ),
+            )
+          : null,
       titlePage: map['titlePage'] as String,
-      params: ParamsModel.fromMap(map['params'] as Map<String,dynamic>),
+      params: ParamsModel.fromMap(map['params'] as Map<String, dynamic>),
     );
   }
 
   String toJson() => json.encode(toMap());
 
-  factory FillterGenreModel.fromJson(String source) => FillterGenreModel.fromMap(json.decode(source) as Map<String, dynamic>);
+  factory FillterGenreModel.fromJson(String source) =>
+      FillterGenreModel.fromMap(json.decode(source) as Map<String, dynamic>);
 }
+
 extension FliterGenreModelConvert on FillterGenreModel {
-  FillterMovieGenreEntity toEntity () {
-    return FillterMovieGenreEntity(items: (items ?? []).map((e) => e.toEntity()).toList(), titlePage: titlePage, params: params.toEntity());
+  FillterMovieGenreEntity toEntity() {
+    return FillterMovieGenreEntity(
+      items: (items ?? []).map((e) => e.toEntity()).toList(),
+      titlePage: titlePage,
+      params: params.toEntity(),
+    );
   }
 }
+
 class ParamsModel {
   final PaginationModel pagination;
 
   ParamsModel({required this.pagination});
 
   Map<String, dynamic> toMap() {
-    return <String, dynamic>{
-      'pagination': pagination.toMap(),
-    };
+    return <String, dynamic>{'pagination': pagination.toMap()};
   }
 
   factory ParamsModel.fromMap(Map<String, dynamic> map) {
     return ParamsModel(
-      pagination: PaginationModel.fromMap(map['pagination'] as Map<String,dynamic>),
+      pagination: PaginationModel.fromMap(
+        map['pagination'] as Map<String, dynamic>,
+      ),
     );
   }
 
   String toJson() => json.encode(toMap());
 
-  factory ParamsModel.fromJson(String source) => ParamsModel.fromMap(json.decode(source) as Map<String, dynamic>);
+  factory ParamsModel.fromJson(String source) =>
+      ParamsModel.fromMap(json.decode(source) as Map<String, dynamic>);
 }
+
 extension ParamsModelConvert on ParamsModel {
-  ParamsEntity toEntity () {
+  ParamsEntity toEntity() {
     return ParamsEntity(pagination: pagination.toEntity());
   }
 }

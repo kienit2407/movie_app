@@ -1,7 +1,13 @@
 import 'package:flutter/material.dart';
 
 class SharderText extends StatelessWidget {
-  const SharderText({super.key, required this.child,  this.firtsColor,  this.secondsColor, required this.gradient});
+  const SharderText({
+    super.key,
+    required this.child,
+    this.firtsColor,
+    this.secondsColor,
+    required this.gradient,
+  });
   final Widget child;
   final Color? firtsColor;
   final Color? secondsColor;

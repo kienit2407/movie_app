@@ -1,4 +1,5 @@
 import 'package:dartz/dartz.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_facebook_auth/flutter_facebook_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
@@ -108,12 +109,25 @@ class AuthSupabaseServiceImpl implements AuthService {
       final iosClientId =
           dotenv.env['IOS_CLIENT_ID']; //<- mã định danh ứng dụng mobile
 
+      if (webClientId == null || webClientId.trim().isEmpty) {
+        return Left('Thiếu WEB_CLIENT_ID để đăng nhập Google.');
+      }
+
+      if (defaultTargetPlatform == TargetPlatform.iOS &&
+          (iosClientId == null || iosClientId.trim().isEmpty)) {
+        return Left('Thiếu IOS_CLIENT_ID để đăng nhập Google trên iOS.');
+      }
+
       final googleSignin =
           GoogleSignIn.instance; //khởi tại instacne cho gg (một singleton)
 
       await googleSignin.initialize(
         // bắt đầu khởi động gg
-        clientId: iosClientId,
+        // Android nhận diện app bằng applicationId + SHA-1 và chỉ cần
+        // Web OAuth Client ID ở serverClientId khi không dùng google-services.json.
+        clientId: defaultTargetPlatform == TargetPlatform.iOS
+            ? iosClientId
+            : null,
         serverClientId: webClientId, //<- để lấy idtoken
       );
 
@@ -134,13 +148,22 @@ class AuthSupabaseServiceImpl implements AuthService {
         return Left('Sign in was failded. Please try again!');
       }
       return Right('Sign in successfull');
-    } on GoogleSignInException {
-      return Left('The user canceled login!');
+    } on GoogleSignInException catch (error) {
+      debugPrint(
+        'Google Sign-In failed: code=${error.code}, '
+        'description=${error.description}',
+      );
+      if (error.code == GoogleSignInExceptionCode.canceled ||
+          error.code == GoogleSignInExceptionCode.interrupted) {
+        return Left('The user canceled login!');
+      }
+      return Left(
+        error.description ??
+            'Không thể đăng nhập với Google. Vui lòng kiểm tra và thử lại.',
+      );
     } catch (e) {
       print('Lỗi không xác định: $e');
-      return Left(
-        'Have an errol occured. Please try again or contact with me:  0971161803',
-      );
+      return Left('Không thể đăng nhập với Google. Vui lòng thử lại.');
     }
   }
 

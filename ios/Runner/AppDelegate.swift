@@ -1,5 +1,9 @@
 import UIKit
 import Flutter
+import UserNotifications
+import flutter_local_notifications
+import path_provider_foundation
+import workmanager_apple
 
 @main
 @objc class AppDelegate: FlutterAppDelegate {
@@ -11,6 +15,26 @@ import Flutter
         didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
     ) -> Bool {
         GeneratedPluginRegistrant.register(with: self)
+        UNUserNotificationCenter.current().delegate = self
+        WorkmanagerPlugin.setPluginRegistrantCallback { registry in
+            if let notificationsRegistrar = registry.registrar(
+                forPlugin: "FlutterLocalNotificationsPlugin"
+            ) {
+                FlutterLocalNotificationsPlugin.register(
+                    with: notificationsRegistrar
+                )
+            }
+            if let pathProviderRegistrar = registry.registrar(
+                forPlugin: "PathProviderPlugin"
+            ) {
+                PathProviderPlugin.register(with: pathProviderRegistrar)
+            }
+        }
+        WorkmanagerPlugin.registerPeriodicTask(
+            withIdentifier: "com.kinit.movieapp.newMovieRefresh",
+            // Temporary debug interval. Restore to 20 * 60 after testing.
+            frequency: NSNumber(value: 20 * 60)
+        )
 
         guard let controller = window?.rootViewController as? FlutterViewController else {
             print("[Storyboard iOS] rootViewController is not FlutterViewController")

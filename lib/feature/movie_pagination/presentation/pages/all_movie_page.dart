@@ -1,5 +1,6 @@
 import 'dart:math';
 import 'dart:ui';
+import 'package:movie_app/common/components/app_auto_scroll_text.dart';
 import 'package:fast_cached_network_image/fast_cached_network_image.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
@@ -7,23 +8,19 @@ import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
-import 'package:movie_app/common/helpers/contants/app_url.dart';
 import 'package:movie_app/common/helpers/navigation/app_navigation.dart';
 import 'package:movie_app/core/config/utils/episode_map.dart';
 import 'package:movie_app/feature/detail_movie/presentation/pages/movie_detail_page.dart';
 import 'package:movie_app/common/helpers/static_data.dart';
 import 'package:movie_app/core/config/themes/app_color.dart';
 import 'package:movie_app/core/config/utils/animated_dialog.dart';
-import 'package:movie_app/core/config/utils/format_episode.dart';
 import 'package:movie_app/core/config/utils/sharder_text.dart';
 import 'package:movie_app/core/config/utils/show_detail_movie_dialog.dart';
 import 'package:movie_app/feature/home/domain/entities/fillter_genre_movie_req.dart';
 import 'package:movie_app/feature/home/domain/entities/new_movie_entity.dart';
 import 'package:movie_app/feature/movie_pagination/presentation/bloc/fetch_fillter_cubit.dart';
 import 'package:movie_app/feature/movie_pagination/presentation/bloc/fetch_fillter_state.dart';
-import 'package:movie_app/feature/movie_pagination/presentation/widgets/all_movie_skeleton.dart';
 import 'package:shimmer/shimmer.dart';
-import 'package:skeletonizer/skeletonizer.dart';
 import 'package:sliver_tools/sliver_tools.dart';
 
 class AllMoviePage extends StatefulWidget {
@@ -506,12 +503,10 @@ class _AllMoviePageState extends State<AllMoviePage> {
 
                           return FastCachedImage(
                             key: ValueKey(itemEntity.slug), // ✅ ổn định widget
-                            url: AppUrl.convertImageAddition(
-                              itemEntity.posterUrl,
-                            ),
+                            url: itemEntity.posterUrl,
                             fit: BoxFit.cover,
-                            // cacheWidth: cw,
-                            // cacheHeight: ch,
+                            cacheWidth: cw,
+                            cacheHeight: ch,
                             // filterQuality: FilterQuality
                             //     .low, // đừng none nếu muốn đỡ “xấu”
                             // gaplessPlayback: true,
@@ -581,18 +576,14 @@ class _AllMoviePageState extends State<AllMoviePage> {
               ),
             ),
             const SizedBox(height: 5),
-            Text(
+            AppAutoScrollText(
               itemEntity.name,
               textAlign: TextAlign.center,
-              overflow: TextOverflow.ellipsis,
-              maxLines: 1,
               style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
             ),
-            Text(
+            AppAutoScrollText(
               itemEntity.originName,
               textAlign: TextAlign.center,
-              overflow: TextOverflow.ellipsis,
-              maxLines: 1,
               style: const TextStyle(fontSize: 10, color: Colors.grey),
             ),
           ],

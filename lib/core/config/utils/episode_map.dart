@@ -34,11 +34,41 @@ enum MediaTagType {
 // 2. Extension để tách chuỗi từ API (Vd: "Vietsub + Lồng Tiếng" -> List)
 extension ConvertLangParser on String {
   List<MediaTagType> toMediaTags() {
-    List<MediaTagType> tags = [];
-    if (this.contains('Vietsub')) tags.add(MediaTagType.vietsub);
-    if (this.contains('Lồng Tiếng')) tags.add(MediaTagType.longTieng);
-    if (this.contains('Thuyết Minh')) tags.add(MediaTagType.thuyetMinh);
+    final value = _normalizeLangText(this);
+    final tags = <MediaTagType>[];
+    if (value.contains('vietsub') ||
+        value.contains('phu de') ||
+        value.contains('phu-de') ||
+        value.contains('subtitle') ||
+        RegExp(r'(^|[^a-z])vs([^a-z]|$)').hasMatch(value)) {
+      tags.add(MediaTagType.vietsub);
+    }
+    if (value.contains('long tieng') ||
+        value.contains('long-tieng') ||
+        value.contains('long_tieng') ||
+        RegExp(r'(^|[^a-z])lt([^a-z]|$)').hasMatch(value)) {
+      tags.add(MediaTagType.longTieng);
+    }
+    if (value.contains('thuyet minh') ||
+        value.contains('thuyet-minh') ||
+        value.contains('thuyet_minh') ||
+        RegExp(r'(^|[^a-z])tm([^a-z]|$)').hasMatch(value)) {
+      tags.add(MediaTagType.thuyetMinh);
+    }
     return tags;
+  }
+
+  String _normalizeLangText(String value) {
+    return value
+        .toLowerCase()
+        .replaceAll(RegExp('[àáạảãâầấậẩẫăằắặẳẵ]'), 'a')
+        .replaceAll(RegExp('[èéẹẻẽêềếệểễ]'), 'e')
+        .replaceAll(RegExp('[ìíịỉĩ]'), 'i')
+        .replaceAll(RegExp('[òóọỏõôồốộổỗơờớợởỡ]'), 'o')
+        .replaceAll(RegExp('[ùúụủũưừứựửữ]'), 'u')
+        .replaceAll(RegExp('[ỳýỵỷỹ]'), 'y')
+        .replaceAll('đ', 'd')
+        .trim();
   }
 }
 

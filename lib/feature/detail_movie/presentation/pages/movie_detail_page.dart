@@ -13,7 +13,6 @@ import 'package:intl/intl.dart';
 import 'package:lottie/lottie.dart';
 import 'package:movie_app/common/components/app_auto_scroll_text.dart';
 import 'package:movie_app/common/components/alert_dialog/app_alert_dialog.dart';
-import 'package:movie_app/common/helpers/contants/app_url.dart';
 import 'package:movie_app/common/helpers/navigation/app_navigation.dart';
 import 'package:movie_app/core/config/di/service_locator.dart';
 import 'package:movie_app/core/config/themes/app_color.dart';
@@ -38,6 +37,11 @@ import 'package:movie_app/feature/home/domain/usecase/get_movies_by_filter_useca
 import 'package:movie_app/feature/home/presentation/widgets/polk_effect.dart';
 import 'package:movie_app/feature/movie_pagination/presentation/bloc/fetch_fillter_cubit.dart';
 import 'package:movie_app/feature/movie_pagination/presentation/bloc/fetch_fillter_state.dart';
+import 'package:movie_app/feature/comments/domain/repositories/comment_repository.dart';
+import 'package:movie_app/feature/comments/presentation/bloc/comments_cubit.dart';
+import 'package:movie_app/feature/comments/presentation/widgets/comments_tab.dart';
+import 'package:movie_app/feature/auth/presentation/sign_in/pages/sign_in.dart';
+import 'package:movie_app/feature/library/presentation/cubit/user_library_cubit.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:sliver_tools/sliver_tools.dart';
 import 'package:youtube_player_flutter/youtube_player_flutter.dart';
@@ -485,7 +489,7 @@ class _EpisodesSliverState extends State<_EpisodesSliver> {
                           episodes: widget.episodes,
                           movieName: widget.movie.name,
                           slug: widget.movie.slug,
-                          initialEpisodeIndex: index,
+                          initialEpisodeIndex: 0,
                           initialServer: ep.server_name,
                           thumbnailUrl: widget.movie.thumb_url,
                           initialEpisodeLink: link,
@@ -508,10 +512,10 @@ class _EpisodesSliverState extends State<_EpisodesSliver> {
                             right: Radius.circular(10),
                           ),
                           child: FastCachedImage(
-                            url: AppUrl.convertImageDirect(
-                              widget.movie.poster_url,
-                            ),
+                            url: widget.movie.poster_url,
                             fit: BoxFit.cover,
+                            cacheWidth: 600,
+                            cacheHeight: 900,
                           ),
                         ),
                       ),
@@ -876,10 +880,10 @@ class _RecommendationItem extends StatelessWidget {
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(8),
                       child: FastCachedImage(
-                        url: itemEntity.posterUrl.startsWith('http')
-                            ? itemEntity.posterUrl
-                            : AppUrl.convertImageAddition(itemEntity.posterUrl),
+                        url: itemEntity.posterUrl,
                         fit: BoxFit.cover,
+                        cacheWidth: 600,
+                        cacheHeight: 900,
                       ),
                     ),
                   ),
@@ -1016,6 +1020,12 @@ class MovieDetailPage extends StatelessWidget {
             getMoviesByFilterUsecase: sl<GetMoviesByFilterUsecase>(),
           ),
         ),
+        BlocProvider(
+          create: (_) => CommentsCubit(
+            repository: sl<CommentRepository>(),
+            movieSlug: slug,
+          ),
+        ),
       ],
       child: _MovieDetailPageContent(startAt: startAt),
     );
@@ -1043,6 +1053,7 @@ class _MovieDetailPageContentState extends State<_MovieDetailPageContent>
   final GlobalKey _tabBarKey = GlobalKey();
   final GlobalKey _beforeTabBarKey = GlobalKey();
   final GlobalKey _tabBarMarkerKey = GlobalKey();
+  int _previousTabIndex = 0;
   int _currentEpisodeIndex = 0;
   String _currentServer = '';
   String _selectedEpisodeLink = '';
@@ -1057,18 +1068,33 @@ class _MovieDetailPageContentState extends State<_MovieDetailPageContent>
   void initState() {
     super.initState();
     _scrollController.addListener(_onScroll);
-    _tabController = TabController(length: 3, vsync: this);
+    _tabController = TabController(length: 4, vsync: this);
     _tabController.addListener(() {
       // if (!_tabController.indexIsChanging) {
       //   _scrollToTabBar();
       // }
+      final selectedTabIndex = _tabController.index;
+      final isEnteringComments =
+          selectedTabIndex == 3 && _previousTabIndex != selectedTabIndex;
+      _previousTabIndex = selectedTabIndex;
+
       final state = context.read<DetailMovieCubit>().state;
       if (state is DetailMovieSuccessed) {
-        if (_tabController.index == 2 && !_isRecommendationLoaded) {
+        if (selectedTabIndex == 2 && !_isRecommendationLoaded) {
           _fetchRecommendations();
+        }
+        if (isEnteringComments) {
+          context.read<CommentsCubit>().loadInitial();
         }
       }
       setState(() {});
+
+      if (isEnteringComments) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!mounted || _tabController.index != 3) return;
+          _scrollToTabBarPinned();
+        });
+      }
     });
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -1120,11 +1146,11 @@ class _MovieDetailPageContentState extends State<_MovieDetailPageContent>
     });
   }
 
-  void _scrollToTabBarPinned() {
+  Future<void> _scrollToTabBarPinned() async {
     final ctx = _tabBarMarkerKey.currentContext;
     if (ctx == null || !_scrollController.hasClients) return;
 
-    Scrollable.ensureVisible(
+    await Scrollable.ensureVisible(
       ctx,
       alignment: 0.0,
       duration: const Duration(milliseconds: 350),
@@ -1229,6 +1255,18 @@ class _MovieDetailPageContentState extends State<_MovieDetailPageContent>
         );
       case 2:
         return const _RecommendationsSliver();
+      case 3:
+        final mediaQuery = MediaQuery.of(context);
+        final availableHeight =
+            mediaQuery.size.height -
+            mediaQuery.padding.top -
+            _tabBarPinnedHeight;
+        return SliverToBoxAdapter(
+          child: SizedBox(
+            height: availableHeight.clamp(320.0, double.infinity),
+            child: CommentsTab(onComposerWillFocus: _scrollToTabBarPinned),
+          ),
+        );
       default:
         return const SliverToBoxAdapter(child: SizedBox.shrink());
     }
@@ -1323,10 +1361,10 @@ class _MovieDetailPageContentState extends State<_MovieDetailPageContent>
             },
             builder: (context, state) {
               if (state is DetailMovieSuccessed) {
-                return _buildBody(
-                  state.detailMovieModel.movie,
+                final episodes = EpisodeHelper.normalizeEpisodes(
                   state.detailMovieModel.episodes,
                 );
+                return _buildBody(state.detailMovieModel.movie, episodes);
               } else if (state is DetailMovieLoading) {
                 return _buildLoadingSkeleton();
               }
@@ -1414,6 +1452,7 @@ class _MovieDetailPageContentState extends State<_MovieDetailPageContent>
                 Tab(text: 'Tập phim'),
                 Tab(text: 'Diễn viên'),
                 Tab(text: 'Đề xuất'),
+                Tab(text: 'Bình luận'),
               ],
             ),
             key: _tabBarKey, // <<< thêm dòng này
@@ -1421,7 +1460,9 @@ class _MovieDetailPageContentState extends State<_MovieDetailPageContent>
         ),
         // SliverToBoxAdapter(key: _tabBarKey, child: const SizedBox(height: 1)),
         SliverPadding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+          padding: _tabController.index == 3
+              ? EdgeInsets.zero
+              : const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
           sliver: _buildTabContent(movie, episodes),
         ),
         // SliverFillRemaining(
@@ -1444,9 +1485,7 @@ class _MovieDetailPageContentState extends State<_MovieDetailPageContent>
     final String posterUrl = movie.thumb_url.isNotEmpty
         ? movie.thumb_url
         : movie.poster_url;
-    final displayUrl = posterUrl.startsWith('http')
-        ? posterUrl
-        : AppUrl.convertImageAddition(posterUrl);
+    final displayUrl = posterUrl;
 
     final showSkeleton = hasTrailer && !_isPlayerReady && !_isPlayerError;
     final showPlayer =
@@ -1462,7 +1501,12 @@ class _MovieDetailPageContentState extends State<_MovieDetailPageContent>
             fit: StackFit.expand,
             children: [
               if (showThumbnail)
-                FastCachedImage(url: displayUrl, fit: BoxFit.cover),
+                FastCachedImage(
+                  url: displayUrl,
+                  fit: BoxFit.cover,
+                  cacheWidth: 1280,
+                  cacheHeight: 720,
+                ),
 
               if (showPlayer)
                 YoutubePlayer(
@@ -1791,8 +1835,10 @@ class _MovieDetailPageContentState extends State<_MovieDetailPageContent>
                 height: 300,
                 width: double.infinity,
                 child: FastCachedImage(
-                  url: AppUrl.convertImageDirect(movie.thumb_url),
+                  url: movie.thumb_url,
                   fit: BoxFit.cover,
+                  cacheWidth: 1080,
+                  cacheHeight: 720,
                   loadingBuilder: (context, loadingProgress) {
                     return _buildSkeletonForThumbnail();
                   },
@@ -1919,10 +1965,10 @@ class _MovieDetailPageContentState extends State<_MovieDetailPageContent>
                                   6,
                                 ), // Trừ đi border width
                                 child: FastCachedImage(
-                                  url: AppUrl.convertImageDirect(
-                                    movie.poster_url,
-                                  ),
+                                  url: movie.poster_url,
                                   fit: BoxFit.cover,
+                                  cacheWidth: 600,
+                                  cacheHeight: 900,
                                   loadingBuilder: (context, loadingProgress) {
                                     return _buildSkeletonForposter();
                                   },
@@ -2281,7 +2327,63 @@ class _MovieDetailPageContentState extends State<_MovieDetailPageContent>
             ),
           ),
         ),
+        _buildFavoriteButton(movie),
       ],
+    );
+  }
+
+  Widget _buildFavoriteButton(MovieModel movie) {
+    return BlocBuilder<UserLibraryCubit, UserLibraryState>(
+      buildWhen: (previous, current) =>
+          previous.isFavorite(movie.slug) != current.isFavorite(movie.slug) ||
+          previous.syncingFavoriteSlugs.contains(movie.slug) !=
+              current.syncingFavoriteSlugs.contains(movie.slug) ||
+          previous.isAuthenticated != current.isAuthenticated,
+      builder: (context, state) {
+        final isFavorite = state.isFavorite(movie.slug);
+        final isSyncing = state.syncingFavoriteSlugs.contains(movie.slug);
+        return GestureDetector(
+          onTap: isSyncing
+              ? null
+              : () async {
+                  HapticFeedback.lightImpact();
+                  final library = context.read<UserLibraryCubit>();
+                  if (!state.isAuthenticated) {
+                    final signedIn = await SignInPage.showSheet(context);
+                    if (!signedIn || !context.mounted) return;
+                    await library.refresh();
+                    if (!context.mounted) return;
+                  }
+                  await library.toggleFavorite(movie);
+                },
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 180),
+            width: 46,
+            height: 44,
+            decoration: BoxDecoration(
+              color: isFavorite
+                  ? Colors.redAccent.withValues(alpha: 0.18)
+                  : Colors.white.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: isFavorite
+                    ? Colors.redAccent
+                    : Colors.white.withValues(alpha: 0.7),
+              ),
+            ),
+            child: isSyncing
+                ? const Padding(
+                    padding: EdgeInsets.all(13),
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : Icon(
+                    isFavorite ? Iconsax.heart : Iconsax.heart_copy,
+                    color: isFavorite ? Colors.redAccent : Colors.white,
+                    size: 21,
+                  ),
+          ),
+        );
+      },
     );
   }
 

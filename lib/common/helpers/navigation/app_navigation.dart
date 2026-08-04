@@ -5,10 +5,10 @@ class AppNavigator {
     BuildContext context,
     Widget newRoute,
   ) {
-    return Navigator.pushReplacement(
+    return Navigator.of(
       context,
-      MaterialPageRoute(builder: (context) => newRoute),
-    );
+      rootNavigator: true,
+    ).pushReplacement(MaterialPageRoute(builder: (context) => newRoute));
   }
 
   static void pop(BuildContext context) {
@@ -19,10 +19,10 @@ class AppNavigator {
     BuildContext context,
     Widget newRoute,
   ) {
-    return Navigator.push(
+    return Navigator.of(
       context,
-      MaterialPageRoute(builder: (context) => newRoute),
-    );
+      rootNavigator: true,
+    ).push(MaterialPageRoute(builder: (context) => newRoute));
   }
 
   static Future<T?> pushAndRemoveUtil<T extends Object?>(

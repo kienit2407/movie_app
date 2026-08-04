@@ -1,10 +1,14 @@
-import 'package:flutter/material.dart';
+import 'dart:async';
+
 import 'package:chewie/chewie.dart';
 import 'package:fast_cached_network_image/fast_cached_network_image.dart';
+import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
 import 'package:movie_app/core/config/routes/app_router.dart';
 import 'package:movie_app/core/config/utils/movie_player_args.dart';
+import 'package:movie_app/core/config/utils/support_rotate_screen.dart';
+import 'package:movie_app/core/ios_picture_in_picture_service.dart';
 import 'package:movie_app/core/mini_player_manager.dart';
 import 'package:video_player/video_player.dart';
 
@@ -15,14 +19,17 @@ class MiniPlayerOverlay extends StatefulWidget {
   State<MiniPlayerOverlay> createState() => _MiniPlayerOverlayState();
 }
 
-class _MiniPlayerOverlayState extends State<MiniPlayerOverlay> with TickerProviderStateMixin {
+class _MiniPlayerOverlayState extends State<MiniPlayerOverlay>
+    with TickerProviderStateMixin, WidgetsBindingObserver {
   final MiniPlayerManager mgr = MiniPlayerManager();
   Offset? _pos;
   bool _wasInactive = true;
   static const double _margin = 16.0;
   bool _draggingMini = false;
-  late final AnimationController _snapCtrl =
-    AnimationController(vsync: this, duration: const Duration(milliseconds: 220));
+  late final AnimationController _snapCtrl = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 220),
+  );
   Future<bool> _handleBackPress() async {
     if (mgr.isMiniPlayerActive) {
       mgr.disposeMiniPlayer();
@@ -34,6 +41,22 @@ class _MiniPlayerOverlayState extends State<MiniPlayerOverlay> with TickerProvid
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _snapCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    if (state == AppLifecycleState.resumed) {
+      unawaited(IosPictureInPictureService.stop());
+    }
   }
 
   @override
@@ -44,7 +67,7 @@ class _MiniPlayerOverlayState extends State<MiniPlayerOverlay> with TickerProvid
   @override
   Widget build(BuildContext context) {
     return AnimatedBuilder(
-      animation: mgr,
+      animation: Listenable.merge([mgr, goRouter.routerDelegate]),
       builder: (context, _) {
         final isActive = mgr.isMiniPlayerActive;
 
@@ -56,6 +79,13 @@ class _MiniPlayerOverlayState extends State<MiniPlayerOverlay> with TickerProvid
 
         final size = MediaQuery.sizeOf(context);
         final bottomInset = MediaQuery.paddingOf(context).bottom;
+        final routePath = goRouter.routerDelegate.currentConfiguration.uri.path;
+        final isHubRoute =
+            routePath == AppRoutes.home ||
+            routePath == AppRoutes.search ||
+            routePath == AppRoutes.favorites ||
+            routePath == AppRoutes.profile;
+        final reservedBottom = isHubRoute ? 92.0 : 0.0;
 
         final miniW = size.width * 0.55;
         final miniH = miniW * 9 / 16;
@@ -67,14 +97,17 @@ class _MiniPlayerOverlayState extends State<MiniPlayerOverlay> with TickerProvid
         if (_wasInactive || _pos == null) {
           _pos = Offset(
             size.width - miniW - 16,
-            size.height - miniH - 16 - bottomInset,
+            size.height - miniH - 16 - bottomInset - reservedBottom,
           );
           _wasInactive = false;
         }
 
         Offset clampPos(Offset p) => Offset(
           p.dx.clamp(_margin, size.width - miniW - _margin),
-          p.dy.clamp(_margin, size.height - miniH - bottomInset - _margin),
+          p.dy.clamp(
+            _margin,
+            size.height - miniH - bottomInset - reservedBottom - _margin,
+          ),
         );
         final currentPos = clampPos(_pos!);
         _pos = currentPos;
@@ -261,7 +294,9 @@ class _MiniPlayerOverlayState extends State<MiniPlayerOverlay> with TickerProvid
     );
   }
 
-  void _openPlayer() {
+  Future<void> _openPlayer() async {
+    await SupportRotateScreen.onlyPotrait();
+    if (!mounted) return;
     final handoff = mgr.detachForOpen();
     final launch = handoff.launch;
     if (launch == null) return;
@@ -280,6 +315,7 @@ class _MiniPlayerOverlayState extends State<MiniPlayerOverlay> with TickerProvid
 
     final navContext = AppRoutes.navigatorKey.currentContext;
     if (navContext == null) return;
+    if (!navContext.mounted) return;
 
     // Nếu đang ở player rồi thì thôi (tránh push chồng)
     final router = GoRouter.of(navContext);
@@ -293,6 +329,8 @@ class _MiniPlayerOverlayState extends State<MiniPlayerOverlay> with TickerProvid
     return FastCachedImage(
       url: url,
       fit: BoxFit.cover,
+      cacheWidth: 360,
+      cacheHeight: 240,
       errorBuilder: (context, error, stackTrace) => Container(
         color: Colors.black12,
         child: Icon(Iconsax.video, color: Colors.white30, size: 32),

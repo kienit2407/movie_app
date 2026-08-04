@@ -10,13 +10,21 @@ class AuthInterceptor extends Interceptor {
   final Future<void> Function(String access, String refresh) saveToken;
   bool _isRefreshing = false;
   final List<QueuedRequest> _queue = [];
-  AuthInterceptor({required this.dio, required this.getAccessToken, required this.getRefreshToken, required this.saveToken});
-  
+  AuthInterceptor({
+    required this.dio,
+    required this.getAccessToken,
+    required this.getRefreshToken,
+    required this.saveToken,
+  });
+
   @override
-  void onRequest(RequestOptions options, RequestInterceptorHandler handler) async {
+  void onRequest(
+    RequestOptions options,
+    RequestInterceptorHandler handler,
+  ) async {
     // lấy access Token ra để đưa vào Beaber
     final accessToken = await getAccessToken();
-    if(accessToken != null && accessToken.isNotEmpty) {
+    if (accessToken != null && accessToken.isNotEmpty) {
       options.headers['Authorization'] = 'Beaber ${accessToken}';
     }
     handler.next(options);
@@ -25,25 +33,28 @@ class AuthInterceptor extends Interceptor {
 
   @override
   void onError(DioException err, ErrorInterceptorHandler handler) async {
-    if(err.response?.statusCode == 401 && !_isRefreshing) {
+    if (err.response?.statusCode == 401 && !_isRefreshing) {
       _isRefreshing = true;
 
       final refreshToken = await getRefreshToken();
-      if(refreshToken == null) return handler.reject(err);
+      if (refreshToken == null) return handler.reject(err);
       try {
-        final res = await dio.post(AppUrl.postRefreshToken, options: Options(
-          headers: {
-            'Authorization' : 'Beaber ${refreshToken}'
-          }
-        ));
+        final res = await dio.post(
+          AppUrl.postRefreshToken,
+          options: Options(
+            headers: {'Authorization': 'Beaber ${refreshToken}'},
+          ),
+        );
 
         final newRefresh = res.data['refreshToken'];
         final newAccess = res.data['accessToken'];
         await saveToken(newAccess, newRefresh);
 
-        for(final req in _queue) {
+        for (final req in _queue) {
           req.resolve(
-            dio.fetch(req.options..headers['Authorization'] = 'Beaber ${newAccess}')
+            dio.fetch(
+              req.options..headers['Authorization'] = 'Beaber ${newAccess}',
+            ),
           );
         }
         _queue.clear();
@@ -53,9 +64,13 @@ class AuthInterceptor extends Interceptor {
         handler.reject(err);
       }
     } else if (_isRefreshing) {
-      final completer =  QueuedRequestCompleted();
-      _queue.add(QueuedRequest(options: err.requestOptions, resolve: completer.resolve));
-      return completer.future.then((r) => handler.resolve(r)).catchError((e) => handler.reject(e));
+      final completer = QueuedRequestCompleted();
+      _queue.add(
+        QueuedRequest(options: err.requestOptions, resolve: completer.resolve),
+      );
+      return completer.future
+          .then((r) => handler.resolve(r))
+          .catchError((e) => handler.reject(e));
     } else {
       handler.next(err);
     }
@@ -67,7 +82,8 @@ class AuthInterceptor extends Interceptor {
 
 class QueuedRequest {
   final RequestOptions options; // chứa toàn bộ dữ liệu của request đó
-  final void Function(Future<Response> response) resolve; // đùng dể chạy lại các request đó
+  final void Function(Future<Response> response)
+  resolve; // đùng dể chạy lại các request đó
 
   QueuedRequest({required this.options, required this.resolve});
 }

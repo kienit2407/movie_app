@@ -22,16 +22,30 @@ import 'package:movie_app/feature/detail_movie/domain/usecase/get_detail_movie_u
 import 'package:movie_app/feature/home/domain/usecase/get_genre_movie.dart';
 import 'package:movie_app/feature/home/domain/usecase/get_latest_usecase.dart';
 import 'package:movie_app/feature/home/domain/usecase/get_movies_by_filter_usecase.dart';
-import 'package:movie_app/feature/movie_pagination/presentation/bloc/fetch_fillter_cubit.dart';
+import 'package:movie_app/feature/home/notification/new_movie_background_service.dart';
+import 'package:movie_app/feature/home/notification/new_movie_checker.dart';
+import 'package:movie_app/feature/home/notification/new_movie_notification_coordinator.dart';
+import 'package:movie_app/feature/home/notification/new_movie_notification_service.dart';
+import 'package:movie_app/feature/home/notification/new_movie_notification_storage.dart';
+import 'package:movie_app/feature/home/notification/new_movie_inbox.dart';
 import 'package:movie_app/feature/search/data/datasources/search_remote_datasource.dart';
 import 'package:movie_app/feature/search/data/repositories/search_repository_impl.dart';
 import 'package:movie_app/feature/search/domain/repositories/search_repository.dart';
 import 'package:movie_app/feature/search/domain/usecases/search_movies_usecase.dart';
 import 'package:movie_app/feature/search/presentation/bloc/search_cubit.dart';
+import 'package:movie_app/feature/comments/data/comment_supabase_repository.dart';
+import 'package:movie_app/feature/comments/domain/repositories/comment_repository.dart';
+import 'package:movie_app/feature/library/data/user_library_repository.dart';
 
 final sl = GetIt.instance;
 
-Future<void> initializeGetit() async {
+Future<void>? _getItInitialization;
+
+Future<void> initializeGetit() {
+  return _getItInitialization ??= _initializeGetit();
+}
+
+Future<void> _initializeGetit() async {
   sl.registerLazySingletonAsync<DioClient>(() => DioClient.create());
   await sl.isReady<DioClient>();
 
@@ -43,6 +57,10 @@ Future<void> initializeGetit() async {
 
   sl.registerLazySingleton<AuthRepository>(
     () => AuthRepositoryImpl(sl<AuthService>()),
+  );
+  sl.registerLazySingleton<CommentRepository>(CommentSupabaseRepository.new);
+  sl.registerLazySingleton<UserLibraryRepository>(
+    SupabaseUserLibraryRepository.new,
   );
 
   sl.registerLazySingleton<MovieRepository>(
@@ -102,13 +120,37 @@ Future<void> initializeGetit() async {
   sl.registerLazySingleton<GetMoviesByFilterUsecase>(
     () => GetMoviesByFilterUsecase(sl<MovieRepository>()),
   );
+  sl.registerLazySingleton<NewMovieNotificationStore>(
+    HiveNewMovieNotificationStore.new,
+  );
+  sl.registerLazySingleton<NewMovieInboxStore>(HiveNewMovieInboxStore.new);
+  sl.registerLazySingleton<NewMovieNotificationService>(
+    NewMovieNotificationService.new,
+  );
+  sl.registerLazySingleton<NewMovieTaskScheduler>(
+    NewMovieBackgroundScheduler.new,
+  );
+  sl.registerLazySingleton<NewMovieChecker>(
+    () => NewMovieChecker(
+      loadLatestMovies: () => sl<GetLatestUsecase>()(1),
+      store: sl<NewMovieNotificationStore>(),
+      notifier: sl<NewMovieNotificationService>(),
+      inboxStore: sl<NewMovieInboxStore>(),
+    ),
+  );
+  sl.registerLazySingleton<NewMovieNotificationCoordinator>(
+    () => NewMovieNotificationCoordinator(
+      checker: sl<NewMovieChecker>(),
+      store: sl<NewMovieNotificationStore>(),
+      notificationService: sl<NewMovieNotificationService>(),
+      scheduler: sl<NewMovieTaskScheduler>(),
+    ),
+  );
   sl.registerFactory<SearchMoviesUseCase>(
     () => SearchMoviesUseCase(sl<SearchRepository>()),
   );
   sl.registerFactory<SearchCubit>(
     () => SearchCubit(searchUseCase: sl<SearchMoviesUseCase>()),
   );
-  sl.registerLazySingleton<PlayerCubit>(
-    () => PlayerCubit(),
-  );
+  sl.registerLazySingleton<PlayerCubit>(() => PlayerCubit());
 }

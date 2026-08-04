@@ -9,8 +9,7 @@ class AppUrl {
   static final String baseUrl = kIsWeb ? '/api/' : 'https://phimapi.com/';
 
   static const baseUrlBe = 'https://localhost:8017';
-  static const baseDomainImg = 'https://phimimg.com/';
-  static const getLatestMovie = 'danh-sach/phim-moi-cap-nhat-v3';
+  static const getLatestMovie = '/v1/api/danh-sach';
   static const getGenretMovie = 'the-loai';
   static const getCountryMovie = 'quoc-gia';
   static const postRefreshToken = 'auth/refresh-token';
@@ -32,17 +31,6 @@ class AppUrl {
 
   static String getDetailMovie(String slug) => 'phim/$slug';
 
-  static String convertImageDirect(String imageUrl) =>
-      '${kIsWeb ? "" : ""}https://phimapi.com/image.php?url=$imageUrl';
-
   static String convertVideoPlayerDirect(String videoUrl) =>
       'https://player.phimapi.com/player/?url=$videoUrl';
-
-  static String convertImageAddition(String imageUrl) {
-    if (imageUrl.startsWith('https://phimimg.com/') ||
-        imageUrl.startsWith('http://phimimg.com/')) {
-      return 'https://phimapi.com/image.php?url=$imageUrl';
-    }
-    return 'https://phimapi.com/image.php?url=$baseDomainImg$imageUrl';
-  }
 }

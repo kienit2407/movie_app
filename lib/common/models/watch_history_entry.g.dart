@@ -33,13 +33,18 @@ class WatchHistoryEntryAdapter extends TypeAdapter<WatchHistoryEntry> {
       type: fields[13] as String?,
       categoryId: fields[14] as String?,
       categoryName: fields[15] as String?,
+      lastServerIndex: (fields[16] as num?)?.toInt(),
+      lastEpisodeIndex: (fields[17] as num?)?.toInt(),
+      lastEpisodeName: fields[18] as String?,
+      lastEpisodeLink: fields[19] as String?,
+      lastServerName: fields[20] as String?,
     );
   }
 
   @override
   void write(BinaryWriter writer, WatchHistoryEntry obj) {
     writer
-      ..writeByte(16)
+      ..writeByte(21)
       ..writeByte(0)
       ..write(obj.slug)
       ..writeByte(1)
@@ -71,7 +76,17 @@ class WatchHistoryEntryAdapter extends TypeAdapter<WatchHistoryEntry> {
       ..writeByte(14)
       ..write(obj.categoryId)
       ..writeByte(15)
-      ..write(obj.categoryName);
+      ..write(obj.categoryName)
+      ..writeByte(16)
+      ..write(obj.lastServerIndex)
+      ..writeByte(17)
+      ..write(obj.lastEpisodeIndex)
+      ..writeByte(18)
+      ..write(obj.lastEpisodeName)
+      ..writeByte(19)
+      ..write(obj.lastEpisodeLink)
+      ..writeByte(20)
+      ..write(obj.lastServerName);
   }
 
   @override

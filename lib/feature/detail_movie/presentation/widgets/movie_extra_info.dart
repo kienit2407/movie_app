@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:fast_cached_network_image/fast_cached_network_image.dart';
 import 'package:intl/intl.dart';
 import 'package:shimmer/shimmer.dart';
-import 'package:movie_app/common/helpers/contants/app_url.dart';
 import 'package:movie_app/core/config/themes/app_color.dart';
 import 'package:movie_app/feature/detail_movie/data/model/detail_movie_model.dart';
 
@@ -43,8 +42,10 @@ class MovieExtraInfo extends StatelessWidget {
                 height: 300,
                 width: double.infinity,
                 child: FastCachedImage(
-                  url: AppUrl.convertImageDirect(movie.thumb_url),
+                  url: movie.thumb_url,
                   fit: BoxFit.cover,
+                  cacheWidth: 1080,
+                  cacheHeight: 720,
                   loadingBuilder: (context, loadingProgress) {
                     return _buildSkeletonForThumbnail();
                   },
@@ -155,10 +156,10 @@ class MovieExtraInfo extends StatelessWidget {
                               child: ClipRRect(
                                 borderRadius: BorderRadius.circular(6),
                                 child: FastCachedImage(
-                                  url: AppUrl.convertImageDirect(
-                                    movie.poster_url,
-                                  ),
+                                  url: movie.poster_url,
                                   fit: BoxFit.cover,
+                                  cacheWidth: 600,
+                                  cacheHeight: 900,
                                   loadingBuilder: (context, loadingProgress) {
                                     return _buildSkeletonForPoster();
                                   },

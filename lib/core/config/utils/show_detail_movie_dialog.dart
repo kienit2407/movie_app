@@ -6,7 +6,6 @@ import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
 import 'package:movie_app/common/components/alert_dialog/app_alert_dialog.dart';
-import 'package:movie_app/common/helpers/contants/app_url.dart';
 import 'package:movie_app/common/helpers/navigation/app_navigation.dart';
 import 'package:movie_app/core/config/di/service_locator.dart';
 import 'package:movie_app/core/config/themes/app_color.dart';
@@ -413,9 +412,7 @@ class _DialogContentState extends State<_DialogContent> {
     final String posterUrl = movie.thumb_url.isNotEmpty
         ? movie.thumb_url
         : movie.poster_url;
-    final String displayUrl = posterUrl.startsWith('http')
-        ? posterUrl
-        : AppUrl.convertImageAddition(posterUrl);
+    final String displayUrl = posterUrl;
 
     final bool showSkeleton = hasTrailer && !_isPlayerReady && !_isPlayerError;
     final bool showPlayer =
@@ -432,7 +429,12 @@ class _DialogContentState extends State<_DialogContent> {
               fit: StackFit.expand,
               children: [
                 if (showThumbnail)
-                  FastCachedImage(url: displayUrl, fit: BoxFit.cover),
+                  FastCachedImage(
+                    url: displayUrl,
+                    fit: BoxFit.cover,
+                    cacheWidth: 1280,
+                    cacheHeight: 720,
+                  ),
                 if (showPlayer)
                   YoutubePlayer(
                     controller: _youtubeController!,

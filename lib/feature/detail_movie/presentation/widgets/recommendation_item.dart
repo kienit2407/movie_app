@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:fast_cached_network_image/fast_cached_network_image.dart';
-import 'package:movie_app/common/helpers/contants/app_url.dart';
 import 'package:movie_app/core/config/routes/app_router.dart';
 import 'package:movie_app/core/config/utils/animated_dialog.dart';
 import 'package:movie_app/core/config/utils/episode_map.dart';
@@ -49,11 +48,28 @@ class RecommendationItem extends StatelessWidget {
                     ),
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(8),
-                      child: FastCachedImage(
-                        url: itemEntity.posterUrl.startsWith('http')
-                            ? itemEntity.posterUrl
-                            : AppUrl.convertImageAddition(itemEntity.posterUrl),
-                        fit: BoxFit.cover,
+                      child: LayoutBuilder(
+                        builder: (context, constraints) {
+                          final pixelRatio = MediaQuery.devicePixelRatioOf(
+                            context,
+                          );
+                          final cacheWidth = (constraints.maxWidth * pixelRatio)
+                              .round()
+                              .clamp(1, 600)
+                              .toInt();
+                          final cacheHeight =
+                              (constraints.maxHeight * pixelRatio)
+                                  .round()
+                                  .clamp(1, 900)
+                                  .toInt();
+
+                          return FastCachedImage(
+                            url: itemEntity.posterUrl,
+                            fit: BoxFit.cover,
+                            cacheWidth: cacheWidth,
+                            cacheHeight: cacheHeight,
+                          );
+                        },
                       ),
                     ),
                   ),

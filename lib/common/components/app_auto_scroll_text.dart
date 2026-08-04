@@ -61,13 +61,14 @@ class AppAutoScrollText extends StatelessWidget {
         return ClipRect(
           child: TextScroll(
             text,
-            mode: TextScrollMode.bouncing,
+            mode: TextScrollMode.endless,
             delayBefore: delayBefore,
             pauseOnBounce: pauseOnBounce,
             velocity: velocity,
             fadedBorder: fadedBorder,
             fadedBorderWidth: fadedBorderWidth,
             textAlign: textAlign,
+            intervalSpaces: 10,
             textDirection: textDirection,
             style: effectiveStyle,
           ),

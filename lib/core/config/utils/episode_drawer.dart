@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:fast_cached_network_image/fast_cached_network_image.dart';
 import 'package:lottie/lottie.dart';
-import 'package:movie_app/common/helpers/contants/app_url.dart';
 import 'package:movie_app/core/config/utils/cover_map.dart';
 import 'package:movie_app/feature/detail_movie/data/model/detail_movie_model.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
@@ -399,10 +398,10 @@ class EpisodeDrawerState extends State<EpisodeDrawer> {
                           right: Radius.circular(10),
                         ),
                         child: FastCachedImage(
-                          url: AppUrl.convertImageDirect(
-                            widget.movie.poster_url,
-                          ),
+                          url: widget.movie.poster_url,
                           fit: BoxFit.cover,
+                          cacheWidth: 600,
+                          cacheHeight: 900,
                           loadingBuilder: (context, loadingProgress) {
                             return _buildSkeletonForposter();
                           },

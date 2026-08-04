@@ -36,8 +36,6 @@ class DetailMovieModel {
 
 extension EpisodesNormalize on EpisodesModel {
   List<EpisodesModel> normalize() {
-    final base = _extractBaseServerName(server_name);
-
     // Nếu server_name không có kiểu gộp => giữ nguyên
     if (!_isMixedServerName(server_name)) return [this];
 
@@ -64,28 +62,16 @@ extension EpisodesNormalize on EpisodesModel {
 
     // Vietsub: lấy phần còn lại (thường là "Full")
     if (others.isNotEmpty) {
-      out.add(
-        EpisodesModel(server_name: '$base (Vietsub)', server_data: others),
-      );
+      out.add(EpisodesModel(server_name: 'Vietsub', server_data: others));
     }
 
-    // Lồng tiếng: ép hiển thị "Full" cho đúng format UI bạn muốn
     if (longTieng.isNotEmpty) {
-      out.add(
-        EpisodesModel(
-          server_name: '$base (Lồng Tiếng)',
-          server_data: longTieng.map(_forceFullNameSlug).toList(),
-        ),
-      );
+      out.add(EpisodesModel(server_name: 'Lồng Tiếng', server_data: longTieng));
     }
 
-    // Thuyết minh: ép hiển thị "Full"
     if (thuyetMinh.isNotEmpty) {
       out.add(
-        EpisodesModel(
-          server_name: '$base (Thuyết Minh)',
-          server_data: thuyetMinh.map(_forceFullNameSlug).toList(),
-        ),
+        EpisodesModel(server_name: 'Thuyết Minh', server_data: thuyetMinh),
       );
     }
 
@@ -93,50 +79,84 @@ extension EpisodesNormalize on EpisodesModel {
     return out.isEmpty ? [this] : out;
   }
 
-  String _extractBaseServerName(String s) {
-    final idx = s.indexOf('(');
-    if (idx == -1) return s.trim();
-    return s.substring(0, idx).trim();
-  }
-
   bool _isMixedServerName(String s) {
-    final lower = s.toLowerCase();
-    // bắt tất cả dạng gộp (bạn có thể bổ sung thêm keyword khác)
-    return lower.contains('+') &&
-        (lower.contains('vietsub') ||
-            lower.contains('lồng tiếng') ||
-            lower.contains('long tieng') ||
-            lower.contains('thuyết minh') ||
-            lower.contains('thuyet minh'));
+    if (!s.contains('+')) return false;
+
+    final normalized = _normalizeServerText(s);
+    final trackCount = [
+      _hasVietsub(normalized),
+      _hasLongTieng(normalized),
+      _hasThuyetMinh(normalized),
+    ].where((value) => value).length;
+
+    return trackCount >= 2;
   }
 
   _TrackType _detectType(ServerData x) {
-    final slug = x.slug.toLowerCase().trim();
-    final name = x.name.toLowerCase().trim();
+    final identityText = _normalizeServerText('${x.slug} ${x.name}');
 
-    if (slug.contains('long-tieng') || slug.contains('long_tieng'))
+    if (_hasLongTieng(identityText)) {
       return _TrackType.longTieng;
-    if (name.contains('lồng tiếng') || name.contains('long tieng'))
-      return _TrackType.longTieng;
+    }
 
-    if (slug.contains('thuyet-minh') || slug.contains('thuyet_minh'))
+    if (_hasThuyetMinh(identityText)) {
       return _TrackType.thuyetMinh;
-    if (name.contains('thuyết minh') || name.contains('thuyet minh'))
+    }
+
+    if (_hasVietsub(identityText)) {
+      return _TrackType.other;
+    }
+
+    final filenameText = _normalizeServerText(x.filename);
+    final hasLongTieng = _hasLongTieng(filenameText);
+    final hasThuyetMinh = _hasThuyetMinh(filenameText);
+    final hasVietsub = _hasVietsub(filenameText);
+
+    // Filename có thể chứa nhãn tổng hợp của cả server. Chỉ phân loại theo
+    // filename khi nó xác định duy nhất một audio track.
+    if (hasLongTieng && !hasThuyetMinh && !hasVietsub) {
+      return _TrackType.longTieng;
+    }
+    if (hasThuyetMinh && !hasLongTieng && !hasVietsub) {
       return _TrackType.thuyetMinh;
+    }
 
     return _TrackType.other; // coi như Vietsub/bản chính
   }
 
-  // Vì UI của bạn đang render theo server_name, nên server_data cứ "Full" là đẹp nhất
-  ServerData _forceFullNameSlug(ServerData x) {
-    if (x.name == 'Full' && x.slug == 'full') return x;
-    return ServerData(
-      name: 'Full',
-      slug: 'full',
-      filename: x.filename,
-      link_embed: x.link_embed,
-      link_m3u8: x.link_m3u8,
-    );
+  bool _hasVietsub(String text) {
+    return text.contains('vietsub') ||
+        text.contains('phu de') ||
+        text.contains('phu-de') ||
+        text.contains('subtitle') ||
+        RegExp(r'(^|[^a-z])vs([^a-z]|$)').hasMatch(text);
+  }
+
+  bool _hasLongTieng(String text) {
+    return text.contains('long tieng') ||
+        text.contains('long-tieng') ||
+        text.contains('long_tieng') ||
+        RegExp(r'(^|[^a-z])lt([^a-z]|$)').hasMatch(text);
+  }
+
+  bool _hasThuyetMinh(String text) {
+    return text.contains('thuyet minh') ||
+        text.contains('thuyet-minh') ||
+        text.contains('thuyet_minh') ||
+        RegExp(r'(^|[^a-z])tm([^a-z]|$)').hasMatch(text);
+  }
+
+  String _normalizeServerText(String value) {
+    return value
+        .toLowerCase()
+        .replaceAll(RegExp('[àáạảãâầấậẩẫăằắặẳẵ]'), 'a')
+        .replaceAll(RegExp('[èéẹẻẽêềếệểễ]'), 'e')
+        .replaceAll(RegExp('[ìíịỉĩ]'), 'i')
+        .replaceAll(RegExp('[òóọỏõôồốộổỗơờớợởỡ]'), 'o')
+        .replaceAll(RegExp('[ùúụủũưừứựửữ]'), 'u')
+        .replaceAll(RegExp('[ỳýỵỷỹ]'), 'y')
+        .replaceAll('đ', 'd')
+        .trim();
   }
 }
 
@@ -302,7 +322,7 @@ class MovieModel {
       'trailer_url': trailer_url,
       'time': time,
       'episode_current': episode_current,
-      'eposode_total': eposode_total,
+      'episode_total': eposode_total,
       'quality': quality,
       'lang': lang,
       'notify': notify,
@@ -385,7 +405,8 @@ class MovieModel {
         trailer_url: map['trailer_url']?.toString() ?? '',
         time: map['time']?.toString() ?? '',
         episode_current: map['episode_current']?.toString() ?? '',
-        eposode_total: map['eposode_total']?.toString(),
+        eposode_total: (map['episode_total'] ?? map['eposode_total'])
+            ?.toString(),
         quality: map['quality']?.toString() ?? '',
         lang: map['lang']?.toString() ?? '',
         notify: map['notify'] is String

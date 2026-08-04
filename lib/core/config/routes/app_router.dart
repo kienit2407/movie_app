@@ -6,6 +6,13 @@ import 'package:movie_app/feature/detail_movie/presentation/pages/movie_detail_p
 import 'package:movie_app/feature/detail_movie/presentation/pages/movie_player_page.dart';
 import 'package:movie_app/feature/search/presentation/pages/search_page.dart';
 import 'package:movie_app/core/config/utils/movie_player_args.dart';
+import 'package:movie_app/feature/auth/presentation/sign_in/pages/sign_in.dart';
+import 'package:cupertino_native_better/cupertino_native_better.dart';
+import 'package:movie_app/feature/hub/presentation/pages/hub_page.dart';
+import 'package:movie_app/feature/home/presentation/pages/notifications_page.dart';
+import 'package:movie_app/feature/library/presentation/pages/edit_profile_page.dart';
+import 'package:movie_app/feature/library/presentation/pages/favorites_page.dart';
+import 'package:movie_app/feature/library/presentation/pages/profile_page.dart';
 
 class AppRoutes {
   static const String splash = '/splash';
@@ -13,24 +20,101 @@ class AppRoutes {
   static const String movieDetail = '/movie/:slug';
   static const String player = '/player';
   static const String search = '/search';
+  static const String favorites = '/favorites';
+  static const String profile = '/profile';
+  static const String notifications = '/notifications';
+  static const String editProfile = '/profile/edit';
+  static const String signIn = '/sign-in';
 
   static final GlobalKey<NavigatorState> navigatorKey =
+      GlobalKey<NavigatorState>();
+  static final GlobalKey<NavigatorState> homeNavigatorKey =
+      GlobalKey<NavigatorState>();
+  static final GlobalKey<NavigatorState> searchNavigatorKey =
+      GlobalKey<NavigatorState>();
+  static final GlobalKey<NavigatorState> favoritesNavigatorKey =
+      GlobalKey<NavigatorState>();
+  static final GlobalKey<NavigatorState> profileNavigatorKey =
       GlobalKey<NavigatorState>();
 }
 
 final goRouter = GoRouter(
   navigatorKey: AppRoutes.navigatorKey, // <<< thêm dòng này
   initialLocation: AppRoutes.splash,
+  observers: [CNTabBarRouteObserver()],
   routes: [
     GoRoute(
       path: AppRoutes.splash,
       name: 'splash',
       builder: (context, state) => const SplashPage(),
     ),
+    StatefulShellRoute.indexedStack(
+      builder: (context, state, navigationShell) =>
+          HubPage(navigationShell: navigationShell),
+      branches: [
+        StatefulShellBranch(
+          navigatorKey: AppRoutes.homeNavigatorKey,
+          observers: [CNTabBarRouteObserver()],
+          routes: [
+            GoRoute(
+              path: AppRoutes.home,
+              name: 'home',
+              builder: (context, state) => const HomePage(),
+            ),
+          ],
+        ),
+        StatefulShellBranch(
+          navigatorKey: AppRoutes.searchNavigatorKey,
+          observers: [CNTabBarRouteObserver()],
+          routes: [
+            GoRoute(
+              path: AppRoutes.search,
+              name: 'search',
+              builder: (context, state) =>
+                  const SearchPage(showBackButton: false),
+            ),
+          ],
+        ),
+        StatefulShellBranch(
+          navigatorKey: AppRoutes.favoritesNavigatorKey,
+          observers: [CNTabBarRouteObserver()],
+          routes: [
+            GoRoute(
+              path: AppRoutes.favorites,
+              name: 'favorites',
+              builder: (context, state) => const FavoritesPage(),
+            ),
+          ],
+        ),
+        StatefulShellBranch(
+          navigatorKey: AppRoutes.profileNavigatorKey,
+          observers: [CNTabBarRouteObserver()],
+          routes: [
+            GoRoute(
+              path: AppRoutes.profile,
+              name: 'profile',
+              builder: (context, state) => const ProfilePage(),
+            ),
+          ],
+        ),
+      ],
+    ),
     GoRoute(
-      path: AppRoutes.home,
-      name: 'home',
-      builder: (context, state) => const HomePage(),
+      path: AppRoutes.signIn,
+      name: 'signIn',
+      builder: (context, state) => const SignInPage(),
+    ),
+    GoRoute(
+      path: AppRoutes.notifications,
+      name: 'notifications',
+      parentNavigatorKey: AppRoutes.navigatorKey,
+      builder: (context, state) => const NotificationsPage(),
+    ),
+    GoRoute(
+      path: AppRoutes.editProfile,
+      name: 'editProfile',
+      parentNavigatorKey: AppRoutes.navigatorKey,
+      builder: (context, state) => const EditProfilePage(),
     ),
     GoRoute(
       path: AppRoutes.movieDetail,
@@ -69,11 +153,6 @@ final goRouter = GoRouter(
           reverseTransitionDuration: Duration.zero,
         );
       },
-    ),
-    GoRoute(
-      path: AppRoutes.search,
-      name: 'search',
-      builder: (context, state) => const SearchPage(),
     ),
   ],
   errorBuilder: (context, state) => Scaffold(

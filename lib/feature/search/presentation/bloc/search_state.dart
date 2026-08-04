@@ -1,5 +1,6 @@
 import 'package:equatable/equatable.dart';
 import 'package:movie_app/feature/detail_movie/data/model/detail_movie_model.dart';
+import 'package:movie_app/feature/search/domain/entities/search_filter_params.dart';
 
 abstract class SearchState extends Equatable {
   const SearchState();
@@ -22,6 +23,7 @@ class SearchLoaded extends SearchState {
   final bool hasMore;
   final int page;
   final String currentKeyword;
+  final SearchFilterParams filters;
 
   // ✅ NEW
   final bool isLoadingMore;
@@ -31,6 +33,7 @@ class SearchLoaded extends SearchState {
     this.hasMore = true,
     required this.page,
     required this.currentKeyword,
+    this.filters = SearchFilterParams.defaults,
     this.isLoadingMore = false,
   });
 
@@ -39,6 +42,7 @@ class SearchLoaded extends SearchState {
     bool? hasMore,
     int? page,
     String? currentKeyword,
+    SearchFilterParams? filters,
     bool? isLoadingMore,
   }) {
     return SearchLoaded(
@@ -46,12 +50,20 @@ class SearchLoaded extends SearchState {
       hasMore: hasMore ?? this.hasMore,
       page: page ?? this.page,
       currentKeyword: currentKeyword ?? this.currentKeyword,
+      filters: filters ?? this.filters,
       isLoadingMore: isLoadingMore ?? this.isLoadingMore,
     );
   }
 
   @override
-  List<Object?> get props => [movies, hasMore, page, currentKeyword, isLoadingMore];
+  List<Object?> get props => [
+    movies,
+    hasMore,
+    page,
+    currentKeyword,
+    filters.signature,
+    isLoadingMore,
+  ];
 }
 
 class SearchError extends SearchState {

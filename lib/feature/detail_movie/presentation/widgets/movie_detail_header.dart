@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:fast_cached_network_image/fast_cached_network_image.dart';
 import 'package:shimmer/shimmer.dart';
-import 'package:movie_app/common/helpers/contants/app_url.dart';
 
 class MovieDetailHeader extends StatelessWidget {
   final String? trailerUrl;
@@ -31,9 +30,7 @@ class MovieDetailHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     final hasTrailer = trailerUrl?.trim().isNotEmpty ?? false;
     final String posterUrlFinal = thumbUrl.isNotEmpty ? thumbUrl : posterUrl;
-    final displayUrl = posterUrlFinal.startsWith('http')
-        ? posterUrlFinal
-        : AppUrl.convertImageAddition(posterUrlFinal);
+    final displayUrl = posterUrlFinal;
 
     final showSkeleton = hasTrailer && !isPlayerReady && !isPlayerError;
     final showPlayer = hasTrailer && playerWidget != null && !isPlayerError;
@@ -48,7 +45,26 @@ class MovieDetailHeader extends StatelessWidget {
             fit: StackFit.expand,
             children: [
               if (showThumbnail)
-                FastCachedImage(url: displayUrl, fit: BoxFit.cover),
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    final pixelRatio = MediaQuery.devicePixelRatioOf(context);
+                    final cacheWidth = (constraints.maxWidth * pixelRatio)
+                        .round()
+                        .clamp(1, 1280)
+                        .toInt();
+                    final cacheHeight = (constraints.maxHeight * pixelRatio)
+                        .round()
+                        .clamp(1, 720)
+                        .toInt();
+
+                    return FastCachedImage(
+                      url: displayUrl,
+                      fit: BoxFit.cover,
+                      cacheWidth: cacheWidth,
+                      cacheHeight: cacheHeight,
+                    );
+                  },
+                ),
 
               if (showPlayer) playerWidget!,
 

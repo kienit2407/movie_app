@@ -1,7 +1,7 @@
+import 'package:fast_cached_network_image/fast_cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:movie_app/common/components/app_auto_scroll_text.dart';
-import 'package:movie_app/common/helpers/contants/app_url.dart';
 import 'package:movie_app/core/config/themes/app_color.dart';
 import 'package:movie_app/core/config/utils/animated_dialog.dart';
 import 'package:movie_app/core/config/utils/show_detail_movie_dialog.dart';
@@ -23,6 +23,10 @@ class MovieItemCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final pixelRatio = MediaQuery.devicePixelRatioOf(context);
+    final posterCacheWidth = (140 * pixelRatio).round().clamp(1, 600).toInt();
+    final posterCacheHeight = (200 * pixelRatio).round().clamp(1, 900).toInt();
+
     return GestureDetector(
       onTap: onTap ?? (enableQuickPreview ? () => _showPreview(context) : null),
       onLongPress:
@@ -42,17 +46,28 @@ class MovieItemCard extends StatelessWidget {
             Container(
               height: 200,
               decoration: BoxDecoration(
-                image: DecorationImage(
-                  image: NetworkImage(
-                    AppUrl.convertImageAddition(item.posterUrl),
-                  ),
-                  fit: BoxFit.cover,
-                ),
                 borderRadius: BorderRadius.circular(10),
                 border: Border.all(color: Colors.white, width: 2),
               ),
               child: Stack(
                 children: [
+                  Positioned.fill(
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: Image(
+                        key: ValueKey('${item.slug}:${item.posterUrl}'),
+                        image: ResizeImage(
+                          FastCachedImageProvider(item.posterUrl),
+                          width: posterCacheWidth,
+                          height: posterCacheHeight,
+                        ),
+                        fit: BoxFit.cover,
+                        gaplessPlayback: true,
+                        errorBuilder: (context, error, stackTrace) =>
+                            Container(color: const Color(0xff191A24)),
+                      ),
+                    ),
+                  ),
                   // Rating badge
                   Positioned(
                     top: 5,

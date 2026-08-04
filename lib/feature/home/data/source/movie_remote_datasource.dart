@@ -39,8 +39,9 @@ class MovieRemoteDatasourceImpl implements MovieRemoteDatasource {
       final response = await dioClient.get(
         path: AppUrl.getLatestMovie,
         queryParameters: {'page': page, 'limit': 20},
+        retryOnFailure: false,
       );
-      if (response.data['status'] == true && response.data['msg'] == 'done') {
+      if (_isSuccessResponse(response.data)) {
         return NewMovieModel.fromMap(response.data);
       } else {
         throw ServerException('Failed to load latest movies');
@@ -54,7 +55,7 @@ class MovieRemoteDatasourceImpl implements MovieRemoteDatasource {
   Future<DetailMovieModel> getDetailMovie(String slug) async {
     try {
       final response = await dioClient.get(path: AppUrl.getDetailMovie(slug));
-      if (response.data['status'] == true && response.data['msg'] == 'done') {
+      if (_isSuccessResponse(response.data)) {
         return DetailMovieModel.fromMap(response.data);
       } else {
         throw ServerException('Failed to load movie detail');
@@ -68,10 +69,11 @@ class MovieRemoteDatasourceImpl implements MovieRemoteDatasource {
   Future<List<GenreMovieModel>> getGenreMovie() async {
     try {
       final response = await dioClient.get(path: AppUrl.getGenretMovie);
-      if (response.statusCode == 200) {
-        return (response.data as List<dynamic>)
-            .map((e) => GenreMovieModel.fromMap(e))
-            .toList();
+      if (response.statusCode == 200 &&
+          (response.data is List || _isSuccessResponse(response.data))) {
+        return _extractCatalogItems(
+          response.data,
+        ).map((e) => GenreMovieModel.fromMap(e)).toList();
       } else {
         throw ServerException('Failed to load genres');
       }
@@ -84,9 +86,14 @@ class MovieRemoteDatasourceImpl implements MovieRemoteDatasource {
   Future<List<CountryMovieModel>> getCountryMovie() async {
     try {
       final response = await dioClient.get(path: AppUrl.getCountryMovie);
-      return (response.data as List<dynamic>)
-          .map((e) => CountryMovieModel.fromMap(e))
-          .toList();
+      if (response.statusCode == 200 &&
+          (response.data is List || _isSuccessResponse(response.data))) {
+        return _extractCatalogItems(
+          response.data,
+        ).map((e) => CountryMovieModel.fromMap(e)).toList();
+      } else {
+        throw ServerException('Failed to load countries');
+      }
     } catch (e) {
       rethrow;
     }
@@ -150,9 +157,24 @@ class MovieRemoteDatasourceImpl implements MovieRemoteDatasource {
   /// Kiểm tra response có success hay không
   /// API có thể trả về status: true hoặc status: 'success'
   bool _isSuccessResponse(dynamic data) {
-    if (data['status'] == true && data['msg'] == 'done') return true;
-    if (data['status'] == 'success') return true;
+    if (data is! Map) return false;
     if (data['status'] == true) return true;
+    if (data['status'] == 'success') return true;
     return false;
+  }
+
+  List<Map<String, dynamic>> _extractCatalogItems(dynamic data) {
+    if (data is List) {
+      return data.cast<Map<String, dynamic>>();
+    }
+
+    if (data is Map && data['data'] is Map) {
+      final wrappedData = data['data'] as Map;
+      if (wrappedData['items'] is List) {
+        return (wrappedData['items'] as List).cast<Map<String, dynamic>>();
+      }
+    }
+
+    throw ServerException('Invalid catalog response format');
   }
 }

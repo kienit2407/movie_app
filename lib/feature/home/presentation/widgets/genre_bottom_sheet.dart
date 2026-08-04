@@ -2,6 +2,7 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
 import 'package:movie_app/common/components/alert_dialog/app_alert_dialog.dart';
 import 'package:movie_app/common/helpers/navigation/app_navigation.dart';
@@ -113,7 +114,7 @@ class _GenreBottomSheetState extends State<GenreBottomSheet> {
                 Container(
                   width: double.infinity,
                   padding: EdgeInsets.symmetric(horizontal: 10),
-                  height: MediaQuery.of(context).size.height * .2,
+                  height: MediaQuery.of(context).size.height * .25, 
                   decoration: BoxDecoration(
                     border: Border(
                       top: BorderSide(color: AppColor.buttonColor),
@@ -213,10 +214,10 @@ class _GenreBottomSheetState extends State<GenreBottomSheet> {
                                             .sortLangMap[index]
                                             .keys
                                             .single;
-
+                                
                                         bool isSelected =
                                             selectedLanguage == slug;
-
+                                
                                         return ChoiceChip(
                                           showCheckmark: false,
                                           side: BorderSide(
@@ -252,7 +253,7 @@ class _GenreBottomSheetState extends State<GenreBottomSheet> {
                                                   20,
                                                 ),
                                           ),
-
+                                
                                           selected: true,
                                           onSelected: (value) {
                                             setState(() {
@@ -396,7 +397,7 @@ class _GenreBottomSheetState extends State<GenreBottomSheet> {
                                 fontSize: 12,
                               ),
                             ),
-                            Icon(Iconsax.arrow_right_1_copy, size: 16,),
+                            Icon(Iconsax.arrow_right_1_copy, size: 16),
                           ],
                         ),
                       ),
@@ -445,43 +446,59 @@ class _GenreBottomSheetState extends State<GenreBottomSheet> {
   }
 
   Widget _buildGenreList(GenreMovieSuccess state) {
-    return SingleChildScrollView(
-      child: Wrap(
-        spacing: 8,
-        alignment:
-            WrapAlignment.start, //CĂN CHỈNH CÁC ITEM TRONG 1 DÒNG HOẶC CỘT
-        children: List.generate(state.genreMovie.length, (index) {
-          final slug = state.genreMovie[index].slug;
-          bool isSelected = selectedGenre == slug;
-
-          return ChoiceChip(
-            showCheckmark: false,
-            side: BorderSide(
-              color: isSelected ? Color(0xffF1D775) : Color(0xff5E6070),
-            ),
-            backgroundColor: Color(0xff2F3345), // ← Background trong suốt
-            selectedColor: Color(0xff2F3345),
-            label: Text(
-              state.genreMovie[index].name,
-              style: TextStyle(
-                color: isSelected ? Color(0xffF1D775) : Colors.white,
-                fontSize: 10,
+    return ShaderMask(
+      shaderCallback: (bounds) {
+        return const LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            Colors.transparent,
+            Colors.black,
+            Colors.black,
+            Colors.transparent,
+          ],
+          stops: [0.0, 0.5, 0.8, 1.0],
+        ).createShader(bounds);
+      },
+      blendMode: BlendMode.dstIn,
+      child: SingleChildScrollView(
+        child: Wrap(
+          spacing: 8,
+          alignment:
+              WrapAlignment.start, //CĂN CHỈNH CÁC ITEM TRONG 1 DÒNG HOẶC CỘT
+          children: List.generate(state.genreMovie.length, (index) {
+            final slug = state.genreMovie[index].slug;
+            bool isSelected = selectedGenre == slug;
+      
+            return ChoiceChip(
+              showCheckmark: false,
+              side: BorderSide(
+                color: isSelected ? Color(0xffF1D775) : Color(0xff5E6070),
               ),
-            ),
-            labelPadding: EdgeInsets.symmetric(horizontal: 2),
-            pressElevation: 2.0,
-            visualDensity: VisualDensity.comfortable,
-            selected: true,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadiusGeometry.circular(20),
-            ),
-            onSelected: (value) {
-              setState(() {
-                selectedGenre = isSelected ? null : slug;
-              });
-            },
-          );
-        }),
+              backgroundColor: Color(0xff2F3345), // ← Background trong suốt
+              selectedColor: Color(0xff2F3345),
+              label: Text(
+                state.genreMovie[index].name,
+                style: TextStyle(
+                  color: isSelected ? Color(0xffF1D775) : Colors.white,
+                  fontSize: 10,
+                ),
+              ),
+              labelPadding: EdgeInsets.symmetric(horizontal: 2),
+              pressElevation: 2.0,
+              visualDensity: VisualDensity.comfortable,
+              selected: true,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadiusGeometry.circular(20),
+              ),
+              onSelected: (value) {
+                setState(() {
+                  selectedGenre = isSelected ? null : slug;
+                });
+              },
+            );
+          }),
+        ),
       ),
     );
   }

@@ -1,4 +1,3 @@
-
 import 'package:flutter/material.dart';
 
 class KeepAliveWrapper extends StatefulWidget {
@@ -13,7 +12,6 @@ class _KeepAliveWrapperState extends State<KeepAliveWrapper>
     with AutomaticKeepAliveClientMixin {
   @override
   Widget build(BuildContext context) {
-    
     return widget.child;
   }
 
@@ -21,5 +19,4 @@ class _KeepAliveWrapperState extends State<KeepAliveWrapper>
   bool get wantKeepAlive => true;
 }
 
-mixin AutomaticKeepAliveClientMixin {
-}
+mixin AutomaticKeepAliveClientMixin {}

@@ -35,6 +35,14 @@ class CachedImageContainer extends StatefulWidget {
 class _CachedImageContainerState extends State<CachedImageContainer> {
   @override
   Widget build(BuildContext context) {
+    final pixelRatio = MediaQuery.devicePixelRatioOf(context);
+    final cacheWidth = widget.width == null
+        ? null
+        : (widget.width! * pixelRatio).round().clamp(1, 1280).toInt();
+    final cacheHeight = widget.height == null
+        ? null
+        : (widget.height! * pixelRatio).round().clamp(1, 1920).toInt();
+
     return Container(
       height: widget.height,
       width: widget.width,
@@ -53,6 +61,8 @@ class _CachedImageContainerState extends State<CachedImageContainer> {
           fit: widget.boxFit ?? BoxFit.cover,
           width: widget.width,
           height: widget.height,
+          cacheWidth: cacheWidth,
+          cacheHeight: cacheHeight,
         ),
       ),
     );

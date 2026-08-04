@@ -97,8 +97,14 @@ dependencies:
   video_thumbnail: ^0.5.6
   flutter_screenutil: ^5.9.3
   liquid_glass_widgets: ^0.10.10
-  cupertino_native_better: ^1.4.5
+  cupertino_native_better: ^1.5.4
   text_scroll: ^0.2.1
+  workmanager: ^0.9.0+3
+  flutter_local_notifications: ^22.2.0
+  image_picker: ^1.2.1
+  image_cropper: ^11.0.0
+  battery_plus: ^7.1.1
+  connectivity_plus: ^7.3.1
 
 dev_dependencies:
   flutter_test:
@@ -113,6 +119,11 @@ dev_dependencies:
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
   flutter_lints: ^5.0.0
+
+dependency_overrides:
+  fast_cached_network_image:
+    path: third_party/fast_cached_network_image
+
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
 # The following section is specific to Flutter packages.
@@ -126,31 +137,10 @@ flutter:
     - assets/images/
     - assets/icons/
     - assets/fonts/
+    - assets/svg/
     - assets/.env
   #   - images/a_dot_ham.jpeg
 
-flutter_native_splash:
-  color: "#000000"                  # fallback
-  background_image: assets/images/bg.png
-
-  android_12:
-    color: "#000000"
-    background_image: assets/images/bg.png
-
-
-  ios: true
-  android: true
-  web: false
-
-
-flutter_launcher_icons:
-  android: "launcher_icon"
-  ios: true
-  image_path: "assets/images/icon_app.png"
-  adaptive_icon_background: "#FFFFFF"
-  adaptive_icon_foreground: "assets/images/icon_app.png"
-  min_sdk_android: 21
-  remove_alpha_ios: true
 
 
   # image_path_ios: "assets/images/icon_app.png"

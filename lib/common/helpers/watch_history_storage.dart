@@ -45,8 +45,15 @@ class WatchHistoryStorage {
     String? type,
     String? categoryId,
     String? categoryName,
+    int? lastServerIndex,
+    int? lastEpisodeIndex,
+    String? lastEpisodeName,
+    String? lastEpisodeLink,
+    String? lastServerName,
+    bool preserveExistingProgress = false,
   }) async {
     final box = await _getBox();
+    final existing = box.get(slug);
     final now = DateTime.now();
 
     final entry = WatchHistoryEntry(
@@ -61,11 +68,20 @@ class WatchHistoryStorage {
       year: year,
       rating: rating,
       watchedAt: now,
-      positionMs: positionMs,
-      durationMs: durationMs,
+      positionMs: preserveExistingProgress
+          ? existing?.positionMs ?? positionMs
+          : positionMs,
+      durationMs: preserveExistingProgress
+          ? existing?.durationMs ?? durationMs
+          : durationMs,
       type: type,
       categoryId: categoryId,
       categoryName: categoryName,
+      lastServerIndex: lastServerIndex ?? existing?.lastServerIndex,
+      lastEpisodeIndex: lastEpisodeIndex ?? existing?.lastEpisodeIndex,
+      lastEpisodeName: lastEpisodeName ?? existing?.lastEpisodeName,
+      lastEpisodeLink: lastEpisodeLink ?? existing?.lastEpisodeLink,
+      lastServerName: lastServerName ?? existing?.lastServerName,
     );
 
     await box.put(slug, entry);
@@ -137,6 +153,11 @@ class WatchHistoryStorage {
         type: existing.type,
         categoryId: existing.categoryId,
         categoryName: existing.categoryName,
+        lastServerIndex: existing.lastServerIndex,
+        lastEpisodeIndex: existing.lastEpisodeIndex,
+        lastEpisodeName: existing.lastEpisodeName,
+        lastEpisodeLink: existing.lastEpisodeLink,
+        lastServerName: existing.lastServerName,
       );
       await box.put(slug, updated);
     }

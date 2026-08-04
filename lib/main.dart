@@ -2,15 +2,19 @@ import 'package:fast_cached_network_image/fast_cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hive_ce_flutter/hive_flutter.dart';
 import 'package:hydrated_bloc/hydrated_bloc.dart';
+import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
+import 'package:movie_app/common/models/favorite_movie_entry.dart';
 import 'package:movie_app/common/models/watch_progress_model.dart';
 import 'package:movie_app/common/models/watch_history_entry.dart';
 import 'package:movie_app/common/bloc/AuthWithSocial/auth_with_social_cubit.dart';
 import 'package:movie_app/core/config/routes/app_router.dart';
 import 'package:movie_app/core/config/di/service_locator.dart';
+import 'package:movie_app/core/config/network/init_supabase.dart';
 import 'package:movie_app/core/config/themes/app_theme.dart';
 import 'package:movie_app/core/mini_player_overlay.dart';
 import 'package:movie_app/feature/auth/domain/usecases/confirm_with_token.dart';
@@ -23,21 +27,31 @@ import 'package:movie_app/feature/auth/presentation/reset_password/bloc/confirm_
 import 'package:movie_app/feature/auth/presentation/reset_password/bloc/reset_password_cubit.dart';
 import 'package:movie_app/feature/auth/presentation/sign_in/bloc/sign_in_cubit.dart';
 import 'package:movie_app/feature/auth/presentation/sign_up/bloc/sign_up_cubit.dart';
+import 'package:movie_app/feature/auth/presentation/session/auth_session_cubit.dart';
 import 'package:movie_app/feature/detail_movie/presentation/bloc/player_cubit.dart';
 import 'package:movie_app/feature/home/domain/usecase/get_country_movie.dart';
 import 'package:movie_app/feature/home/domain/usecase/get_movies_by_filter_usecase.dart';
 import 'package:movie_app/feature/home/domain/usecase/get_genre_movie.dart';
 import 'package:movie_app/feature/home/domain/usecase/get_latest_usecase.dart';
+import 'package:movie_app/feature/home/notification/new_movie_notification_navigation.dart';
+import 'package:movie_app/feature/home/notification/new_movie_inbox.dart';
+import 'package:movie_app/feature/home/notification/new_movie_notification_service.dart';
+import 'package:movie_app/feature/home/notification/new_movie_worker.dart';
 import 'package:movie_app/feature/home/presentation/bloc/carousel_display_cubit.dart';
 import 'package:movie_app/feature/home/presentation/bloc/country_movie_cubit.dart';
 import 'package:movie_app/feature/home/presentation/bloc/genre_cubit.dart';
 import 'package:movie_app/feature/intro/presentation/splash/bloc/splash_cubit.dart';
+import 'package:movie_app/feature/library/data/user_library_repository.dart';
+import 'package:movie_app/feature/library/presentation/cubit/user_library_cubit.dart';
 import 'package:movie_app/feature/movie_pagination/presentation/bloc/fetch_fillter_cubit.dart';
 import 'package:movie_app/feature/search/presentation/bloc/search_cubit.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:workmanager/workmanager.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  PaintingBinding.instance.imageCache.maximumSize = 500;
+  PaintingBinding.instance.imageCache.maximumSizeBytes = 160 << 20;
   debugPrint('=== [1/8] WidgetsFlutterBinding initialized ===');
   // 1. Chỉ set orientation trên Mobile
 
@@ -47,13 +61,15 @@ Future<void> main() async {
   ]);
   debugPrint('=== [2/8] Screen orientation set ===');
 
-  // await dotenv.load(fileName: 'assets/.env');
+  await dotenv.load(fileName: 'assets/.env');
+  await supaBaseInit.initSupabase();
   debugPrint('=== [3/8] Dotenv loaded ===');
   final dir = await getApplicationDocumentsDirectory();
   HydratedBloc.storage = await HydratedStorage.build(storageDirectory: dir);
 
   await Hive.initFlutter();
 
+  Hive.registerAdapter(FavoriteMovieEntryAdapter());
   Hive.registerAdapter(WatchProgressModelAdapter());
   Hive.registerAdapter(WatchHistoryEntryAdapter());
   debugPrint('=== [4/8] Hive initialized ===');
@@ -71,8 +87,20 @@ Future<void> main() async {
   await initializeGetit();
   debugPrint('=== [7/8] GetIt initialized ===');
 
+  await Workmanager().initialize(newMovieCallbackDispatcher);
+  await sl<NewMovieNotificationService>().initialize(
+    onPayload: NewMovieNotificationNavigation.handlePayload,
+    readLaunchPayload: true,
+  );
+
+  await LiquidGlassWidgets.initialize(enablePerformanceMonitor: false);
   debugPrint('=== Starting app... ===');
-  runApp(MovieApp(router: goRouter));
+  runApp(
+    LiquidGlassWidgets.wrap(
+      adaptiveQuality: true,
+      child: MovieApp(router: goRouter),
+    ),
+  );
 }
 
 class MovieApp extends StatelessWidget {
@@ -98,6 +126,14 @@ class MovieApp extends StatelessWidget {
               sl<SiginWithGoogleUsecase>(),
               sl<SiginWithFacebookUsecase>(),
             ),
+          ),
+          BlocProvider(create: (context) => AuthSessionCubit()),
+          BlocProvider(
+            create: (context) =>
+                UserLibraryCubit(repository: sl<UserLibraryRepository>()),
+          ),
+          BlocProvider(
+            create: (context) => NewMovieInboxCubit(sl<NewMovieInboxStore>()),
           ),
           BlocProvider(
             create: (context) =>
@@ -128,18 +164,21 @@ class MovieApp extends StatelessWidget {
           BlocProvider(create: (context) => sl<SearchCubit>()),
           BlocProvider(create: (context) => sl<PlayerCubit>()),
         ],
-        child: MaterialApp.router(
-          routerConfig: router,
-          theme: AppTheme.appTheme,
-          debugShowCheckedModeBanner: false,
-          builder: (context, child) {
-            return Overlay(
-              initialEntries: [
-                OverlayEntry(builder: (_) => child!),
-                OverlayEntry(builder: (_) => MiniPlayerOverlay()),
-              ],
-            );
-          },
+        child: GestureDetector(
+          onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
+          child: MaterialApp.router(
+            routerConfig: router,
+            theme: AppTheme.appTheme,
+            debugShowCheckedModeBanner: false,
+            builder: (context, child) {
+              return Overlay(
+                initialEntries: [
+                  OverlayEntry(builder: (_) => child!),
+                  OverlayEntry(builder: (_) => MiniPlayerOverlay()),
+                ],
+              );
+            },
+          ),
         ),
       ),
     );

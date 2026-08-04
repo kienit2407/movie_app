@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:fast_cached_network_image/fast_cached_network_image.dart';
 import 'package:sliver_tools/sliver_tools.dart';
 import 'package:movie_app/common/components/alert_dialog/app_alert_dialog.dart';
-import 'package:movie_app/common/helpers/contants/app_url.dart';
 import 'package:movie_app/core/config/utils/animated_dialog.dart';
 import 'package:movie_app/core/config/utils/blocking_back_page.dart';
 import 'package:movie_app/core/config/utils/cover_map.dart';
@@ -196,10 +195,10 @@ class _EpisodesSliverState extends State<EpisodesSliver> {
                             right: Radius.circular(10),
                           ),
                           child: FastCachedImage(
-                            url: AppUrl.convertImageDirect(
-                              widget.movie.poster_url,
-                            ),
+                            url: widget.movie.poster_url,
                             fit: BoxFit.cover,
+                            cacheWidth: 600,
+                            cacheHeight: 900,
                           ),
                         ),
                       ),
