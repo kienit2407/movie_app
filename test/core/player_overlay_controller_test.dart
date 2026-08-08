@@ -45,6 +45,20 @@ void main() {
     final dispatcher = PlayerOverlayBackButtonDispatcher(controller);
     controller.open(_args('movie-a'));
 
+    final transientOwner = Object();
+    var transientDismissed = false;
+    controller.attachTransientOverlayDismissHandler(
+      owner: transientOwner,
+      dismiss: () {
+        transientDismissed = true;
+        return true;
+      },
+    );
+    expect(await dispatcher.invokeCallback(Future.value(false)), isTrue);
+    expect(transientDismissed, isTrue);
+    expect(controller.target, PlayerOverlayTarget.expanded);
+    controller.detachTransientOverlayDismissHandler(owner: transientOwner);
+
     expect(await dispatcher.invokeCallback(Future.value(false)), isTrue);
     expect(controller.target, PlayerOverlayTarget.mini);
 

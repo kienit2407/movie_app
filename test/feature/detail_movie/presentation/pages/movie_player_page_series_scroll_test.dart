@@ -9,12 +9,15 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:hive_ce/hive.dart';
 import 'package:hydrated_bloc/hydrated_bloc.dart';
 import 'package:movie_app/core/config/di/service_locator.dart';
+import 'package:movie_app/feature/auth/presentation/session/auth_session_cubit.dart';
 import 'package:movie_app/feature/comments/domain/entities/comment.dart';
 import 'package:movie_app/feature/comments/domain/repositories/comment_repository.dart';
+import 'package:movie_app/feature/comments/presentation/widgets/comments_tab.dart';
 import 'package:movie_app/feature/detail_movie/data/model/detail_movie_model.dart';
 import 'package:movie_app/feature/detail_movie/presentation/bloc/player_cubit.dart';
 import 'package:movie_app/feature/detail_movie/presentation/pages/movie_player_page.dart';
 import 'package:movie_app/hive_registrar.g.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -146,6 +149,50 @@ void main() {
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pump();
   });
+
+  testWidgets('comments open from an app-level player overlay', (tester) async {
+    await _setPortraitSurface(tester);
+    await _pumpPlayer(
+      tester,
+      episodeCurrent: 'Full',
+      episodeCount: 1,
+      appLevelOverlay: true,
+    );
+
+    await tester.tap(find.byKey(const ValueKey('movie-comments-preview')));
+    await tester.pump();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 260));
+
+    expect(find.byType(CommentsTab), findsOneWidget);
+    expect(find.byType(CommentsTab).hitTestable(), findsOneWidget);
+    expect(tester.takeException(), isNull);
+
+    await tester.tap(find.byIcon(Icons.tune_rounded));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(find.text('Hủy'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+
+    await tester.tap(
+      find.ancestor(of: find.text('Mới nhất'), matching: find.byType(ListTile)),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(find.text('Hủy'), findsNothing);
+    expect(find.byType(CommentsTab), findsOneWidget);
+    expect(tester.takeException(), isNull);
+
+    await tester.tapAt(const Offset(20, 20));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 200));
+    await tester.pump();
+    expect(find.byType(CommentsTab), findsNothing);
+    expect(tester.takeException(), isNull);
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump(const Duration(milliseconds: 600));
+  });
 }
 
 Future<void> _setPortraitSurface(WidgetTester tester) async {
@@ -161,6 +208,7 @@ Future<void> _pumpPlayer(
   WidgetTester tester, {
   required String episodeCurrent,
   int episodeCount = 80,
+  bool appLevelOverlay = false,
 }) async {
   final movie = MovieModel.fromMap({
     'slug': 'series-scroll-test',
@@ -178,25 +226,49 @@ Future<void> _pumpPlayer(
     _server('Vietsub', episodeCount),
     _server('Lồng Tiếng', episodeCount),
   ];
+  final player = MoviePlayerPage(
+    slug: movie.slug,
+    movieName: movie.name,
+    episodes: episodes,
+    movie: movie,
+    initialEpisodeIndex: 0,
+    initialServer: episodes.first.server_name,
+    initialServerIndex: 0,
+  );
 
   await tester.pumpWidget(
     ScreenUtilInit(
       designSize: const Size(414, 896),
       minTextAdapt: true,
       splitScreenMode: true,
-      builder: (_, __) => BlocProvider(
-        create: (_) => PlayerCubit(),
-        child: MaterialApp(
-          home: MoviePlayerPage(
-            slug: movie.slug,
-            movieName: movie.name,
-            episodes: episodes,
-            movie: movie,
-            initialEpisodeIndex: 0,
-            initialServer: episodes.first.server_name,
-            initialServerIndex: 0,
+      builder: (_, __) => MultiBlocProvider(
+        providers: [
+          BlocProvider(create: (_) => PlayerCubit()),
+          BlocProvider(
+            create: (_) => AuthSessionCubit(
+              client: SupabaseClient(
+                'https://comments-test.supabase.co',
+                'comments-test-anon-key',
+                authOptions: const AuthClientOptions(autoRefreshToken: false),
+              ),
+            ),
           ),
-        ),
+        ],
+        child: appLevelOverlay
+            ? MaterialApp(
+                home: const SizedBox.shrink(),
+                builder: (context, child) => Overlay(
+                  initialEntries: [
+                    OverlayEntry(
+                      builder: (_) => Stack(
+                        fit: StackFit.expand,
+                        children: [child ?? const SizedBox.shrink(), player],
+                      ),
+                    ),
+                  ],
+                ),
+              )
+            : MaterialApp(home: player),
       ),
     ),
   );

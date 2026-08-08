@@ -42,6 +42,10 @@ class PlayerOverlayBackButtonDispatcher extends RootBackButtonDispatcher {
 
   @override
   Future<bool> invokeCallback(Future<bool> defaultValue) {
+    if (controller.dismissTransientOverlay()) {
+      return SynchronousFuture<bool>(true);
+    }
+
     if (!controller.isVisible) return super.invokeCallback(defaultValue);
 
     if (controller.isMini || controller.progress.value >= 0.999) {

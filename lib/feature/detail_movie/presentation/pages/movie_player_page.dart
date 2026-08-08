@@ -120,6 +120,11 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
   bool _connectivityInitialized = false;
   Timer? _connectivityConfirmTimer;
   bool _isCommentsEmptyPressed = false;
+  final GlobalKey<NavigatorState> _commentsNavigatorKey =
+      GlobalKey<NavigatorState>();
+  OverlayEntry? _commentsOverlayEntry;
+  double _commentsSheetHeight = 0;
+  bool _commentsSheetPresentationStarted = false;
   final _drawerKey = GlobalKey<EpisodeDrawerState>();
   int _selectedServerIndex = 0;
   final ScrollController _scrollController = ScrollController();
@@ -286,6 +291,10 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
       vsync: this,
       duration: const Duration(milliseconds: 220),
     );
+    widget.overlayController?.attachTransientOverlayDismissHandler(
+      owner: this,
+      dismiss: _dismissCommentsOverlay,
+    );
     _landscapeZoomSnapCtrl = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 240),
@@ -328,6 +337,8 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
     _saveProgressTimer?.cancel();
     unawaited(_saveWatchProgress(flushRemote: true));
     widget.overlayController?.detachPlaybackController(owner: this);
+    widget.overlayController?.detachTransientOverlayDismissHandler(owner: this);
+    _removeCommentsOverlayEntry();
     _hideControlsTimer?.cancel();
     _seekThrottle?.cancel();
     _seekOverlayTimer?.cancel();
@@ -2142,7 +2153,9 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
     );
   }
 
-  Future<void> _openCommentsSheet(BuildContext providerContext) async {
+  void _openCommentsSheet(BuildContext providerContext) {
+    if (_commentsOverlayEntry != null) return;
+
     final videoContext = _videoBoxKey.currentContext;
     final videoBox = videoContext?.findRenderObject() as RenderBox?;
 
@@ -2158,39 +2171,133 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
     final sheetHeight = (screenHeight - videoBottom)
         .clamp(0.0, screenHeight)
         .toDouble();
+    if (sheetHeight <= 1) return;
 
-    // Dùng lại CommentsCubit đang có của MoviePlayerPage
+    FocusScope.of(providerContext).unfocus();
     final commentsCubit = providerContext.read<CommentsCubit>();
+    final overlay = Overlay.maybeOf(providerContext);
+    if (overlay == null) return;
+
+    _commentsSheetHeight = sheetHeight;
+    _commentsSheetPresentationStarted = false;
+    late final OverlayEntry entry;
+    entry = OverlayEntry(
+      builder: (_) => BlocProvider.value(
+        value: commentsCubit,
+        child: _buildCommentsNavigator(
+          commentsCubit: commentsCubit,
+          overlayEntry: entry,
+        ),
+      ),
+    );
+    _commentsOverlayEntry = entry;
+    overlay.insert(entry);
+  }
+
+  bool _dismissCommentsOverlay() {
+    if (_commentsOverlayEntry == null) return false;
+
+    final commentsNavigator = _commentsNavigatorKey.currentState;
+    if (commentsNavigator?.canPop() ?? false) {
+      commentsNavigator!.pop();
+      return true;
+    }
+
+    _removeCommentsOverlayEntry();
+    return true;
+  }
+
+  void _removeCommentsOverlayEntry() {
+    final entry = _commentsOverlayEntry;
+    if (entry == null) return;
+    _commentsOverlayEntry = null;
+    _commentsSheetPresentationStarted = false;
+    entry.remove();
+    entry.dispose();
+  }
+
+  Widget _buildCommentsNavigator({
+    required CommentsCubit commentsCubit,
+    required OverlayEntry overlayEntry,
+  }) {
+    return Positioned.fill(
+      child: HeroControllerScope.none(
+        child: Navigator(
+          key: _commentsNavigatorKey,
+          onGenerateRoute: (_) => PageRouteBuilder<void>(
+            settings: const RouteSettings(name: 'movie-comments-overlay'),
+            opaque: false,
+            transitionDuration: Duration.zero,
+            reverseTransitionDuration: Duration.zero,
+            pageBuilder: (context, animation, secondaryAnimation) {
+              if (!_commentsSheetPresentationStarted) {
+                _commentsSheetPresentationStarted = true;
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (!mounted ||
+                      !identical(_commentsOverlayEntry, overlayEntry) ||
+                      !context.mounted) {
+                    return;
+                  }
+                  unawaited(
+                    _presentCommentsSheet(
+                      context,
+                      commentsCubit: commentsCubit,
+                      overlayEntry: overlayEntry,
+                    ),
+                  );
+                });
+              }
+              return const Material(
+                type: MaterialType.transparency,
+                child: SizedBox.expand(),
+              );
+            },
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _presentCommentsSheet(
+    BuildContext navigatorContext, {
+    required CommentsCubit commentsCubit,
+    required OverlayEntry overlayEntry,
+  }) async {
+    final disableAnimations =
+        MediaQuery.maybeOf(navigatorContext)?.disableAnimations ?? false;
+    final animationStyle = disableAnimations
+        ? const AnimationStyle(
+            duration: Duration.zero,
+            reverseDuration: Duration.zero,
+          )
+        : const AnimationStyle(
+            duration: Duration(milliseconds: 240),
+            reverseDuration: Duration(milliseconds: 180),
+          );
 
     await showModalBottomSheet<void>(
-      context: providerContext,
+      context: navigatorContext,
       isScrollControlled: true,
       useSafeArea: false,
       backgroundColor: Colors.transparent,
-
-      // Không làm tối video phía trên
       barrierColor: Colors.transparent,
-
-      // Cho phép kéo xuống hoặc chạm video để đóng
       enableDrag: true,
       isDismissible: true,
-
-      builder: (sheetContext) {
-        return BlocProvider.value(
-          value: commentsCubit,
-          child: SizedBox(
-            height: sheetHeight,
-            width: double.infinity,
-            child: ClipRRect(
-              borderRadius: const BorderRadius.vertical(
-                top: Radius.circular(18),
-              ),
-              child: Material(
-                color: const Color(0xff191A24),
-                child: Column(
-                  children: [
-                    // Thanh kéo nhỏ giống YouTube
-                    SizedBox(
+      sheetAnimationStyle: animationStyle,
+      builder: (_) => BlocProvider.value(
+        value: commentsCubit,
+        child: SizedBox(
+          height: _commentsSheetHeight,
+          width: double.infinity,
+          child: ClipRRect(
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(18)),
+            child: Material(
+              color: const Color(0xff191A24),
+              child: Column(
+                children: [
+                  Semantics(
+                    label: 'Kéo xuống để đóng bình luận',
+                    child: SizedBox(
                       height: 22,
                       child: Center(
                         child: Container(
@@ -2203,17 +2310,19 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
                         ),
                       ),
                     ),
-
-                    // Dùng nguyên giao diện và chức năng CommentsTab
-                    const Expanded(child: CommentsTab()),
-                  ],
-                ),
+                  ),
+                  const Expanded(child: CommentsTab()),
+                ],
               ),
             ),
           ),
-        );
-      },
+        ),
+      ),
     );
+
+    if (mounted && identical(_commentsOverlayEntry, overlayEntry)) {
+      _removeCommentsOverlayEntry();
+    }
   }
 
   Widget _buildPlayerPlaceholder() {
@@ -3619,6 +3728,9 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
                                           SizedBox(height: 10.h),
                                           // Bình luận
                                           Material(
+                                            key: const ValueKey(
+                                              'movie-comments-preview',
+                                            ),
                                             color: Colors.transparent,
                                             borderRadius: BorderRadius.circular(
                                               12.r,

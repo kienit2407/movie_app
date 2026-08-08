@@ -23,6 +23,8 @@ class PlayerOverlayController extends ChangeNotifier {
   bool _isDragging = false;
   int _sessionId = 0;
   Object? _playbackOwner;
+  Object? _transientOverlayOwner;
+  bool Function()? _dismissTransientOverlay;
 
   MoviePlayerArgs? get args => _args;
   PlayerOverlayTarget get target => _target;
@@ -42,6 +44,8 @@ class PlayerOverlayController extends ChangeNotifier {
     if (!sameSession) {
       _playbackOwner = null;
       playbackController.value = null;
+      _transientOverlayOwner = null;
+      _dismissTransientOverlay = null;
       _args = args;
       _sessionId++;
       progress.value = 0;
@@ -104,9 +108,28 @@ class PlayerOverlayController extends ChangeNotifier {
     _target = PlayerOverlayTarget.expanded;
     _playbackOwner = null;
     playbackController.value = null;
+    _transientOverlayOwner = null;
+    _dismissTransientOverlay = null;
     progress.value = 0;
     notifyListeners();
   }
+
+  void attachTransientOverlayDismissHandler({
+    required Object owner,
+    required bool Function() dismiss,
+  }) {
+    if (!isVisible) return;
+    _transientOverlayOwner = owner;
+    _dismissTransientOverlay = dismiss;
+  }
+
+  void detachTransientOverlayDismissHandler({required Object owner}) {
+    if (!identical(_transientOverlayOwner, owner)) return;
+    _transientOverlayOwner = null;
+    _dismissTransientOverlay = null;
+  }
+
+  bool dismissTransientOverlay() => _dismissTransientOverlay?.call() ?? false;
 
   void updatePlaybackIdentity({
     required String? episodeLink,
