@@ -17,16 +17,15 @@ import 'package:movie_app/common/components/lost_network.dart';
 import 'package:movie_app/common/helpers/navigation/app_navigation.dart';
 import 'package:movie_app/core/config/constants/const_globals.dart';
 import 'package:movie_app/core/config/routes/app_router.dart';
-import 'package:movie_app/core/config/utils/blocking_back_page.dart';
 import 'package:movie_app/core/config/utils/episode_map.dart';
+import 'package:movie_app/core/config/utils/movie_player_args.dart';
 import 'package:movie_app/core/config/utils/package_infor.dart';
+import 'package:movie_app/core/player_overlay_launcher.dart';
 import 'package:movie_app/feature/detail_movie/data/model/detail_movie_model.dart';
-import 'package:movie_app/feature/detail_movie/presentation/bloc/player_cubit.dart';
 import 'package:movie_app/feature/detail_movie/presentation/pages/movie_detail_page.dart';
 import 'package:movie_app/core/config/assets/app_image.dart';
 import 'package:movie_app/feature/detail_movie/presentation/bloc/detail_movie_state.dart';
 import 'package:movie_app/feature/detail_movie/presentation/bloc/detail_movie_cubit.dart';
-import 'package:movie_app/feature/detail_movie/presentation/pages/movie_player_page.dart';
 import 'package:movie_app/feature/detail_movie/domain/usecase/get_detail_movie_usecase.dart';
 import 'package:movie_app/core/config/di/service_locator.dart';
 import 'package:movie_app/core/config/themes/app_color.dart';
@@ -540,7 +539,6 @@ class _HomePageState extends State<HomePage>
                             ),
                         ],
                       );
-                      
                     },
                   ),
                 ],
@@ -1279,23 +1277,17 @@ class _HomePageState extends State<HomePage>
         return;
       }
 
-      final playerCubit = context.read<PlayerCubit>();
-      Navigator.of(context, rootNavigator: true).push(
-        NoBackSwipeRoute(
-          builder: (ctx) => BlocProvider.value(
-            value: playerCubit,
-            child: MoviePlayerPage(
-              slug: movie.slug,
-              movieName: movie.name,
-              thumbnailUrl: movie.poster_url,
-              episodes: episodes,
-              movie: movie,
-              initialEpisodeLink: selectedTarget.episodeLink,
-              initialEpisodeIndex: selectedTarget.episodeIndex,
-              initialServer: episodes[selectedTarget.serverIndex].server_name,
-              initialServerIndex: selectedTarget.serverIndex,
-            ),
-          ),
+      context.openMoviePlayer(
+        MoviePlayerArgs(
+          movie.slug,
+          movie.poster_url,
+          selectedTarget.episodeLink,
+          selectedTarget.episodeIndex,
+          episodes[selectedTarget.serverIndex].server_name,
+          movie.name,
+          episodes,
+          movie,
+          initialServerIndex: selectedTarget.serverIndex,
         ),
       );
     } catch (e) {

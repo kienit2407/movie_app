@@ -5,13 +5,12 @@ import 'dart:ui';
 import 'package:battery_plus/battery_plus.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/foundation.dart' show ValueListenable;
 import 'package:flutter/rendering.dart' show ScrollDirection;
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:movie_app/core/config/di/service_locator.dart';
-import 'package:movie_app/core/config/routes/app_router.dart';
-import 'package:movie_app/core/config/utils/movie_player_args.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:movie_app/feature/auth/presentation/session/auth_session_cubit.dart';
 import 'package:movie_app/feature/comments/domain/repositories/comment_repository.dart';
@@ -39,7 +38,7 @@ import 'package:video_player/video_player.dart';
 import 'package:movie_app/core/config/themes/app_color.dart';
 import 'package:movie_app/core/ios_now_playing_service.dart';
 import 'package:movie_app/core/ios_picture_in_picture_service.dart';
-import 'package:movie_app/core/mini_player_manager.dart';
+import 'package:movie_app/core/player_overlay_controller.dart';
 import 'package:movie_app/core/playback_wakelock.dart';
 import 'package:movie_app/feature/detail_movie/data/model/detail_movie_model.dart';
 import 'package:movie_app/feature/library/data/user_library_repository.dart';
@@ -59,6 +58,8 @@ class MoviePlayerPage extends StatefulWidget {
   final int initialEpisodeIndex;
   final String initialServer;
   final int initialServerIndex;
+  final PlayerOverlayController? overlayController;
+  final ValueListenable<double>? overlayProgress;
 
   MoviePlayerPage({
     super.key,
@@ -71,6 +72,8 @@ class MoviePlayerPage extends StatefulWidget {
     this.initialServer = 'Server 1',
     required this.movie,
     required this.initialServerIndex,
+    this.overlayController,
+    this.overlayProgress,
   }) : episodes = EpisodeHelper.normalizeEpisodes(episodes);
 
   @override
@@ -172,15 +175,12 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
   static const double _panelMax = 0.65;
   double _dragDy = 0;
   double _miniDragDy = 0;
-  double _miniDragT = 0.0;
   final List<GlobalKey> _episodeKeys = [];
-  bool _isMinifyAnimating = false;
   bool get _isExpandedPortrait => _expandT >= 0.97;
   bool _wasPlayingBeforeScrub = false;
   Timer? _seekThrottle;
   Duration _previewPosition = Duration.zero;
   String? _previewThumbUrl; // nếu có storyboard từ server
-  late final AnimationController _minifyCtrl;
   static const double _panelAmbientH = 26;
 
   bool _showSeekOverlay = false;
@@ -191,7 +191,6 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
   Timer? _saveProgressTimer;
   DateTime? _lastSeekTapTime;
   late final AnimationController _arrowCtrl;
-  final MiniPlayerManager _miniPlayerManager = MiniPlayerManager();
   Future<void> _historyWriteQueue = Future<void>.value();
   final TextEditingController _searchController = TextEditingController();
   final ScrollController _episodeScrollController = ScrollController();
@@ -207,7 +206,6 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
   bool _isExpandInfor = false;
   _VideoDragMode? _videoDragMode; // null = undecided
   double _videoGestureDragDy = 0;
-  bool _isInMiniMode = false;
   bool _autoPlayTriggered = false;
   bool _isPlaybackCompleted = false;
   VoidCallback? _vpPositionListener;
@@ -228,7 +226,6 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
   bool _showAutoToast = false;
   String _autoToastText = '';
   VoidCallback? _vpEndListener;
-  bool _enteringMiniPlayer = false;
   static const double _landscapeZoomMin = 1.0;
   static const double _landscapeZoomMax = 2.0;
   late final AnimationController _landscapeZoomSnapCtrl;
@@ -270,7 +267,6 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
     super.initState();
 
     WidgetsBinding.instance.addObserver(this);
-    MiniPlayerManager.shouldRestorePlayer.addListener(_onRestorePlayer);
     _playerCubit = context.read<PlayerCubit>();
     _libraryCubit = context.read<UserLibraryCubit?>();
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -281,29 +277,12 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
       );
     });
     _startStatusHeaderTicker();
-    final handoffController = _miniPlayerManager.handoffController;
-    final handoffLaunch = _miniPlayerManager.handoffLaunch;
-
-    final isOpeningFromMiniTap =
-        handoffController != null && handoffLaunch != null;
-
-    // Chỉ dispose mini cũ khi KHÔNG phải restore từ mini
-    if (!isOpeningFromMiniTap && MiniPlayerManager.isVisible.value) {
-      final existingSlug = _miniPlayerManager.launch?.slug;
-      if (existingSlug != null && existingSlug != widget.slug) {
-        _miniPlayerManager.disposeMiniPlayer(); // KHÔNG notify:false
-      }
-    }
 
     _arrowCtrl = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 450),
     );
     _videoSnapCtrl = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 220),
-    );
-    _minifyCtrl = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 220),
     );
@@ -315,42 +294,15 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
     _currentEpisodeIndex = widget.initialEpisodeIndex;
     _currentServer = widget.initialServer;
 
-    if (handoffController != null && handoffLaunch != null) {
-      _miniPlayerManager.takeHandoff();
-
-      if (mounted) {
-        setState(() {
-          _chewieController = handoffController;
-          _videoPlayerController = handoffController.videoPlayerController;
-          _currentEpisodeLink = handoffLaunch.initialEpisodeLink;
-          _currentEpisodeIndex = handoffLaunch.initialEpisodeIndex;
-          _currentServer = handoffLaunch.initialServer;
-          _selectedServerIndex = handoffLaunch.initialServerIndex;
-          _isFullscreen = false;
-          _lastOrientation = null;
-        });
-
-        if (!handoffController.isPlaying) {
-          handoffController.play();
-        }
-
-        _attachVpListeners();
-        unawaited(_attachPictureInPicture());
-        unawaited(_saveWatchProgress());
-      }
+    if (widget.initialEpisodeLink != null &&
+        widget.initialEpisodeLink!.isNotEmpty) {
+      _currentEpisodeLink = widget.initialEpisodeLink;
+      unawaited(_saveWatchProgress());
+      _initializePlayer(widget.initialEpisodeLink!);
+    } else if (widget.episodes.isNotEmpty) {
+      _playEpisode(widget.initialEpisodeIndex, widget.episodes.first);
     } else {
-      if (MiniPlayerManager.isVisible.value) {
-        MiniPlayerManager.dismissMiniPlayer();
-      }
-
-      if (widget.initialEpisodeLink != null &&
-          widget.initialEpisodeLink!.isNotEmpty) {
-        _currentEpisodeLink = widget.initialEpisodeLink;
-        unawaited(_saveWatchProgress());
-        _initializePlayer(widget.initialEpisodeLink!);
-      } else if (widget.episodes.isNotEmpty) {
-        _playEpisode(widget.initialEpisodeIndex, widget.episodes.first);
-      }
+      _currentEpisodeLink = null;
     }
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -375,8 +327,7 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
     _playerInitGeneration++;
     _saveProgressTimer?.cancel();
     unawaited(_saveWatchProgress(flushRemote: true));
-    _isInMiniMode = false;
-    MiniPlayerManager.shouldRestorePlayer.removeListener(_onRestorePlayer);
+    widget.overlayController?.detachPlaybackController(owner: this);
     _hideControlsTimer?.cancel();
     _seekThrottle?.cancel();
     _seekOverlayTimer?.cancel();
@@ -387,31 +338,24 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
     _statusHeaderTimer?.cancel();
 
     unawaited(SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge));
-    final controllerOwnedByMini =
-        MiniPlayerManager.isVisible.value &&
-        (_miniPlayerManager.chewieController != null);
-
-    if (!controllerOwnedByMini) {
-      PlaybackWakelock.unawaitedSetEnabled(false);
-      unawaited(IosNowPlayingService.clear());
-      unawaited(_detachPictureInPicture());
-      try {
-        _chewieController?.pause();
-      } catch (_) {}
-      try {
-        _chewieController?.dispose();
-      } catch (_) {}
-      try {
-        _videoPlayerController?.dispose();
-      } catch (_) {}
-    }
+    PlaybackWakelock.unawaitedSetEnabled(false);
+    unawaited(IosNowPlayingService.clear());
+    unawaited(_detachPictureInPicture());
+    try {
+      _chewieController?.pause();
+    } catch (_) {}
+    try {
+      _chewieController?.dispose();
+    } catch (_) {}
+    try {
+      _videoPlayerController?.dispose();
+    } catch (_) {}
 
     _chewieController = null;
     _videoPlayerController = null;
 
     _arrowCtrl.dispose();
     _videoSnapCtrl.dispose();
-    _minifyCtrl.dispose();
     _landscapeZoomSnapCtrl.dispose();
     _panelCtrl.dispose();
     _searchController.dispose();
@@ -492,7 +436,14 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
     }
 
     if (results.contains(ConnectivityResult.mobile)) {
-      return const Text('LTE', style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600));
+      return const Text(
+        'LTE',
+        style: TextStyle(
+          color: Colors.white,
+          fontSize: 14,
+          fontWeight: FontWeight.w600,
+        ),
+      );
     }
 
     if (results.contains(ConnectivityResult.ethernet)) {
@@ -845,38 +796,6 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
     );
   }
 
-  void _onRestorePlayer() {
-    if (MiniPlayerManager.shouldRestorePlayer.value && _isInMiniMode) {
-      final controller = _miniPlayerManager.handoffController;
-      final launch = _miniPlayerManager.handoffLaunch;
-
-      if (controller != null && launch != null) {
-        _miniPlayerManager.takeHandoff();
-
-        if (mounted) {
-          setState(() {
-            _chewieController = controller;
-            _videoPlayerController = controller.videoPlayerController;
-            _currentEpisodeLink = launch.initialEpisodeLink;
-            _currentEpisodeIndex = launch.initialEpisodeIndex;
-            _currentServer = launch.initialServer;
-            _selectedServerIndex = launch.initialServerIndex;
-            _isInMiniMode = false;
-          });
-
-          if (!controller.isPlaying) {
-            controller.play();
-          }
-
-          unawaited(_attachPictureInPicture());
-          unawaited(_saveWatchProgress());
-        }
-      }
-
-      _miniPlayerManager.clearRestoreFlag();
-    }
-  }
-
   double get _seekbarHPad {
     // 0 -> 12 khi expand (tự mượt theo _expandT)
     final t = Curves.easeOut.transform(_expandT);
@@ -1096,8 +1015,6 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
     _showControlsWithAutoHide();
   }
 
-  double get _minifyT => _isMinifyAnimating ? _minifyCtrl.value : _miniDragT;
-
   Future<void> _saveWatchProgress({
     bool useCurrentPlaybackPosition = true,
     bool preserveExistingProgressWhenUnavailable = true,
@@ -1285,6 +1202,10 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
     );
 
     _chewieController = chewieController;
+    widget.overlayController?.attachPlaybackController(
+      initializedVideoController,
+      owner: this,
+    );
 
     debugPrint('=== Video initialized ===');
 
@@ -1316,6 +1237,12 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
   }) async {
     final generation = ++_playerInitGeneration;
     final sourceUrl = videoUrl.trim();
+    widget.overlayController?.updatePlaybackIdentity(
+      episodeLink: sourceUrl,
+      episodeIndex: _currentEpisodeIndex,
+      server: _currentServer,
+      serverIndex: _selectedServerIndex,
+    );
     debugPrint(
       '_disposeAndInitializePlayer: START, restoreLastPosition=$restoreLastPosition, _lastPosition=$_lastPosition',
     );
@@ -1328,6 +1255,7 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
 
     final oldChewieController = _chewieController;
     final oldVideoPlayerController = _videoPlayerController;
+    widget.overlayController?.detachPlaybackController(owner: this);
 
     if (mounted) {
       setState(() {
@@ -1405,6 +1333,10 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
     );
     _videoPlayerController = initializedVideoController;
     _chewieController = chewieController;
+    widget.overlayController?.attachPlaybackController(
+      initializedVideoController,
+      owner: this,
+    );
     debugPrint('_disposeAndInitializePlayer: ChewieController created');
 
     debugPrint(
@@ -1998,27 +1930,6 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
     );
   }
 
-  Rect _calcMiniRect(BuildContext context) {
-    final size = MediaQuery.sizeOf(context);
-    final bottomInset = MediaQuery.paddingOf(context).bottom;
-
-    final miniW = size.width * 0.55;
-    final miniH = miniW * 9 / 16;
-
-    const margin = 16.0;
-    final left = size.width - miniW - margin;
-    final top = size.height - miniH - margin - bottomInset;
-
-    return Rect.fromLTWH(left, top, miniW, miniH);
-  }
-
-  Rect _globalRectOf(GlobalKey key) {
-    final box = key.currentContext?.findRenderObject() as RenderBox?;
-    if (box == null) return Rect.zero;
-    final topLeft = box.localToGlobal(Offset.zero);
-    return topLeft & box.size;
-  }
-
   Future<void> _toggleFullscreen() async {
     if (_orientationChangeInFlight) return;
 
@@ -2354,39 +2265,22 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
   }
 
   Future<void> _enterMiniPlayer() async {
-    final controller = _chewieController;
-    if (controller == null) return;
+    if (_chewieController == null) return;
 
     unawaited(_saveWatchProgress());
-    _removeVpListeners();
     _isFullscreen = false;
     _resetLandscapeZoom();
     await SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     await SupportRotateScreen.onlyPotrait();
     if (!mounted) return;
 
-    final launchData = MiniPlayerLaunchData(
-      slug: widget.slug,
-      movieName: widget.movieName,
-      thumbnailUrl: widget.thumbnailUrl,
-      episodes: widget.episodes,
-      movie: widget.movie,
-      initialEpisodeLink: _currentEpisodeLink,
-      initialEpisodeIndex: _currentEpisodeIndex,
-      initialServer: _currentServer,
-      initialServerIndex: _selectedServerIndex,
-    );
+    final overlayController = widget.overlayController;
+    if (overlayController != null) {
+      overlayController.minimize();
+      return;
+    }
 
-    _miniPlayerManager.showMiniPlayer(
-      controller: controller,
-      launchData: launchData,
-    );
-
-    _isInMiniMode = true;
-    _chewieController = null;
-    _videoPlayerController = null;
-
-    context.pop();
+    if (context.canPop()) context.pop();
   }
 
   Future<void> _seekTo(double position) async {
@@ -3004,7 +2898,6 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
 
   Widget _buildVideoAreaWithoutSeekbar() {
     final isExpanded = _videoHeight >= _maxVideoHeight - 100;
-    final bool isMinifying = _minifyT > 0.001;
     return GestureDetector(
       behavior: HitTestBehavior.translucent,
 
@@ -3013,9 +2906,6 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
       onDoubleTapDown: _handleDoubleTap,
 
       onVerticalDragStart: (_) {
-        _minifyCtrl.stop();
-        _isMinifyAnimating = false;
-
         _miniDragDy = 0;
         _videoGestureDragDy = 0;
 
@@ -3048,6 +2938,14 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
 
         // mini mode (kéo xuống)
         _miniDragDy += d.delta.dy;
+        final overlayController = widget.overlayController;
+        if (overlayController != null) {
+          overlayController.beginDrag();
+          overlayController.updateDragDelta(
+            d.delta.dy,
+            MediaQuery.sizeOf(context).height * 0.55,
+          );
+        }
       },
 
       onVerticalDragEnd: (d) {
@@ -3060,8 +2958,18 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
         }
 
         // mini mode
+        final overlayController = widget.overlayController;
+        if (overlayController != null) {
+          overlayController.endDrag(velocityY: v);
+          return;
+        }
         if (_miniDragDy > 80 || v > 800) {
           _enterMiniPlayer();
+        }
+      },
+      onVerticalDragCancel: () {
+        if (_videoDragMode == _VideoDragMode.mini) {
+          widget.overlayController?.cancelDrag();
         }
       },
 
@@ -3093,7 +3001,7 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
                 ),
               ),
             // chỉ build ambient/blur khi KHÔNG minify
-            if (!isMinifying) _buildAmbientAroundVideo(),
+            _buildAmbientAroundVideo(),
             if (_chewieController != null)
               Center(
                 child: AspectRatio(
@@ -3470,6 +3378,31 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
     );
   }
 
+  Widget _buildOverlayFadingInformation({required Widget child}) {
+    final progress = widget.overlayProgress;
+    if (progress == null) return Flexible(child: child);
+
+    return Flexible(
+      child: ValueListenableBuilder<double>(
+        valueListenable: progress,
+        child: RepaintBoundary(child: child),
+        builder: (context, value, content) {
+          final fadeProgress = Curves.easeOutCubic.transform(
+            (value / 0.72).clamp(0.0, 1.0),
+          );
+          final opacity = 1 - fadeProgress;
+          return IgnorePointer(
+            ignoring: value > 0.04,
+            child: ExcludeSemantics(
+              excluding: opacity < 0.05,
+              child: Opacity(opacity: opacity, child: content),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
   Widget _buildPortraitPlayer() {
     // Khi expand video, ẩn SafeArea để video nằm chính giữa
     final isExpanded = _videoHeight >= _maxVideoHeight - 100;
@@ -3518,7 +3451,7 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
           Column(
             children: [
               RepaintBoundary(child: _buildVideoAreaWithoutSeekbar()),
-              Flexible(
+              _buildOverlayFadingInformation(
                 child: Material(
                   color: AppColor.bgApp,
                   clipBehavior: Clip.antiAlias, // QUAN TRỌNG
@@ -3567,10 +3500,7 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
                               top: 0,
                               left: 0,
                               right: 0,
-                              child: Opacity(
-                                opacity: (1 - _minifyT).clamp(0.0, 1.0),
-                                child: _buildPanelAmbientTop(),
-                              ),
+                              child: _buildPanelAmbientTop(),
                             ),
                           Positioned.fill(
                             child: AnimatedContainer(
@@ -5473,11 +5403,13 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
     _isExitingPlayer = true;
     _hideControlsTimer?.cancel();
 
-    // Pop ngay khi màn hình vẫn còn landscape.
-    context.pop();
+    if (widget.overlayController != null) {
+      await _enterMiniPlayer();
+      _isExitingPlayer = false;
+      return;
+    }
 
-    // Không xoay màn hình tại đây.
-    // dispose() sẽ khôi phục portrait sau khi trang video được gỡ.
+    if (context.canPop()) context.pop();
   }
 
   Widget _buildLandscapePlayer() {
@@ -6128,9 +6060,7 @@ class _IosWifiStrengthPainter extends CustomPainter {
 
     Paint paintForLevel(int requiredLevel) {
       return Paint()
-        ..color = level >= requiredLevel
-            ? activeColor
-            : inactiveColor
+        ..color = level >= requiredLevel ? activeColor : inactiveColor
         ..style = PaintingStyle.fill
         ..isAntiAlias = true;
     }
@@ -6142,32 +6072,14 @@ class _IosWifiStrengthPainter extends CustomPainter {
       required double capRadius,
     }) {
       final leftCap = Path()
-        ..addOval(
-          Rect.fromCircle(
-            center: leftCenter,
-            radius: capRadius,
-          ),
-        );
+        ..addOval(Rect.fromCircle(center: leftCenter, radius: capRadius));
 
       final rightCap = Path()
-        ..addOval(
-          Rect.fromCircle(
-            center: rightCenter,
-            radius: capRadius,
-          ),
-        );
+        ..addOval(Rect.fromCircle(center: rightCenter, radius: capRadius));
 
-      final withLeftCap = Path.combine(
-        PathOperation.union,
-        path,
-        leftCap,
-      );
+      final withLeftCap = Path.combine(PathOperation.union, path, leftCap);
 
-      return Path.combine(
-        PathOperation.union,
-        withLeftCap,
-        rightCap,
-      );
+      return Path.combine(PathOperation.union, withLeftCap, rightCap);
     }
 
     // =========================
@@ -6176,39 +6088,19 @@ class _IosWifiStrengthPainter extends CustomPainter {
 
     final outerBasePath = Path()
       ..moveTo(x(1.7), y(6.2))
-      ..cubicTo(
-        x(7.2),
-        y(0.8),
-        x(16.8),
-        y(0.8),
-        x(22.3),
-        y(6.2),
-      )
+      ..cubicTo(x(7.2), y(0.8), x(16.8), y(0.8), x(22.3), y(6.2))
       ..lineTo(x(19.55), y(8.85))
-      ..cubicTo(
-        x(15.45),
-        y(4.95),
-        x(8.55),
-        y(4.95),
-        x(4.45),
-        y(8.85),
-      )
+      ..cubicTo(x(15.45), y(4.95), x(8.55), y(4.95), x(4.45), y(8.85))
       ..close();
 
     final outerBand = addRoundCaps(
       path: outerBasePath,
 
       // Trung điểm của hai cạnh đầu bên trái.
-      leftCenter: Offset(
-        x(3.08),
-        y(7.52),
-      ),
+      leftCenter: Offset(x(3.08), y(7.52)),
 
       // Trung điểm của hai cạnh đầu bên phải.
-      rightCenter: Offset(
-        x(20.92),
-        y(7.52),
-      ),
+      rightCenter: Offset(x(20.92), y(7.52)),
 
       // Tăng lên 2.0 nếu muốn đầu tròn hơn nữa.
       capRadius: radius(1.85),
@@ -6220,35 +6112,15 @@ class _IosWifiStrengthPainter extends CustomPainter {
 
     final middleBasePath = Path()
       ..moveTo(x(5.8), y(10.15))
-      ..cubicTo(
-        x(9.15),
-        y(6.95),
-        x(14.85),
-        y(6.95),
-        x(18.2),
-        y(10.15),
-      )
+      ..cubicTo(x(9.15), y(6.95), x(14.85), y(6.95), x(18.2), y(10.15))
       ..lineTo(x(15.45), y(12.75))
-      ..cubicTo(
-        x(13.55),
-        y(10.95),
-        x(10.45),
-        y(10.95),
-        x(8.55),
-        y(12.75),
-      )
+      ..cubicTo(x(13.55), y(10.95), x(10.45), y(10.95), x(8.55), y(12.75))
       ..close();
 
     final middleBand = addRoundCaps(
       path: middleBasePath,
-      leftCenter: Offset(
-        x(7.18),
-        y(11.45),
-      ),
-      rightCenter: Offset(
-        x(16.82),
-        y(11.45),
-      ),
+      leftCenter: Offset(x(7.18), y(11.45)),
+      rightCenter: Offset(x(16.82), y(11.45)),
       capRadius: radius(1.82),
     );
 
@@ -6258,52 +6130,20 @@ class _IosWifiStrengthPainter extends CustomPainter {
 
     final bottomBand = Path()
       ..moveTo(x(9.45), y(14.7))
-      ..cubicTo(
-        x(10.75),
-        y(13.25),
-        x(13.25),
-        y(13.25),
-        x(14.55),
-        y(14.7),
-      )
-      ..cubicTo(
-        x(14.0),
-        y(15.35),
-        x(13.15),
-        y(16.25),
-        x(12),
-        y(17.25),
-      )
-      ..cubicTo(
-        x(10.85),
-        y(16.25),
-        x(10.0),
-        y(15.35),
-        x(9.45),
-        y(14.7),
-      )
+      ..cubicTo(x(10.75), y(13.25), x(13.25), y(13.25), x(14.55), y(14.7))
+      ..cubicTo(x(14.0), y(15.35), x(13.15), y(16.25), x(12), y(17.25))
+      ..cubicTo(x(10.85), y(16.25), x(10.0), y(15.35), x(9.45), y(14.7))
       ..close();
 
-    canvas.drawPath(
-      outerBand,
-      paintForLevel(3),
-    );
+    canvas.drawPath(outerBand, paintForLevel(3));
 
-    canvas.drawPath(
-      middleBand,
-      paintForLevel(2),
-    );
+    canvas.drawPath(middleBand, paintForLevel(2));
 
-    canvas.drawPath(
-      bottomBand,
-      paintForLevel(1),
-    );
+    canvas.drawPath(bottomBand, paintForLevel(1));
   }
 
   @override
-  bool shouldRepaint(
-    covariant _IosWifiStrengthPainter oldDelegate,
-  ) {
+  bool shouldRepaint(covariant _IosWifiStrengthPainter oldDelegate) {
     return oldDelegate.level != level ||
         oldDelegate.activeColor != activeColor ||
         oldDelegate.inactiveColor != inactiveColor;

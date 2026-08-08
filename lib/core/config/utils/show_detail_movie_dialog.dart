@@ -10,15 +10,14 @@ import 'package:movie_app/common/helpers/navigation/app_navigation.dart';
 import 'package:movie_app/core/config/di/service_locator.dart';
 import 'package:movie_app/core/config/themes/app_color.dart';
 import 'package:movie_app/core/config/utils/animated_dialog.dart';
-import 'package:movie_app/core/config/utils/blocking_back_page.dart';
 import 'package:movie_app/core/config/utils/format_episode.dart';
+import 'package:movie_app/core/config/utils/movie_player_args.dart';
+import 'package:movie_app/core/player_overlay_launcher.dart';
 import 'package:movie_app/feature/detail_movie/data/model/detail_movie_model.dart';
 import 'package:movie_app/feature/detail_movie/domain/usecase/get_detail_movie_usecase.dart';
 import 'package:movie_app/feature/detail_movie/presentation/bloc/detail_movie_cubit.dart';
 import 'package:movie_app/feature/detail_movie/presentation/bloc/detail_movie_state.dart';
 import 'package:movie_app/feature/detail_movie/presentation/pages/movie_detail_page.dart';
-import 'package:movie_app/feature/detail_movie/presentation/pages/movie_player_page.dart';
-import 'package:movie_app/feature/detail_movie/presentation/bloc/player_cubit.dart';
 import 'package:skeletonizer/skeletonizer.dart';
 import 'package:youtube_player_flutter/youtube_player_flutter.dart';
 
@@ -690,23 +689,20 @@ class _DialogContentState extends State<_DialogContent> {
             onTap: () {
               HapticFeedback.mediumImpact();
               if (hasEpisodes) {
-                Navigator.pop(context);
-                Navigator.push(
-                  context,
-                  NoBackSwipeRoute(
-                    builder: (ctx) => BlocProvider.value(
-                      value: context.read<PlayerCubit>(),
-                      child: MoviePlayerPage(
-                        slug: movie.slug,
-                        movieName: movie.name,
-                        thumbnailUrl: movie.poster_url,
-                        episodes: episodes,
-                        movie: movie,
-                        initialServerIndex: 0,
-                      ),
-                    ),
+                context.openMoviePlayer(
+                  MoviePlayerArgs(
+                    movie.slug,
+                    movie.poster_url,
+                    null,
+                    0,
+                    episodes.first.server_name,
+                    movie.name,
+                    episodes,
+                    movie,
+                    initialServerIndex: 0,
                   ),
                 );
+                Navigator.pop(context);
               } else {
                 showAnimatedDialog(
                   context: context,

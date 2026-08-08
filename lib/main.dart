@@ -16,7 +16,8 @@ import 'package:movie_app/core/config/routes/app_router.dart';
 import 'package:movie_app/core/config/di/service_locator.dart';
 import 'package:movie_app/core/config/network/init_supabase.dart';
 import 'package:movie_app/core/config/themes/app_theme.dart';
-import 'package:movie_app/core/mini_player_overlay.dart';
+import 'package:movie_app/core/player_overlay_host.dart';
+import 'package:movie_app/core/player_overlay_controller.dart';
 import 'package:movie_app/feature/auth/domain/usecases/confirm_with_token.dart';
 import 'package:movie_app/feature/auth/domain/usecases/req_reset_password.dart';
 import 'package:movie_app/feature/auth/domain/usecases/sigin_with_facebook.dart';
@@ -103,6 +104,10 @@ Future<void> main() async {
   );
 }
 
+final playerOverlayBackButtonDispatcher = PlayerOverlayBackButtonDispatcher(
+  PlayerOverlayController.instance,
+);
+
 class MovieApp extends StatelessWidget {
   final GoRouter router;
   const MovieApp({super.key, required this.router});
@@ -167,14 +172,21 @@ class MovieApp extends StatelessWidget {
         child: GestureDetector(
           onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
           child: MaterialApp.router(
-            routerConfig: router,
+            routeInformationProvider: router.routeInformationProvider,
+            routeInformationParser: router.routeInformationParser,
+            routerDelegate: router.routerDelegate,
+            backButtonDispatcher: playerOverlayBackButtonDispatcher,
             theme: AppTheme.appTheme,
             debugShowCheckedModeBanner: false,
             builder: (context, child) {
               return Overlay(
                 initialEntries: [
-                  OverlayEntry(builder: (_) => child!),
-                  OverlayEntry(builder: (_) => MiniPlayerOverlay()),
+                  OverlayEntry(
+                    builder: (_) => PlayerOverlayHost(
+                      router: router,
+                      child: child ?? const SizedBox.shrink(),
+                    ),
+                  ),
                 ],
               );
             },

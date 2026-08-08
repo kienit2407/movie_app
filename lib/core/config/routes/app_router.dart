@@ -3,9 +3,9 @@ import 'package:go_router/go_router.dart';
 import 'package:movie_app/feature/home/presentation/pages/home_page.dart';
 import 'package:movie_app/feature/intro/presentation/splash/pages/splash.dart';
 import 'package:movie_app/feature/detail_movie/presentation/pages/movie_detail_page.dart';
-import 'package:movie_app/feature/detail_movie/presentation/pages/movie_player_page.dart';
 import 'package:movie_app/feature/search/presentation/pages/search_page.dart';
 import 'package:movie_app/core/config/utils/movie_player_args.dart';
+import 'package:movie_app/core/player_overlay_route_bridge.dart';
 import 'package:movie_app/feature/auth/presentation/sign_in/pages/sign_in.dart';
 import 'package:cupertino_native_better/cupertino_native_better.dart';
 import 'package:movie_app/feature/hub/presentation/pages/hub_page.dart';
@@ -128,19 +128,11 @@ final goRouter = GoRouter(
       path: AppRoutes.player,
       name: 'player',
       pageBuilder: (context, state) {
-        final args = state.extra as MoviePlayerArgs;
+        final args = state.extra is MoviePlayerArgs
+            ? state.extra as MoviePlayerArgs
+            : null;
         return CustomTransitionPage<void>(
-          child: MoviePlayerPage(
-            slug: args.slug,
-            movieName: args.movieName,
-            thumbnailUrl: args.thumbnailUrl,
-            episodes: args.episodes,
-            movie: args.movie,
-            initialEpisodeLink: args.initialEpisodeLink,
-            initialEpisodeIndex: args.initialEpisodeIndex,
-            initialServer: args.initialServer,
-            initialServerIndex: args.initialServerIndex,
-          ),
+          child: PlayerOverlayRouteBridge(args: args),
           // Không vẽ transition (đảm bảo không có slide)
           transitionsBuilder: (context, animation, secondaryAnimation, child) {
             return child;

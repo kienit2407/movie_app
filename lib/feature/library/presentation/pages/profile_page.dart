@@ -6,6 +6,7 @@ import 'package:movie_app/core/config/routes/app_router.dart';
 import 'package:movie_app/core/config/themes/app_color.dart';
 import 'package:movie_app/core/config/di/service_locator.dart';
 import 'package:movie_app/core/config/utils/movie_player_args.dart';
+import 'package:movie_app/core/player_overlay_launcher.dart';
 import 'package:movie_app/feature/detail_movie/domain/usecase/get_detail_movie_usecase.dart';
 import 'package:movie_app/feature/library/data/user_library_repository.dart';
 import 'package:movie_app/feature/library/presentation/cubit/user_library_cubit.dart';
@@ -113,9 +114,8 @@ class _ProfilePageState extends State<ProfilePage>
           final link = episode.link_m3u8.isNotEmpty
               ? episode.link_m3u8
               : episode.link_embed;
-          context.push(
-            AppRoutes.player,
-            extra: MoviePlayerArgs(
+          context.openMoviePlayer(
+            MoviePlayerArgs(
               detail.movie.slug,
               detail.movie.poster_url,
               link,

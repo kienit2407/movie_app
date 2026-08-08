@@ -17,18 +17,16 @@ import 'package:movie_app/common/helpers/navigation/app_navigation.dart';
 import 'package:movie_app/core/config/di/service_locator.dart';
 import 'package:movie_app/core/config/themes/app_color.dart';
 import 'package:movie_app/core/config/utils/animated_dialog.dart';
-import 'package:movie_app/core/config/utils/blocking_back_page.dart';
 import 'package:movie_app/core/config/utils/cover_map.dart';
 import 'package:movie_app/core/config/utils/episode_map.dart';
 import 'package:movie_app/core/config/utils/format_episode.dart';
+import 'package:movie_app/core/config/utils/movie_player_args.dart';
 import 'package:movie_app/core/config/utils/show_detail_movie_dialog.dart';
-import 'package:movie_app/core/mini_player_manager.dart';
+import 'package:movie_app/core/player_overlay_launcher.dart';
 import 'package:movie_app/feature/detail_movie/data/model/detail_movie_model.dart';
 import 'package:movie_app/feature/detail_movie/domain/usecase/get_detail_movie_usecase.dart';
 import 'package:movie_app/feature/detail_movie/presentation/bloc/detail_movie_cubit.dart';
 import 'package:movie_app/feature/detail_movie/presentation/bloc/detail_movie_state.dart';
-import 'package:movie_app/feature/detail_movie/presentation/pages/movie_player_page.dart';
-import 'package:movie_app/feature/detail_movie/presentation/bloc/player_cubit.dart';
 import 'package:movie_app/common/helpers/watch_progress_storage.dart';
 import 'package:movie_app/feature/home/domain/entities/fillterType.dart';
 import 'package:movie_app/feature/home/domain/entities/fillter_genre_movie_req.dart';
@@ -399,28 +397,17 @@ class _EpisodesSliverState extends State<_EpisodesSliver> {
 
     widget.onEpisodeSelected?.call(episodeIndex, link);
 
-    // Close mini player before opening new player
-    if (MiniPlayerManager.isVisible.value) {
-      MiniPlayerManager.dismissMiniPlayer();
-    }
-
-    Navigator.push(
-      context,
-      NoBackSwipeRoute(
-        builder: (ctx) => BlocProvider.value(
-          value: context.read<PlayerCubit>(),
-          child: MoviePlayerPage(
-            movie: widget.movie,
-            episodes: widget.episodes,
-            movieName: widget.movie.name,
-            slug: widget.movie.slug,
-            initialEpisodeIndex: episodeIndex,
-            initialServer: _currentServerModel.server_name,
-            thumbnailUrl: widget.movie.thumb_url,
-            initialEpisodeLink: link,
-            initialServerIndex: _selectedServerIndex,
-          ),
-        ),
+    context.openMoviePlayer(
+      MoviePlayerArgs(
+        widget.movie.slug,
+        widget.movie.thumb_url,
+        link,
+        episodeIndex,
+        _currentServerModel.server_name,
+        widget.movie.name,
+        widget.episodes,
+        widget.movie,
+        initialServerIndex: _selectedServerIndex,
       ),
     );
   }
@@ -475,27 +462,17 @@ class _EpisodesSliverState extends State<_EpisodesSliver> {
                       ? data.link_m3u8
                       : data.link_embed;
                   widget.onEpisodeSelected!(index, link);
-                  // Close mini player before opening new player
-                  if (MiniPlayerManager.isVisible.value) {
-                    MiniPlayerManager.dismissMiniPlayer();
-                  }
-                  Navigator.push(
-                    context,
-                    NoBackSwipeRoute(
-                      builder: (ctx) => BlocProvider.value(
-                        value: context.read<PlayerCubit>(),
-                        child: MoviePlayerPage(
-                          movie: widget.movie,
-                          episodes: widget.episodes,
-                          movieName: widget.movie.name,
-                          slug: widget.movie.slug,
-                          initialEpisodeIndex: 0,
-                          initialServer: ep.server_name,
-                          thumbnailUrl: widget.movie.thumb_url,
-                          initialEpisodeLink: link,
-                          initialServerIndex: index,
-                        ),
-                      ),
+                  context.openMoviePlayer(
+                    MoviePlayerArgs(
+                      widget.movie.slug,
+                      widget.movie.thumb_url,
+                      link,
+                      0,
+                      ep.server_name,
+                      widget.movie.name,
+                      widget.episodes,
+                      widget.movie,
+                      initialServerIndex: index,
                     ),
                   );
                 },
@@ -783,24 +760,17 @@ class _EpisodesSliverState extends State<_EpisodesSliver> {
                 // update UI bên detail (nếu bạn muốn highlight / lưu lại)
                 widget.onEpisodeSelected?.call(index, link);
 
-                // mở player luôn -> đúng nghĩa "chuyển tập"
-                Navigator.push(
-                  context,
-                  NoBackSwipeRoute(
-                    builder: (ctx) => BlocProvider.value(
-                      value: context.read<PlayerCubit>(),
-                      child: MoviePlayerPage(
-                        movie: widget.movie,
-                        episodes: widget.episodes,
-                        movieName: widget.movie.name,
-                        slug: widget.movie.slug,
-                        initialEpisodeIndex: index,
-                        initialServer: selectedModel.server_name,
-                        initialServerIndex: _selectedServerIndex,
-                        thumbnailUrl: widget.movie.thumb_url,
-                        initialEpisodeLink: link,
-                      ),
-                    ),
+                context.openMoviePlayer(
+                  MoviePlayerArgs(
+                    widget.movie.slug,
+                    widget.movie.thumb_url,
+                    link,
+                    index,
+                    selectedModel.server_name,
+                    widget.movie.name,
+                    widget.episodes,
+                    widget.movie,
+                    initialServerIndex: _selectedServerIndex,
                   ),
                 );
               },
@@ -2136,22 +2106,17 @@ class _MovieDetailPageContentState extends State<_MovieDetailPageContent>
       String episodeLink,
     ) {
       if (episodes.isEmpty) return;
-      Navigator.of(context).push(
-        NoBackSwipeRoute(
-          builder: (ctx) => BlocProvider.value(
-            value: context.read<PlayerCubit>(),
-            child: MoviePlayerPage(
-              slug: movie.slug,
-              movieName: movie.name,
-              thumbnailUrl: movie.poster_url,
-              episodes: episodes,
-              movie: movie,
-              initialEpisodeLink: episodeLink,
-              initialEpisodeIndex: episodeIndex,
-              initialServer: episodes[serverIndex].server_name,
-              initialServerIndex: serverIndex,
-            ),
-          ),
+      context.openMoviePlayer(
+        MoviePlayerArgs(
+          movie.slug,
+          movie.poster_url,
+          episodeLink,
+          episodeIndex,
+          episodes[serverIndex].server_name,
+          movie.name,
+          episodes,
+          movie,
+          initialServerIndex: serverIndex,
         ),
       );
     }
