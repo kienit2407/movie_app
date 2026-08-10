@@ -2343,63 +2343,9 @@ class _MovieDetailPageContentState extends State<_MovieDetailPageContent>
             ),
           ),
         ),
-        _buildFavoriteButton(movie),
+        SizedBox(width: 8),
+        _FavoriteButton(movie: movie),
       ],
-    );
-  }
-
-  Widget _buildFavoriteButton(MovieModel movie) {
-    return BlocBuilder<UserLibraryCubit, UserLibraryState>(
-      buildWhen: (previous, current) =>
-          previous.isFavorite(movie.slug) != current.isFavorite(movie.slug) ||
-          previous.syncingFavoriteSlugs.contains(movie.slug) !=
-              current.syncingFavoriteSlugs.contains(movie.slug) ||
-          previous.isAuthenticated != current.isAuthenticated,
-      builder: (context, state) {
-        final isFavorite = state.isFavorite(movie.slug);
-        final isSyncing = state.syncingFavoriteSlugs.contains(movie.slug);
-        return GestureDetector(
-          onTap: isSyncing
-              ? null
-              : () async {
-                  HapticFeedback.lightImpact();
-                  final library = context.read<UserLibraryCubit>();
-                  if (!state.isAuthenticated) {
-                    final signedIn = await SignInPage.showSheet(context);
-                    if (!signedIn || !context.mounted) return;
-                    await library.refresh();
-                    if (!context.mounted) return;
-                  }
-                  await library.toggleFavorite(movie);
-                },
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 180),
-            width: 46,
-            height: 44,
-            decoration: BoxDecoration(
-              color: isFavorite
-                  ? Colors.redAccent.withValues(alpha: 0.18)
-                  : Colors.white.withValues(alpha: 0.08),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: isFavorite
-                    ? Colors.redAccent
-                    : Colors.white.withValues(alpha: 0.7),
-              ),
-            ),
-            child: isSyncing
-                ? const Padding(
-                    padding: EdgeInsets.all(13),
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : Icon(
-                    isFavorite ? Iconsax.heart : Iconsax.heart_copy,
-                    color: isFavorite ? Colors.redAccent : Colors.white,
-                    size: 21,
-                  ),
-          ),
-        );
-      },
     );
   }
 
@@ -2607,6 +2553,267 @@ class _MovieDetailPageContentState extends State<_MovieDetailPageContent>
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _FavoriteButton extends StatefulWidget {
+  const _FavoriteButton({required this.movie});
+
+  final MovieModel movie;
+
+  @override
+  State<_FavoriteButton> createState() => _FavoriteButtonState();
+}
+
+class _FavoriteButtonState extends State<_FavoriteButton>
+    with SingleTickerProviderStateMixin {
+  bool _pressed = false;
+
+  late final AnimationController _heartController;
+
+  @override
+  void initState() {
+    super.initState();
+
+    _heartController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 700),
+    );
+  }
+
+  @override
+  void dispose() {
+    _heartController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _toggleFavorite(UserLibraryState state) async {
+    HapticFeedback.lightImpact();
+
+    final library = context.read<UserLibraryCubit>();
+
+    if (!state.isAuthenticated) {
+      final signedIn = await SignInPage.showSheet(context);
+
+      if (!signedIn || !mounted) {
+        return;
+      }
+
+      await library.refresh();
+
+      if (!mounted) {
+        return;
+      }
+    }
+
+    // Lưu trạng thái trước khi toggle.
+    final wasFavorite = library.state.isFavorite(widget.movie.slug);
+
+    await library.toggleFavorite(widget.movie);
+
+    if (!mounted) {
+      return;
+    }
+
+    // Chỉ bắn tim khi ADD favorite,
+    // không bắn khi bỏ favorite.
+    if (!wasFavorite) {
+      _heartController.forward(from: 0);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final movie = widget.movie;
+
+    return BlocBuilder<UserLibraryCubit, UserLibraryState>(
+      buildWhen: (previous, current) =>
+          previous.isFavorite(movie.slug) != current.isFavorite(movie.slug) ||
+          previous.syncingFavoriteSlugs.contains(movie.slug) !=
+              current.syncingFavoriteSlugs.contains(movie.slug) ||
+          previous.isAuthenticated != current.isAuthenticated,
+      builder: (context, state) {
+        final isFavorite = state.isFavorite(movie.slug);
+
+        final isSyncing = state.syncingFavoriteSlugs.contains(movie.slug);
+
+        return Stack(
+          clipBehavior: Clip.none,
+          alignment: Alignment.center,
+          children: [
+            // ==========================
+            // TIM BAY
+            // ==========================
+            IgnorePointer(
+              child: AnimatedBuilder(
+                animation: _heartController,
+                builder: (context, child) {
+                  final t = Curves.easeOutCubic.transform(
+                    _heartController.value,
+                  );
+
+                  return Stack(
+                    clipBehavior: Clip.none,
+                    alignment: Alignment.center,
+                    children: [
+                      _FlyingHeart(
+                        progress: t,
+                        startX: 0,
+                        endX: -3,
+                        endY: -65,
+                        size: 21,
+                      ),
+                      _FlyingHeart(
+                        progress: t,
+                        startX: 0,
+                        endX: 23,
+                        endY: -52,
+                        size: 16,
+                        delay: 0.08,
+                      ),
+                      _FlyingHeart(
+                        progress: t,
+                        startX: 0,
+                        endX: -25,
+                        endY: -48,
+                        size: 14,
+                        delay: 0.14,
+                      ),
+                      _FlyingHeart(
+                        progress: t,
+                        startX: 0,
+                        endX: 14,
+                        endY: -78,
+                        size: 12,
+                        delay: 0.20,
+                      ),
+                    ],
+                  );
+                },
+              ),
+            ),
+
+            // ==========================
+            // BUTTON
+            // ==========================
+            GestureDetector(
+              behavior: HitTestBehavior.opaque,
+
+              onTapDown: isSyncing
+                  ? null
+                  : (_) {
+                      setState(() {
+                        _pressed = true;
+                      });
+                    },
+
+              onTapUp: isSyncing
+                  ? null
+                  : (_) {
+                      setState(() {
+                        _pressed = false;
+                      });
+                    },
+
+              onTapCancel: isSyncing
+                  ? null
+                  : () {
+                      setState(() {
+                        _pressed = false;
+                      });
+                    },
+
+              onTap: isSyncing ? null : () => _toggleFavorite(state),
+
+              child: AnimatedScale(
+                // Đây chính là hiệu ứng
+                // "lún xuống" khi bấm.
+                scale: _pressed ? 0.86 : 1,
+
+                duration: const Duration(milliseconds: 110),
+
+                curve: Curves.easeOutCubic,
+
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    AnimatedScale(
+                      scale: isFavorite ? 1.08 : 1,
+                      duration: const Duration(milliseconds: 220),
+                      curve: Curves.easeOutBack,
+                      child: Icon(
+                        isFavorite ? Iconsax.heart : Iconsax.heart_copy,
+                        color: isFavorite ? Colors.redAccent : Colors.white,
+                        size: 28,
+                      ),
+                    ),
+
+                    const SizedBox(height: 2),
+
+                    Text(
+                      'Yêu thích',
+                      key: ValueKey('favorite_text_${movie.slug}'),
+                      style: TextStyle(
+                        fontSize: 10,
+                        color: isFavorite ? Colors.redAccent : Colors.white,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _FlyingHeart extends StatelessWidget {
+  const _FlyingHeart({
+    required this.progress,
+    required this.startX,
+    required this.endX,
+    required this.endY,
+    required this.size,
+    this.delay = 0,
+  });
+
+  final double progress;
+
+  final double startX;
+  final double endX;
+  final double endY;
+
+  final double size;
+  final double delay;
+
+  @override
+  Widget build(BuildContext context) {
+    final adjusted = ((progress - delay) / (1 - delay)).clamp(0.0, 1.0);
+
+    if (adjusted <= 0) {
+      return const SizedBox.shrink();
+    }
+
+    final opacity = (1 - adjusted).clamp(0.0, 1.0);
+
+    final scale = 0.6 + Curves.easeOutBack.transform(adjusted) * 0.6;
+
+    return Transform.translate(
+      offset: Offset(startX + (endX - startX) * adjusted, endY * adjusted),
+      child: Transform.scale(
+        scale: scale,
+        child: Opacity(
+          opacity: opacity,
+          child: Icon(
+            Icons.favorite_rounded,
+            size: size,
+            color: Colors.redAccent,
+          ),
+        ),
       ),
     );
   }

@@ -22,6 +22,7 @@ class SearchFilterBottomSheet extends StatefulWidget {
     required SearchFilterParams initialFilters,
   }) {
     return showModalBottomSheet<SearchFilterParams>(
+      useRootNavigator: true,
       sheetAnimationStyle: const AnimationStyle(
         curve: Curves.easeInOut,
         duration: Duration(milliseconds: 300),

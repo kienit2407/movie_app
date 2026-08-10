@@ -26,6 +26,7 @@ class YearBottomSheet extends StatefulWidget {
         curve: Curves.easeInOut,
         duration: Duration(milliseconds: 200),
       ),
+      useRootNavigator: true,
       context: context,
       builder: (context) => YearBottomSheet(),
     );

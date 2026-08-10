@@ -167,7 +167,8 @@ class HiveNewMovieInboxStore implements NewMovieInboxStore {
       final raw = entry.value;
       if (raw is! Map) continue;
       final item = NewMovieInboxItem.fromMap(raw);
-      updated[entry.key] = (item.isRead ? item : item.markRead(now)).toMap();
+      if (item.isRead) continue;
+      updated[entry.key] = item.markRead(now).toMap();
     }
     if (updated.isNotEmpty) await box.putAll(updated);
   }
@@ -206,23 +207,52 @@ class NewMovieInboxState {
 
 class NewMovieInboxCubit extends Cubit<NewMovieInboxState> {
   NewMovieInboxCubit(this._store) : super(const NewMovieInboxState()) {
-    _subscription = _store.watch().listen((_) => unawaited(refresh()));
+    _subscription = _store.watch().listen((_) => _scheduleRefresh());
   }
+
+  static const _refreshDebounceDuration = Duration(milliseconds: 50);
 
   final NewMovieInboxStore _store;
   late final StreamSubscription<void> _subscription;
+  Timer? _refreshDebounce;
+
+  void _scheduleRefresh() {
+    _refreshDebounce?.cancel();
+    _refreshDebounce = Timer(
+      _refreshDebounceDuration,
+      () => unawaited(refresh()),
+    );
+  }
 
   Future<void> refresh() async {
-    emit(NewMovieInboxState(items: await _store.getItems(), isLoading: false));
+    final items = await _store.getItems();
+    if (isClosed) return;
+    emit(NewMovieInboxState(items: items, isLoading: false));
   }
 
   Future<void> markAllRead() async {
-    await _store.markAllRead();
-    await refresh();
+    if (state.isLoading) await refresh();
+    if (state.unreadCount == 0 || isClosed) return;
+
+    final previousState = state;
+    final readAt = DateTime.now();
+    final readItems = previousState.items
+        .map((item) => item.isRead ? item : item.markRead(readAt))
+        .toList(growable: false);
+
+    emit(NewMovieInboxState(items: readItems, isLoading: false));
+
+    try {
+      await _store.markAllRead();
+    } catch (_) {
+      if (!isClosed) emit(previousState);
+      rethrow;
+    }
   }
 
   @override
   Future<void> close() async {
+    _refreshDebounce?.cancel();
     await _subscription.cancel();
     return super.close();
   }

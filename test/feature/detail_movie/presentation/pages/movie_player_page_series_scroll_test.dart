@@ -150,6 +150,31 @@ void main() {
     await tester.pump();
   });
 
+  testWidgets('portrait video expands without a panel layout overflow', (
+    tester,
+  ) async {
+    await _setPortraitSurface(tester, topPadding: 47);
+    await _pumpPlayer(tester, episodeCurrent: 'Full', episodeCount: 1);
+
+    final commentsPreview = find.byKey(
+      const ValueKey('movie-comments-preview'),
+    );
+    expect(tester.takeException(), isNull);
+
+    await tester.timedDrag(
+      commentsPreview,
+      const Offset(0, 900),
+      const Duration(milliseconds: 500),
+    );
+    await tester.pump(const Duration(milliseconds: 300));
+
+    expect(tester.getTopLeft(commentsPreview).dy, greaterThan(900));
+    expect(tester.takeException(), isNull);
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump();
+  });
+
   testWidgets('comments open from an app-level player overlay', (tester) async {
     await _setPortraitSurface(tester);
     await _pumpPlayer(
@@ -195,12 +220,19 @@ void main() {
   });
 }
 
-Future<void> _setPortraitSurface(WidgetTester tester) async {
+Future<void> _setPortraitSurface(
+  WidgetTester tester, {
+  double topPadding = 0,
+}) async {
   tester.view.devicePixelRatio = 1;
   tester.view.physicalSize = const Size(430, 1000);
+  tester.view.padding = FakeViewPadding(top: topPadding);
+  tester.view.viewPadding = FakeViewPadding(top: topPadding);
   addTearDown(() {
     tester.view.resetDevicePixelRatio();
     tester.view.resetPhysicalSize();
+    tester.view.resetPadding();
+    tester.view.resetViewPadding();
   });
 }
 

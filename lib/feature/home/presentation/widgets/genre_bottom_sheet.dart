@@ -27,6 +27,7 @@ class GenreBottomSheet extends StatefulWidget {
       ),
       isScrollControlled:
           true, //mặc định chiếm 50% màn hình nhưng muón chiếm toàn bộ container thì set true
+      useRootNavigator: true,
       context: context,
       builder: (context) => GenreBottomSheet(),
     );

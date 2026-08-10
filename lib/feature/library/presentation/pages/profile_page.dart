@@ -186,22 +186,13 @@ class _ProfilePageState extends State<ProfilePage>
                   SliverPadding(
                     padding: const EdgeInsets.fromLTRB(16, 20, 16, 10),
                     sliver: SliverToBoxAdapter(
-                      child: Row(
-                        children: [
-                          const Text(
-                            'Lịch sử xem',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 20,
-                              fontWeight: FontWeight.w800,
-                            ),
-                          ),
-                          const Spacer(),
-                          Text(
-                            '${state.history.length}/100',
-                            style: const TextStyle(color: Colors.white54),
-                          ),
-                        ],
+                      child: const Text(
+                        'Lịch sử xem',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 20,
+                          fontWeight: FontWeight.w800,
+                        ),
                       ),
                     ),
                   ),

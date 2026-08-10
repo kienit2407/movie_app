@@ -1,16 +1,12 @@
-import 'dart:io';
 import 'dart:ui';
 
-import 'package:cupertino_native_better/cupertino_native_better.dart';
 import 'package:fast_cached_network_image/fast_cached_network_image.dart';
 import 'package:flutter/cupertino.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
-import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 import 'package:movie_app/core/config/themes/app_color.dart';
 import 'package:movie_app/feature/library/presentation/cubit/user_library_cubit.dart';
 
@@ -23,6 +19,7 @@ class HubPage extends StatelessWidget {
     if (index == navigationShell.currentIndex) {
       HubTabReselectNotifier.instance.notifyTab(index);
     }
+
     navigationShell.goBranch(
       index,
       initialLocation: index == navigationShell.currentIndex,
@@ -32,20 +29,20 @@ class HubPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final index = navigationShell.currentIndex;
+
     return PopScope(
       canPop: index == 0,
       onPopInvokedWithResult: (didPop, _) {
-        if (!didPop && navigationShell.currentIndex != 0) _selectTab(0);
+        if (!didPop && navigationShell.currentIndex != 0) {
+          _selectTab(0);
+        }
       },
       child: Scaffold(
         extendBody: true,
         backgroundColor: AppColor.bgApp,
         body: navigationShell,
         bottomNavigationBar: RepaintBoundary(
-          child: AdaptiveHubBottomBar(
-            selectedIndex: index,
-            onSelected: _selectTab,
-          ),
+          child: HubBottomBar(selectedIndex: index, onSelected: _selectTab),
         ),
       ),
     );
@@ -58,6 +55,7 @@ class HubTabReselectNotifier extends ChangeNotifier {
   static final HubTabReselectNotifier instance = HubTabReselectNotifier._();
 
   int? _index;
+
   int? get index => _index;
 
   void notifyTab(int index) {
@@ -66,8 +64,13 @@ class HubTabReselectNotifier extends ChangeNotifier {
   }
 }
 
-class AdaptiveHubBottomBar extends StatelessWidget {
-  const AdaptiveHubBottomBar({
+/// Dùng chung một bottom bar cho mọi nền tảng.
+///
+/// Mỗi tab có thể dùng:
+/// - IconData
+/// - SVG asset
+class HubBottomBar extends StatelessWidget {
+  const HubBottomBar({
     super.key,
     required this.selectedIndex,
     required this.onSelected,
@@ -76,41 +79,8 @@ class AdaptiveHubBottomBar extends StatelessWidget {
   final int selectedIndex;
   final ValueChanged<int> onSelected;
 
-  bool get _useNativeGlass =>
-      !kIsWeb && Platform.isIOS && PlatformVersion.isIOS26OrLater;
-
   @override
   Widget build(BuildContext context) {
-    if (_useNativeGlass) {
-      return CNTabBar(
-        currentIndex: selectedIndex,
-        onTap: (index) {
-          debugPrint('CNTabBar tapped: $index');
-          onSelected(index);
-        },
-        tint: AppColor.secondColor,
-        backgroundColor: AppColor.bgApp.withValues(alpha: 0.2),
-        autoHideOnModal: true,
-        autoHideOnPageTransition: true,
-        items: const [
-          CNTabBarItem(
-            customIcon: Iconsax.home_2_copy,
-            activeCustomIcon: Iconsax.home_2,
-            
-          ),
-          CNTabBarItem(icon: CNSymbol('magnifyingglass')),
-          CNTabBarItem(
-            icon: CNSymbol('heart'),
-            activeIcon: CNSymbol('heart.fill'),
-          ),
-          CNTabBarItem(
-            icon: CNSymbol('person'),
-            activeIcon: CNSymbol('person.fill'),
-          ),
-        ],
-      );
-    }
-
     return BlocBuilder<UserLibraryCubit, UserLibraryState>(
       buildWhen: (previous, current) => previous.user != current.user,
       builder: (context, libraryState) {
@@ -157,7 +127,6 @@ class _FloatingBlurHubBar extends StatelessWidget {
         child: ClipRRect(
           borderRadius: BorderRadius.circular(32),
           child: BackdropFilter(
-            // Chỉ blur một lần cho toàn bộ hub.
             filter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
             child: DecoratedBox(
               decoration: BoxDecoration(
@@ -186,7 +155,7 @@ class _FloatingBlurHubBar extends StatelessWidget {
 
                   return Stack(
                     children: [
-                      // Overlay trượt phía dưới icon.
+                      /// Indicator của tab đang chọn.
                       AnimatedPositioned(
                         duration: Duration(
                           milliseconds: reduceMotion ? 80 : 260,
@@ -219,30 +188,55 @@ class _FloatingBlurHubBar extends StatelessWidget {
                         padding: const EdgeInsets.all(outerPadding),
                         child: Row(
                           children: [
+                            /// HOME
+                            /// Dùng SVG.
                             _HubTabButton(
                               selected: selectedIndex == 0,
-                              icon: Iconsax.home_2,
-                              activeIcon: Iconsax.home_2,
+
+                              imageAsset: 'assets/images/home.png',
+
+                              activeImageAsset: 'assets/images/home_filled.png',
+
                               semanticLabel: 'Trang chủ',
+
                               onTap: () => onSelected(0),
+
                               reduceMotion: reduceMotion,
                             ),
+
+                            /// SEARCH
+                            /// Dùng IconData bình thường.
                             _HubTabButton(
                               selected: selectedIndex == 1,
-                              icon: CupertinoIcons.search,
-                              activeIcon: CupertinoIcons.search,
+
+                              icon: Iconsax.search_normal_1_copy,
+
+                              activeIcon: Iconsax.search_normal_1,
+
                               semanticLabel: 'Tìm kiếm',
+
                               onTap: () => onSelected(1),
+
                               reduceMotion: reduceMotion,
                             ),
+
+                            /// FAVORITE
+                            /// Cũng dùng IconData.
                             _HubTabButton(
                               selected: selectedIndex == 2,
+
                               icon: CupertinoIcons.heart,
+
                               activeIcon: CupertinoIcons.heart_fill,
+
                               semanticLabel: 'Yêu thích',
+
                               onTap: () => onSelected(2),
+
                               reduceMotion: reduceMotion,
                             ),
+
+                            /// PROFILE
                             _HubAvatarTabButton(
                               selected: selectedIndex == 3,
                               avatarUrl: avatarUrl,
@@ -264,22 +258,61 @@ class _FloatingBlurHubBar extends StatelessWidget {
   }
 }
 
+/// Một tab có thể nhận IconData hoặc SVG.
+///
+/// Ví dụ IconData:
+///
+/// icon: CupertinoIcons.search
+/// activeIcon: CupertinoIcons.search
+///
+/// Hoặc SVG:
+///
+/// svgAsset: 'assets/icons/home.svg'
+/// activeSvgAsset: 'assets/icons/home_fill.svg'
 class _HubTabButton extends StatelessWidget {
   const _HubTabButton({
     required this.selected,
-    required this.icon,
-    required this.activeIcon,
     required this.semanticLabel,
     required this.onTap,
     required this.reduceMotion,
-  });
+
+    // Flutter Icon
+    this.icon,
+    this.activeIcon,
+
+    // SVG
+    this.svgAsset,
+    this.activeSvgAsset,
+
+    // PNG / JPG
+    this.imageAsset,
+    this.activeImageAsset,
+
+    this.size = 24,
+  }) : assert(
+         icon != null || svgAsset != null || imageAsset != null,
+         'Phải truyền icon, svgAsset hoặc imageAsset.',
+       );
 
   final bool selected;
-  final IconData icon;
-  final IconData activeIcon;
+
+  // IconData
+  final IconData? icon;
+  final IconData? activeIcon;
+
+  // SVG
+  final String? svgAsset;
+  final String? activeSvgAsset;
+
+  // PNG / JPG
+  final String? imageAsset;
+  final String? activeImageAsset;
+
   final String semanticLabel;
   final VoidCallback onTap;
   final bool reduceMotion;
+
+  final double size;
 
   @override
   Widget build(BuildContext context) {
@@ -302,18 +335,60 @@ class _HubTabButton extends StatelessWidget {
                 scale: selected ? 1.08 : 1,
                 child: AnimatedSwitcher(
                   duration: Duration(milliseconds: reduceMotion ? 70 : 170),
-                  child: Icon(
-                    selected ? activeIcon : icon,
-                    key: ValueKey(selected),
-                    size: 24,
-                    color: selected ? Colors.white : Colors.white54,
-                  ),
+                  switchInCurve: Curves.easeOut,
+                  switchOutCurve: Curves.easeIn,
+                  child: _buildIcon(),
                 ),
               ),
             ),
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildIcon() {
+    // =========================
+    // 1. PNG / JPG
+    // =========================
+    final currentImage = selected ? activeImageAsset ?? imageAsset : imageAsset;
+
+    if (currentImage != null) {
+      return Image.asset(
+        currentImage,
+        key: ValueKey<String>('image-$currentImage-$selected'),
+        width: size,
+        height: size,
+        fit: BoxFit.contain,
+        filterQuality: FilterQuality.high,
+      );
+    }
+
+    // =========================
+    // 2. SVG
+    // =========================
+    final currentSvg = selected ? activeSvgAsset ?? svgAsset : svgAsset;
+
+    if (currentSvg != null) {
+      return SvgPicture.asset(
+        currentSvg,
+        key: ValueKey<String>('svg-$currentSvg-$selected'),
+        width: size,
+        height: size,
+        fit: BoxFit.contain,
+      );
+    }
+
+    // =========================
+    // 3. IconData
+    // =========================
+    final currentIcon = selected ? activeIcon ?? icon : icon;
+
+    return Icon(
+      currentIcon,
+      key: ValueKey<String>('icon-${currentIcon?.codePoint}-$selected'),
+      size: size,
+      color: selected ? Colors.white : Colors.white54,
     );
   }
 }
@@ -371,8 +446,11 @@ class _HubAvatarIcon extends StatelessWidget {
     if (url.isEmpty) {
       return Icon(
         selected ? CupertinoIcons.person_fill : CupertinoIcons.person,
+        size: 24,
+        color: selected ? Colors.white : Colors.white54,
       );
     }
+
     return Container(
       width: 26,
       height: 26,
@@ -391,7 +469,11 @@ class _HubAvatarIcon extends StatelessWidget {
 String _firstNonEmpty(List<Object?> values) {
   for (final value in values) {
     final text = value?.toString().trim() ?? '';
-    if (text.isNotEmpty) return text;
+
+    if (text.isNotEmpty) {
+      return text;
+    }
   }
+
   return '';
 }

@@ -5,7 +5,8 @@ import 'dart:ui';
 import 'package:battery_plus/battery_plus.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/cupertino.dart';
-import 'package:flutter/foundation.dart' show ValueListenable;
+import 'package:flutter/foundation.dart'
+    show Listenable, ValueListenable, ValueNotifier;
 import 'package:flutter/rendering.dart' show ScrollDirection;
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_svg/svg.dart';
@@ -130,6 +131,10 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
   final ScrollController _scrollController = ScrollController();
   final ScrollController _scrollMovie = ScrollController();
   double _scrubValue = 0.0;
+  final ValueNotifier<double> _scrubProgress = ValueNotifier<double>(0.0);
+  int _scrubSessionId = 0;
+  Future<void>? _scrubPauseFuture;
+  int? _activeSeekbarPointer;
   int _seekCount = 0;
   BatteryState _batteryState = BatteryState.unknown;
 
@@ -374,6 +379,7 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
     _scrollMovie.dispose();
     _episodeScrollController.dispose();
     _landscapeEpisodeScrollController.dispose();
+    _scrubProgress.dispose();
 
     SupportRotateScreen.onlyPotrait();
     _batteryStateSubscription?.cancel();
@@ -1277,10 +1283,14 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
         _showSeekOverlay = false;
         _isScrubbing = false;
         _scrubValue = 0.0;
+        _activeSeekbarPointer = null;
         _isVideoLoading = true;
         _isPlaybackBuffering = false;
         _playerLoadError = null;
       });
+      _scrubProgress.value = 0.0;
+      _scrubSessionId++;
+      _scrubPauseFuture = null;
     } else {
       _chewieController = null;
       _videoPlayerController = null;
@@ -2429,37 +2439,71 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
     final fraction = _seekFractionFromLocal(localDx, width);
     if (fraction == null) return;
 
-    final target = _seekTargetForFraction(vp.value, fraction);
+    _startSeekbarDragAtFraction(
+      fraction,
+      keepControlsVisible: keepControlsVisible,
+    );
+  }
+
+  void _startSeekbarDragAtFraction(
+    double fraction, {
+    required bool keepControlsVisible,
+    bool pausePlayback = false,
+    bool seekDuringDrag = true,
+  }) {
+    final vp = _videoPlayerController;
+    if (vp == null || !vp.value.isInitialized) return;
+
+    final safeFraction = fraction.clamp(0.0, 1.0).toDouble();
+    final target = _seekTargetForFraction(vp.value, safeFraction);
 
     _hideControlsTimer?.cancel();
     _seekThrottle?.cancel();
     _wasPlayingBeforeScrub = vp.value.isPlaying;
+    _scrubSessionId++;
+    _scrubPauseFuture = pausePlayback && _wasPlayingBeforeScrub
+        ? vp.pause()
+        : null;
 
     setState(() {
       _showControls = keepControlsVisible;
       _isScrubbing = true;
-      _scrubValue = fraction;
+      _scrubValue = safeFraction;
       _previewPosition = target;
     });
+    _scrubProgress.value = safeFraction;
 
-    _seekToThrottled(target, ms: 45);
+    if (seekDuringDrag) {
+      _seekToThrottled(target, ms: 45);
+    }
   }
 
   void _updateSeekbarDrag(double localDx, double width) {
-    final vp = _videoPlayerController;
-    if (vp == null || !vp.value.isInitialized) return;
-
     final fraction = _seekFractionFromLocal(localDx, width);
     if (fraction == null) return;
 
-    final target = _seekTargetForFraction(vp.value, fraction);
+    _updateSeekbarDragAtFraction(fraction);
+  }
 
-    setState(() {
-      _scrubValue = fraction;
-      _previewPosition = target;
-    });
+  void _updateSeekbarDragAtFraction(
+    double fraction, {
+    bool seekDuringDrag = true,
+  }) {
+    final vp = _videoPlayerController;
+    if (vp == null || !vp.value.isInitialized) return;
 
-    _seekToThrottled(target, ms: 70);
+    final safeFraction = fraction.clamp(0.0, 1.0).toDouble();
+    if ((safeFraction - _scrubValue).abs() < 0.0001) return;
+
+    final target = _seekTargetForFraction(vp.value, safeFraction);
+
+    _scrubValue = safeFraction;
+    _previewPosition = target;
+    _scrubProgress.value = safeFraction;
+
+    if (seekDuringDrag) {
+      _seekToThrottled(target, ms: 70);
+    }
   }
 
   Future<void> _finishSeekbarDrag({required bool keepControlsVisible}) async {
@@ -2467,13 +2511,27 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
     if (vp == null || !vp.value.isInitialized) return;
 
     _seekThrottle?.cancel();
-    await _seekTo(_scrubValue);
+    final scrubSessionId = _scrubSessionId;
+    final targetFraction = _scrubValue;
+    final shouldResumePlayback = _wasPlayingBeforeScrub;
+    final pauseFuture = _scrubPauseFuture;
 
-    if (_wasPlayingBeforeScrub && !vp.value.isPlaying) {
+    if (pauseFuture != null) {
+      try {
+        await pauseFuture;
+      } catch (_) {}
+    }
+    if (!mounted || scrubSessionId != _scrubSessionId) return;
+
+    await _seekTo(targetFraction);
+    if (!mounted || scrubSessionId != _scrubSessionId) return;
+
+    if (shouldResumePlayback && !vp.value.isPlaying) {
       await vp.play();
     }
 
-    if (!mounted) return;
+    if (!mounted || scrubSessionId != _scrubSessionId) return;
+    _scrubPauseFuture = null;
     setState(() {
       _showControls = keepControlsVisible;
       _isScrubbing = false;
@@ -3526,9 +3584,19 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
       ((0.97 - _expandT) / 0.07).clamp(0.0, 1.0),
     );
 
-    final topPad = insets.top * safeT;
+    final requestedTopPad = insets.top * safeT;
+    final availableTopPad = math.max(0.0, mq.size.height - _videoHeight);
+    final topPad = math.min(requestedTopPad, availableTopPad);
     final leftPad = insets.left * safeT;
     final rightPad = insets.right * safeT;
+    final collapsedVideoHeight = math.max(
+      _minVideoHeight,
+      mq.size.width * (9 / 16),
+    );
+    final panelLayoutHeight = math.max(
+      0.0,
+      mq.size.height - insets.top - collapsedVideoHeight,
+    );
 
     // // Nếu bạn có dùng panelH để tính show/hide content:
     // final screenH = mq.size.height - topPad; // trừ topPad cho đúng cảm giác
@@ -3543,9 +3611,8 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
     final showSeekbar = isExpandedNow
         ? (_controlsVisible || _isScrubbing)
         : true;
-    return AnimatedPadding(
-      duration: const Duration(milliseconds: 140),
-      curve: Curves.bounceInOut,
+    final collapsedSeekbarOffset = (_seekbarHitHeight / 2) - _thumbRadius + 1;
+    return Padding(
       padding: EdgeInsets.only(top: topPad, left: leftPad, right: rightPad),
       child: Stack(
         clipBehavior: Clip.none,
@@ -3554,477 +3621,490 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
             top: -topPad,
             left: 0,
             right: 0,
-            height: topPad + 60,
             child: IgnorePointer(child: _buildTopAmbientStrip(topPad + 60)),
           ),
           Column(
             children: [
               RepaintBoundary(child: _buildVideoAreaWithoutSeekbar()),
               _buildOverlayFadingInformation(
-                child: Material(
-                  color: AppColor.bgApp,
-                  clipBehavior: Clip.antiAlias, // QUAN TRỌNG
-                  shape: const RoundedRectangleBorder(
-                    borderRadius: BorderRadius.vertical(
-                      top: Radius.circular(18),
+                child: OverflowBox(
+                  alignment: Alignment.topCenter,
+                  minHeight: panelLayoutHeight,
+                  maxHeight: panelLayoutHeight,
+                  child: Material(
+                    color: AppColor.bgApp,
+                    clipBehavior: Clip.antiAlias, // QUAN TRỌNG
+                    shape: const RoundedRectangleBorder(
+                      borderRadius: BorderRadius.vertical(
+                        top: Radius.circular(18),
+                      ),
                     ),
-                  ),
-                  child: LayoutBuilder(
-                    builder: (context, c) {
-                      final screen = MediaQuery.of(context).size;
-                      final newMin = screen.width * (9 / 16);
-                      final newMax = screen.height;
+                    child: LayoutBuilder(
+                      builder: (context, c) {
+                        final screen = MediaQuery.of(context).size;
+                        final newMin = screen.width * (9 / 16);
+                        final newMax = screen.height;
 
-                      final needSync =
-                          (_maxVideoHeight - newMax).abs() > 0.5 ||
-                          (_minVideoHeight - newMin).abs() > 0.5;
+                        final needSync =
+                            (_maxVideoHeight - newMax).abs() > 0.5 ||
+                            (_minVideoHeight - newMin).abs() > 0.5;
 
-                      if (needSync) {
-                        WidgetsBinding.instance.addPostFrameCallback((_) {
-                          if (!mounted) return;
-                          setState(() {
-                            _maxVideoHeight = newMax;
-                            _minVideoHeight = newMin;
-                            _videoHeight = _videoHeight.clamp(
-                              _minVideoHeight,
-                              _maxVideoHeight,
-                            );
+                        if (needSync) {
+                          WidgetsBinding.instance.addPostFrameCallback((_) {
+                            if (!mounted) return;
+                            setState(() {
+                              _maxVideoHeight = newMax;
+                              _minVideoHeight = newMin;
+                              _videoHeight = _videoHeight.clamp(
+                                _minVideoHeight,
+                                _maxVideoHeight,
+                              );
+                            });
                           });
-                        });
-                      }
-                      final commentsState = context
-                          .watch<CommentsCubit>()
-                          .state;
+                        }
+                        final commentsState = context
+                            .watch<CommentsCubit>()
+                            .state;
 
-                      final firstComment = commentsState.comments.isNotEmpty
-                          ? commentsState.comments.first
-                          : null;
-                      final isCommentsLoading =
-                          commentsState.status == CommentsStatus.loading;
-                      return Stack(
-                        children: [
-                          // Ambient blur cpc  trên cùng
-                          if (!isExpanded)
-                            Positioned(
-                              top: 0,
-                              left: 0,
-                              right: 0,
-                              child: _buildPanelAmbientTop(),
-                            ),
-                          Positioned.fill(
-                            child: AnimatedContainer(
-                              duration: Duration(milliseconds: 200),
-                              curve: Curves.easeOutCubic,
-                              child: _wrapPanelHeaderDrag(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Padding(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 10,
-                                        vertical: 10,
-                                      ),
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            widget.movie.origin_name,
-                                            maxLines: 2,
-                                            overflow: TextOverflow
-                                                .ellipsis, // Nếu tên quá dài sẽ hiện "..."
-                                            style: const TextStyle(
-                                              fontSize: 18,
-                                              fontWeight: FontWeight.bold,
-                                              color: Colors.white,
-                                            ),
-                                          ),
-                                          const SizedBox(height: 4),
-                                          Text(
-                                            widget.movie.name,
-                                            maxLines: 1,
-                                            overflow: TextOverflow.ellipsis,
-                                            style: const TextStyle(
-                                              fontSize: 14,
-                                              fontWeight: FontWeight.w500,
-                                              color: AppColor
-                                                  .secondColor, // Màu nhấn cho tên phụ
-                                            ),
-                                          ),
-                                          const SizedBox(height: 6),
-
-                                          if (widget.movie.episode_current !=
-                                              'Full')
-                                            Builder(
-                                              builder: (context) {
-                                                // Server hiện tại
-                                                // final serverName = widget
-                                                //     .episodes[_selectedServerIndex]
-                                                //     .server_name;
-
-                                                // Tên tập hiện tại (nếu có)
-                                                final serverData = widget
-                                                    .episodes[_selectedServerIndex]
-                                                    .server_data;
-                                                final epName =
-                                                    (serverData.isNotEmpty &&
-                                                        _currentEpisodeIndex >=
-                                                            0 &&
-                                                        _currentEpisodeIndex <
-                                                            serverData.length)
-                                                    ? serverData[_currentEpisodeIndex]
-                                                          .name
-                                                    : 'Full';
-
-                                                final isPlaying =
-                                                    _videoPlayerController
-                                                        ?.value
-                                                        .isPlaying ??
-                                                    false;
-
-                                                return Row(
-                                                  children: [
-                                                    SizedBox(
-                                                      width: 13,
-                                                      height: 13,
-                                                      child: Lottie.asset(
-                                                        animate:
-                                                            isPlaying, //  không phát -> đứng yên
-                                                        'assets/icons/now_playing.json',
-                                                        delegates: LottieDelegates(
-                                                          values: [
-                                                            ValueDelegate.color(
-                                                              const ['**'],
-                                                              value:
-                                                                  Colors.white,
-                                                            ),
-                                                          ],
-                                                        ),
-                                                      ),
-                                                    ),
-                                                    const SizedBox(width: 6),
-
-                                                    Expanded(
-                                                      child: Text(
-                                                        'Đang phát: $epName',
-                                                        maxLines: 1,
-                                                        overflow: TextOverflow
-                                                            .ellipsis,
-                                                        style: TextStyle(
-                                                          fontSize: 11,
-                                                          fontWeight:
-                                                              FontWeight.w600,
-                                                          color: Colors.white
-                                                              .withValues(
-                                                                alpha: 0.78,
-                                                              ),
-                                                        ),
-                                                      ),
-                                                    ),
-                                                  ],
-                                                );
-                                              },
-                                            ),
-                                          SizedBox(height: 10.h),
-                                          // Bình luận
-                                          Material(
-                                            key: const ValueKey(
-                                              'movie-comments-preview',
-                                            ),
-                                            color: Colors.transparent,
-                                            borderRadius: BorderRadius.circular(
-                                              12.r,
-                                            ),
-                                            clipBehavior: Clip.antiAlias,
-                                            child: Ink(
-                                              width: double.infinity,
-                                              decoration: BoxDecoration(
-                                                color: const Color(0xff1A1A22),
-                                                borderRadius:
-                                                    BorderRadius.circular(12.r),
-                                                border: Border.all(
-                                                  color: Colors.white
-                                                      .withOpacity(0.1),
-                                                ),
+                        final firstComment = commentsState.comments.isNotEmpty
+                            ? commentsState.comments.first
+                            : null;
+                        final isCommentsLoading =
+                            commentsState.status == CommentsStatus.loading;
+                        return Stack(
+                          children: [
+                            // Ambient blur cpc  trên cùng
+                            if (!isExpanded)
+                              Positioned(
+                                top: 0,
+                                left: 0,
+                                right: 0,
+                                child: _buildPanelAmbientTop(),
+                              ),
+                            Positioned.fill(
+                              child: AnimatedContainer(
+                                duration: Duration(milliseconds: 200),
+                                curve: Curves.easeOutCubic,
+                                child: _wrapPanelHeaderDrag(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Padding(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 10,
+                                          vertical: 10,
+                                        ),
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              widget.movie.origin_name,
+                                              maxLines: 2,
+                                              overflow: TextOverflow
+                                                  .ellipsis, // Nếu tên quá dài sẽ hiện "..."
+                                              style: const TextStyle(
+                                                fontSize: 18,
+                                                fontWeight: FontWeight.bold,
+                                                color: Colors.white,
                                               ),
-                                              child: InkWell(
-                                                borderRadius:
-                                                    BorderRadius.circular(12.r),
-                                                splashFactory:
-                                                    InkSplash.splashFactory,
-                                                splashColor: Colors.white
-                                                    .withValues(alpha: 0.045),
-                                                highlightColor: Colors.white
-                                                    .withValues(alpha: 0.025),
-                                                onTap: () =>
-                                                    _openCommentsSheet(context),
-                                                child: Padding(
-                                                  padding: EdgeInsets.all(12.w),
-                                                  child: Column(
-                                                    crossAxisAlignment:
-                                                        CrossAxisAlignment
-                                                            .start,
+                                            ),
+                                            const SizedBox(height: 4),
+                                            Text(
+                                              widget.movie.name,
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: const TextStyle(
+                                                fontSize: 14,
+                                                fontWeight: FontWeight.w500,
+                                                color: AppColor
+                                                    .secondColor, // Màu nhấn cho tên phụ
+                                              ),
+                                            ),
+                                            const SizedBox(height: 6),
+
+                                            if (widget.movie.episode_current !=
+                                                'Full')
+                                              Builder(
+                                                builder: (context) {
+                                                  // Server hiện tại
+                                                  // final serverName = widget
+                                                  //     .episodes[_selectedServerIndex]
+                                                  //     .server_name;
+
+                                                  // Tên tập hiện tại (nếu có)
+                                                  final serverData = widget
+                                                      .episodes[_selectedServerIndex]
+                                                      .server_data;
+                                                  final epName =
+                                                      (serverData.isNotEmpty &&
+                                                          _currentEpisodeIndex >=
+                                                              0 &&
+                                                          _currentEpisodeIndex <
+                                                              serverData.length)
+                                                      ? serverData[_currentEpisodeIndex]
+                                                            .name
+                                                      : 'Full';
+
+                                                  final isPlaying =
+                                                      _videoPlayerController
+                                                          ?.value
+                                                          .isPlaying ??
+                                                      false;
+
+                                                  return Row(
                                                     children: [
-                                                      Text.rich(
-                                                        TextSpan(
-                                                          children: [
-                                                            TextSpan(
-                                                              text: 'Bình luận',
-                                                              style: TextStyle(
-                                                                fontSize: 14.sp,
-                                                                fontWeight:
-                                                                    FontWeight
-                                                                        .w600,
-                                                                color: Colors
+                                                      SizedBox(
+                                                        width: 13,
+                                                        height: 13,
+                                                        child: Lottie.asset(
+                                                          animate:
+                                                              isPlaying, //  không phát -> đứng yên
+                                                          'assets/icons/now_playing.json',
+                                                          delegates: LottieDelegates(
+                                                            values: [
+                                                              ValueDelegate.color(
+                                                                const ['**'],
+                                                                value: Colors
                                                                     .white,
                                                               ),
-                                                            ),
-                                                            WidgetSpan(
-                                                              child: SizedBox(
-                                                                width: 6.w,
-                                                              ),
-                                                            ),
-                                                            TextSpan(
-                                                              text:
-                                                                  isCommentsLoading
-                                                                  ? ''
-                                                                  : '${commentsState.totalCount}',
-                                                              style: TextStyle(
-                                                                fontSize: 12.sp,
-                                                                fontWeight:
-                                                                    FontWeight
-                                                                        .w400,
-                                                                color:
-                                                                    const Color(
-                                                                      0xffAAAAAA,
-                                                                    ),
-                                                              ),
-                                                            ),
-                                                          ],
+                                                            ],
+                                                          ),
                                                         ),
                                                       ),
+                                                      const SizedBox(width: 6),
 
-                                                      SizedBox(height: 8.h),
-
-                                                      AnimatedSwitcher(
-                                                        duration:
-                                                            const Duration(
-                                                              milliseconds: 220,
-                                                            ),
-                                                        switchInCurve:
-                                                            Curves.easeOut,
-                                                        switchOutCurve:
-                                                            Curves.easeIn,
-                                                        child: isCommentsLoading
-                                                            ? KeyedSubtree(
-                                                                key: const ValueKey(
-                                                                  'comments-loading',
+                                                      Expanded(
+                                                        child: Text(
+                                                          'Đang phát: $epName',
+                                                          maxLines: 1,
+                                                          overflow: TextOverflow
+                                                              .ellipsis,
+                                                          style: TextStyle(
+                                                            fontSize: 11,
+                                                            fontWeight:
+                                                                FontWeight.w600,
+                                                            color: Colors.white
+                                                                .withValues(
+                                                                  alpha: 0.78,
                                                                 ),
-                                                                child:
-                                                                    _buildCommentPreviewShimmer(),
-                                                              )
-                                                            : firstComment !=
-                                                                  null
-                                                            ? Row(
-                                                                key: const ValueKey(
-                                                                  'comments-loaded',
+                                                          ),
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  );
+                                                },
+                                              ),
+                                            SizedBox(height: 10.h),
+                                            // Bình luận
+                                            Material(
+                                              key: const ValueKey(
+                                                'movie-comments-preview',
+                                              ),
+                                              color: Colors.transparent,
+                                              borderRadius:
+                                                  BorderRadius.circular(12.r),
+                                              clipBehavior: Clip.antiAlias,
+                                              child: Ink(
+                                                width: double.infinity,
+                                                decoration: BoxDecoration(
+                                                  color: const Color(
+                                                    0xff1A1A22,
+                                                  ),
+                                                  borderRadius:
+                                                      BorderRadius.circular(
+                                                        12.r,
+                                                      ),
+                                                  border: Border.all(
+                                                    color: Colors.white
+                                                        .withOpacity(0.1),
+                                                  ),
+                                                ),
+                                                child: InkWell(
+                                                  borderRadius:
+                                                      BorderRadius.circular(
+                                                        12.r,
+                                                      ),
+                                                  splashFactory:
+                                                      InkSplash.splashFactory,
+                                                  splashColor: Colors.white
+                                                      .withValues(alpha: 0.045),
+                                                  highlightColor: Colors.white
+                                                      .withValues(alpha: 0.025),
+                                                  onTap: () =>
+                                                      _openCommentsSheet(
+                                                        context,
+                                                      ),
+                                                  child: Padding(
+                                                    padding: EdgeInsets.all(
+                                                      12.w,
+                                                    ),
+                                                    child: Column(
+                                                      crossAxisAlignment:
+                                                          CrossAxisAlignment
+                                                              .start,
+                                                      children: [
+                                                        Text.rich(
+                                                          TextSpan(
+                                                            children: [
+                                                              TextSpan(
+                                                                text:
+                                                                    'Bình luận',
+                                                                style: TextStyle(
+                                                                  fontSize:
+                                                                      14.sp,
+                                                                  fontWeight:
+                                                                      FontWeight
+                                                                          .w600,
+                                                                  color: Colors
+                                                                      .white,
                                                                 ),
-                                                                crossAxisAlignment:
-                                                                    CrossAxisAlignment
-                                                                        .center,
-                                                                children: [
-                                                                  CircleAvatar(
-                                                                    radius:
-                                                                        15.r,
-                                                                    backgroundColor:
-                                                                        const Color(
-                                                                          0xff6155A6,
-                                                                        ),
-                                                                    backgroundImage:
-                                                                        firstComment.authorAvatarUrl !=
-                                                                                null &&
-                                                                            firstComment.authorAvatarUrl!.trim().isNotEmpty
-                                                                        ? NetworkImage(
-                                                                            firstComment.authorAvatarUrl!,
-                                                                          )
-                                                                        : null,
-                                                                    child:
-                                                                        firstComment.authorAvatarUrl ==
-                                                                                null ||
-                                                                            firstComment.authorAvatarUrl!.trim().isEmpty
-                                                                        ? Text(
-                                                                            firstComment.authorName.trim().isEmpty
-                                                                                ? '?'
-                                                                                : firstComment.authorName.trim()[0].toUpperCase(),
-                                                                            style: TextStyle(
-                                                                              color: Colors.white,
-                                                                              fontSize: 11.sp,
-                                                                              fontWeight: FontWeight.w700,
-                                                                            ),
-                                                                          )
-                                                                        : null,
+                                                              ),
+                                                              WidgetSpan(
+                                                                child: SizedBox(
+                                                                  width: 6.w,
+                                                                ),
+                                                              ),
+                                                              TextSpan(
+                                                                text:
+                                                                    isCommentsLoading
+                                                                    ? ''
+                                                                    : '${commentsState.totalCount}',
+                                                                style: TextStyle(
+                                                                  fontSize:
+                                                                      12.sp,
+                                                                  fontWeight:
+                                                                      FontWeight
+                                                                          .w400,
+                                                                  color: const Color(
+                                                                    0xffAAAAAA,
                                                                   ),
+                                                                ),
+                                                              ),
+                                                            ],
+                                                          ),
+                                                        ),
 
-                                                                  SizedBox(
-                                                                    width: 8.w,
-                                                                  ),
+                                                        SizedBox(height: 8.h),
 
-                                                                  Expanded(
-                                                                    child: Text(
-                                                                      firstComment
-                                                                              .isDeleted
-                                                                          ? 'Bình luận đã bị xóa'
-                                                                          : firstComment.body,
-                                                                      maxLines:
-                                                                          2,
-                                                                      overflow:
-                                                                          TextOverflow
-                                                                              .ellipsis,
-                                                                      style: TextStyle(
-                                                                        color: Colors
-                                                                            .white
-                                                                            .withOpacity(
-                                                                              0.85,
-                                                                            ),
-                                                                        fontSize:
-                                                                            11.sp,
-                                                                        height:
-                                                                            1.3,
-                                                                      ),
-                                                                    ),
-                                                                  ),
-                                                                ],
-                                                              )
-                                                            : GestureDetector(
-                                                                behavior:
-                                                                    HitTestBehavior
-                                                                        .opaque,
-
-                                                                onTapDown: (_) {
-                                                                  setState(() {
-                                                                    _isCommentsEmptyPressed =
-                                                                        true;
-                                                                  });
-                                                                },
-
-                                                                onTapUp: (_) {
-                                                                  setState(() {
-                                                                    _isCommentsEmptyPressed =
-                                                                        false;
-                                                                  });
-                                                                },
-
-                                                                onTapCancel: () {
-                                                                  setState(() {
-                                                                    _isCommentsEmptyPressed =
-                                                                        false;
-                                                                  });
-                                                                },
-
-                                                                onTap: () =>
-                                                                    _openCommentsSheet(
-                                                                      context,
-                                                                    ),
-
-                                                                child: AnimatedContainer(
+                                                        AnimatedSwitcher(
+                                                          duration:
+                                                              const Duration(
+                                                                milliseconds:
+                                                                    220,
+                                                              ),
+                                                          switchInCurve:
+                                                              Curves.easeOut,
+                                                          switchOutCurve:
+                                                              Curves.easeIn,
+                                                          child:
+                                                              isCommentsLoading
+                                                              ? KeyedSubtree(
                                                                   key: const ValueKey(
-                                                                    'comments-empty',
+                                                                    'comments-loading',
                                                                   ),
-                                                                  duration:
-                                                                      const Duration(
-                                                                        milliseconds:
-                                                                            120,
-                                                                      ),
-                                                                  curve: Curves
-                                                                      .easeOut,
-
-                                                                  width: double
-                                                                      .infinity,
-                                                                  padding: EdgeInsets.symmetric(
-                                                                    vertical:
-                                                                        8.h,
-                                                                    horizontal:
-                                                                        12.w,
+                                                                  child:
+                                                                      _buildCommentPreviewShimmer(),
+                                                                )
+                                                              : firstComment !=
+                                                                    null
+                                                              ? Row(
+                                                                  key: const ValueKey(
+                                                                    'comments-loaded',
                                                                   ),
-
-                                                                  decoration: BoxDecoration(
-                                                                    color:
-                                                                        _isCommentsEmptyPressed
-                                                                        ? Colors.white.withValues(
-                                                                            alpha:
-                                                                                0.16,
-                                                                          )
-                                                                        : Colors.grey.withValues(
-                                                                            alpha:
-                                                                                0.10,
+                                                                  crossAxisAlignment:
+                                                                      CrossAxisAlignment
+                                                                          .center,
+                                                                  children: [
+                                                                    CircleAvatar(
+                                                                      radius:
+                                                                          15.r,
+                                                                      backgroundColor:
+                                                                          const Color(
+                                                                            0xff6155A6,
                                                                           ),
+                                                                      backgroundImage:
+                                                                          firstComment.authorAvatarUrl !=
+                                                                                  null &&
+                                                                              firstComment.authorAvatarUrl!.trim().isNotEmpty
+                                                                          ? NetworkImage(
+                                                                              firstComment.authorAvatarUrl!,
+                                                                            )
+                                                                          : null,
+                                                                      child:
+                                                                          firstComment.authorAvatarUrl ==
+                                                                                  null ||
+                                                                              firstComment.authorAvatarUrl!.trim().isEmpty
+                                                                          ? Text(
+                                                                              firstComment.authorName.trim().isEmpty
+                                                                                  ? '?'
+                                                                                  : firstComment.authorName.trim()[0].toUpperCase(),
+                                                                              style: TextStyle(
+                                                                                color: Colors.white,
+                                                                                fontSize: 11.sp,
+                                                                                fontWeight: FontWeight.w700,
+                                                                              ),
+                                                                            )
+                                                                          : null,
+                                                                    ),
 
-                                                                    borderRadius:
-                                                                        BorderRadius.circular(
-                                                                          30.r,
+                                                                    SizedBox(
+                                                                      width:
+                                                                          8.w,
+                                                                    ),
+
+                                                                    Expanded(
+                                                                      child: Text(
+                                                                        firstComment.isDeleted
+                                                                            ? 'Bình luận đã bị xóa'
+                                                                            : firstComment.body,
+                                                                        maxLines:
+                                                                            2,
+                                                                        overflow:
+                                                                            TextOverflow.ellipsis,
+                                                                        style: TextStyle(
+                                                                          color: Colors.white.withOpacity(
+                                                                            0.85,
+                                                                          ),
+                                                                          fontSize:
+                                                                              11.sp,
+                                                                          height:
+                                                                              1.3,
                                                                         ),
+                                                                      ),
+                                                                    ),
+                                                                  ],
+                                                                )
+                                                              : GestureDetector(
+                                                                  behavior:
+                                                                      HitTestBehavior
+                                                                          .opaque,
 
-                                                                    border: Border.all(
+                                                                  onTapDown: (_) {
+                                                                    setState(() {
+                                                                      _isCommentsEmptyPressed =
+                                                                          true;
+                                                                    });
+                                                                  },
+
+                                                                  onTapUp: (_) {
+                                                                    setState(() {
+                                                                      _isCommentsEmptyPressed =
+                                                                          false;
+                                                                    });
+                                                                  },
+
+                                                                  onTapCancel: () {
+                                                                    setState(() {
+                                                                      _isCommentsEmptyPressed =
+                                                                          false;
+                                                                    });
+                                                                  },
+
+                                                                  onTap: () =>
+                                                                      _openCommentsSheet(
+                                                                        context,
+                                                                      ),
+
+                                                                  child: AnimatedContainer(
+                                                                    key: const ValueKey(
+                                                                      'comments-empty',
+                                                                    ),
+                                                                    duration: const Duration(
+                                                                      milliseconds:
+                                                                          120,
+                                                                    ),
+                                                                    curve: Curves
+                                                                        .easeOut,
+
+                                                                    width: double
+                                                                        .infinity,
+                                                                    padding: EdgeInsets.symmetric(
+                                                                      vertical:
+                                                                          8.h,
+                                                                      horizontal:
+                                                                          12.w,
+                                                                    ),
+
+                                                                    decoration: BoxDecoration(
                                                                       color:
                                                                           _isCommentsEmptyPressed
                                                                           ? Colors.white.withValues(
-                                                                              alpha: 0.20,
+                                                                              alpha: 0.16,
                                                                             )
-                                                                          : Colors.transparent,
+                                                                          : Colors.grey.withValues(
+                                                                              alpha: 0.10,
+                                                                            ),
+
+                                                                      borderRadius:
+                                                                          BorderRadius.circular(
+                                                                            30.r,
+                                                                          ),
+
+                                                                      border: Border.all(
+                                                                        color:
+                                                                            _isCommentsEmptyPressed
+                                                                            ? Colors.white.withValues(
+                                                                                alpha: 0.20,
+                                                                              )
+                                                                            : Colors.transparent,
+                                                                      ),
+
+                                                                      boxShadow:
+                                                                          _isCommentsEmptyPressed
+                                                                          ? [
+                                                                              BoxShadow(
+                                                                                color: Colors.white.withValues(
+                                                                                  alpha: 0.12,
+                                                                                ),
+                                                                                blurRadius: 14,
+                                                                                spreadRadius: 1,
+                                                                              ),
+                                                                            ]
+                                                                          : const [],
                                                                     ),
 
-                                                                    boxShadow:
-                                                                        _isCommentsEmptyPressed
-                                                                        ? [
-                                                                            BoxShadow(
-                                                                              color: Colors.white.withValues(
-                                                                                alpha: 0.12,
-                                                                              ),
-                                                                              blurRadius: 14,
-                                                                              spreadRadius: 1,
-                                                                            ),
-                                                                          ]
-                                                                        : const [],
-                                                                  ),
-
-                                                                  child: Text(
-                                                                    'Chưa có bình luận',
-                                                                    style: TextStyle(
-                                                                      color:
-                                                                          _isCommentsEmptyPressed
-                                                                          ? Colors.white70
-                                                                          : Colors.white38,
-                                                                      fontSize:
-                                                                          11.sp,
+                                                                    child: Text(
+                                                                      'Chưa có bình luận',
+                                                                      style: TextStyle(
+                                                                        color:
+                                                                            _isCommentsEmptyPressed
+                                                                            ? Colors.white70
+                                                                            : Colors.white38,
+                                                                        fontSize:
+                                                                            11.sp,
+                                                                      ),
                                                                     ),
                                                                   ),
                                                                 ),
-                                                              ),
-                                                      ),
-                                                    ],
+                                                        ),
+                                                      ],
+                                                    ),
                                                   ),
                                                 ),
                                               ),
                                             ),
-                                          ),
-                                        ],
+                                          ],
+                                        ),
                                       ),
-                                    ),
-                                    const SizedBox(height: 10),
-                                    Expanded(
-                                      child:
-                                          widget.movie.episode_current == 'Full'
-                                          ? _buildEpisodeListForSingle()
-                                          : _buildEpisodeListForSeriesMovie(),
-                                    ),
-                                  ],
+                                      const SizedBox(height: 10),
+                                      Expanded(
+                                        child:
+                                            widget.movie.episode_current ==
+                                                'Full'
+                                            ? _buildEpisodeListForSingle()
+                                            : _buildEpisodeListForSeriesMovie(),
+                                      ),
+                                    ],
+                                  ),
                                 ),
                               ),
                             ),
-                          ),
-                        ],
-                      );
-                    },
+                          ],
+                        );
+                      },
+                    ),
                   ),
                 ),
               ),
@@ -4050,7 +4130,7 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
                   _videoHeight -
                   _thumbRadius -
                   _seekbarLift -
-                  (isExpanded ? 30 : 4),
+                  (isExpanded ? 30 : collapsedSeekbarOffset),
               left: (isExpanded ? 20 : 0),
               right: (isExpanded ? 20 : 0),
               child: Material(
@@ -4913,184 +4993,188 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
       return _buildLoadingControlBar(trackHeight);
     }
 
-    return ValueListenableBuilder<VideoPlayerValue>(
-      valueListenable: vp,
-      builder: (context, value, _) {
-        final durationMs = value.duration.inMilliseconds;
-        final positionMs = value.position.inMilliseconds;
+    return RepaintBoundary(
+      child: ListenableBuilder(
+        listenable: Listenable.merge([vp, _scrubProgress]),
+        builder: (context, _) {
+          final value = vp.value;
+          final scrubProgress = _scrubProgress.value;
+          final durationMs = value.duration.inMilliseconds;
+          final positionMs = value.position.inMilliseconds;
 
-        final safeDurationMs = durationMs <= 0 ? 1 : durationMs;
-        final safePositionMs = positionMs.clamp(0, safeDurationMs);
+          final safeDurationMs = durationMs <= 0 ? 1 : durationMs;
+          final safePositionMs = positionMs.clamp(0, safeDurationMs);
 
-        final progress = safePositionMs / safeDurationMs;
-        final sliderValue = _isScrubbing ? _scrubValue : progress;
+          final progress = safePositionMs / safeDurationMs;
+          final sliderValue = _isScrubbing ? scrubProgress : progress;
 
-        final showThumb = _isScrubbing;
-        final buffered = _bufferedFraction(value);
+          final showThumb = _isScrubbing;
+          final buffered = _bufferedFraction(value);
 
-        return Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (_controlsVisible)
-              Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  // vertical: 5,
-                ),
-                child: Row(
-                  children: [
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(20),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 5,
+          return Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (_controlsVisible)
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    // vertical: 5,
+                  ),
+                  child: Row(
+                    children: [
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(20),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 5,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.black.withValues(alpha: 0.2),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Row(
+                            spacing: 5,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                _formatDuration(value.position),
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              // const SizedBox(width: 6),
+                              const Text(
+                                '/',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              // const SizedBox(width: 6),
+                              Text(
+                                _formatDuration(value.duration),
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
+                      ),
+                      const Spacer(),
+                      Container(
+                        width: 34,
+                        height: 34,
                         decoration: BoxDecoration(
                           color: Colors.black.withValues(alpha: 0.2),
-                          borderRadius: BorderRadius.circular(20),
+                          shape: BoxShape.circle,
                         ),
-                        child: Row(
-                          spacing: 5,
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              _formatDuration(value.position),
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 11,
-                                fontWeight: FontWeight.bold,
-                              ),
+                        child: IconButton(
+                          padding: EdgeInsets.all(5),
+                          onPressed: _toggleFullscreen,
+                          icon: SvgPicture.asset(
+                            _isFullscreen
+                                ? 'assets/icons/fullscreen_exit.svg'
+                                : 'assets/icons/fullscreen.svg',
+                            width: 25,
+                            height: 25,
+                            colorFilter: const ColorFilter.mode(
+                              Colors.white,
+                              BlendMode.srcIn,
                             ),
-                            // const SizedBox(width: 6),
-                            const Text(
-                              '/',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 11,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            // const SizedBox(width: 6),
-                            Text(
-                              _formatDuration(value.duration),
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 11,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    const Spacer(),
-                    Container(
-                      width: 34,
-                      height: 34,
-                      decoration: BoxDecoration(
-                        color: Colors.black.withValues(alpha: 0.2),
-                        shape: BoxShape.circle,
-                      ),
-                      child: IconButton(
-                        padding: EdgeInsets.all(5),
-                        onPressed: _toggleFullscreen,
-                        icon: SvgPicture.asset(
-                          _isFullscreen
-                              ? 'assets/icons/fullscreen_exit.svg'
-                              : 'assets/icons/fullscreen.svg',
-                          width: 25,
-                          height: 25,
-                          colorFilter: const ColorFilter.mode(
-                            Colors.white,
-                            BlendMode.srcIn,
                           ),
                         ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
-            SliderTheme(
-              data: SliderThemeData(
-                padding: EdgeInsets.zero,
-                trackHeight: _isScrubbing
-                    ? 4
-                    : trackHeight ?? _seekbarVisualHeight,
-                trackShape: GradientBufferedSliderTrackShape(
-                  buffered: buffered,
-                  bufferedColor: Colors.white.withValues(alpha: 0.35),
-                  gradientColors: const [
-                    Color(0xFFC77DFF), // Tím
-                    Color(0xFFFF9E9E), // Hồng cam (ở giữa)
-                    Color(0xFFFFD275),
-                  ],
+              SliderTheme(
+                data: SliderThemeData(
+                  padding: EdgeInsets.zero,
+                  trackHeight: _isScrubbing
+                      ? 4
+                      : trackHeight ?? _seekbarVisualHeight,
+                  trackShape: GradientBufferedSliderTrackShape(
+                    buffered: buffered,
+                    bufferedColor: Colors.white.withValues(alpha: 0.35),
+                    gradientColors: const [
+                      Color(0xFFC77DFF), // Tím
+                      Color(0xFFFF9E9E), // Hồng cam (ở giữa)
+                      Color(0xFFFFD275),
+                    ],
+                  ),
+                  activeTrackColor: AppColor.secondColor,
+                  inactiveTrackColor: Colors.white.withValues(alpha: 0.15),
+                  thumbShape: showThumb
+                      ? const _LowPositionThumbShape(radius: 6, offsetY: 0)
+                      : const _InvisibleThumbShape(radius: 6),
+                  overlayShape: showThumb
+                      ? const _LowPositionOverlayShape(radius: 12, offsetY: 0)
+                      : const _InvisibleOverlayShape(radius: 14),
+                  thumbColor: Colors.white,
+                  overlayColor: AppColor.secondColor.withValues(alpha: 0.2),
+                  showValueIndicator: ShowValueIndicator.never,
                 ),
-                activeTrackColor: AppColor.secondColor,
-                inactiveTrackColor: Colors.white.withValues(alpha: 0.15),
-                thumbShape: showThumb
-                    ? const _LowPositionThumbShape(radius: 6, offsetY: 0)
-                    : const _InvisibleThumbShape(radius: 6),
-                overlayShape: showThumb
-                    ? const _LowPositionOverlayShape(radius: 12, offsetY: 0)
-                    : const _InvisibleOverlayShape(radius: 14),
-                thumbColor: Colors.white,
-                overlayColor: AppColor.secondColor.withValues(alpha: 0.2),
-                showValueIndicator: ShowValueIndicator.never,
-              ),
-              child: LayoutBuilder(
-                builder: (context, constraints) {
-                  final seekbarWidth = constraints.maxWidth;
-                  return GestureDetector(
-                    behavior: HitTestBehavior.opaque,
-                    onTapDown: (details) {
-                      _startSeekbarDrag(
-                        details.localPosition.dx,
-                        seekbarWidth,
-                        keepControlsVisible: false,
-                      );
-                    },
-                    onTapUp: (_) => unawaited(
-                      _finishSeekbarDrag(keepControlsVisible: false),
-                    ),
-                    onHorizontalDragStart: (details) {
-                      _startSeekbarDrag(
-                        details.localPosition.dx,
-                        seekbarWidth,
-                        keepControlsVisible: false,
-                      );
-                    },
-                    onHorizontalDragUpdate: (details) {
-                      _updateSeekbarDrag(
-                        details.localPosition.dx,
-                        seekbarWidth,
-                      );
-                    },
-                    onHorizontalDragEnd: (_) => unawaited(
-                      _finishSeekbarDrag(keepControlsVisible: false),
-                    ),
-                    onHorizontalDragCancel: () => unawaited(
-                      _finishSeekbarDrag(keepControlsVisible: false),
-                    ),
-                    child: SizedBox(
-                      height: 20, // chừa đủ cho thumb/overlay
-                      child: Align(
-                        alignment: Alignment.bottomCenter,
-                        child: IgnorePointer(
-                          child: Slider(
-                            value: sliderValue.clamp(0.0, 1.0).toDouble(),
-                            onChanged: (_) {},
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    final seekbarWidth = constraints.maxWidth;
+                    return GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      onTapUp: (details) {
+                        _startSeekbarDrag(
+                          details.localPosition.dx,
+                          seekbarWidth,
+                          keepControlsVisible: false,
+                        );
+                        unawaited(
+                          _finishSeekbarDrag(keepControlsVisible: false),
+                        );
+                      },
+                      onHorizontalDragStart: (details) {
+                        _startSeekbarDrag(
+                          details.localPosition.dx,
+                          seekbarWidth,
+                          keepControlsVisible: false,
+                        );
+                      },
+                      onHorizontalDragUpdate: (details) {
+                        _updateSeekbarDrag(
+                          details.localPosition.dx,
+                          seekbarWidth,
+                        );
+                      },
+                      onHorizontalDragEnd: (_) => unawaited(
+                        _finishSeekbarDrag(keepControlsVisible: false),
+                      ),
+                      onHorizontalDragCancel: () => unawaited(
+                        _finishSeekbarDrag(keepControlsVisible: false),
+                      ),
+                      child: SizedBox(
+                        height: 20, // chừa đủ cho thumb/overlay
+                        child: Align(
+                          alignment: Alignment.bottomCenter,
+                          child: IgnorePointer(
+                            child: Slider(
+                              value: sliderValue.clamp(0.0, 1.0).toDouble(),
+                              onChanged: (_) {},
+                            ),
                           ),
                         ),
                       ),
-                    ),
-                  );
-                },
+                    );
+                  },
+                ),
               ),
-            ),
-          ],
-        );
-      },
+            ],
+          );
+        },
+      ),
     );
   }
 
@@ -5185,97 +5269,85 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
 
     final vp = chewie.videoPlayerController;
 
-    return ValueListenableBuilder<VideoPlayerValue>(
-      valueListenable: vp,
-      builder: (context, value, _) {
-        final durationMs = value.duration.inMilliseconds;
-        final positionMs = value.position.inMilliseconds;
+    return RepaintBoundary(
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final width = constraints.maxWidth;
 
-        final safeDurationMs = durationMs <= 0 ? 1 : durationMs;
-        final safePositionMs = positionMs.clamp(0, safeDurationMs);
+          double? fractionFor(Offset localPosition) {
+            return _seekFractionFromLocal(localPosition.dx, width);
+          }
 
-        final progress = safePositionMs / safeDurationMs;
-        final sliderValue = _isScrubbing ? _scrubValue : progress;
+          void updatePointer(PointerEvent event) {
+            if (_activeSeekbarPointer != event.pointer) return;
+            final fraction = fractionFor(event.localPosition);
+            if (fraction == null) return;
+            _updateSeekbarDragAtFraction(fraction, seekDuringDrag: false);
+          }
 
-        final showThumb = _isScrubbing;
-        final buffered = _bufferedFraction(value);
+          void finishPointer(PointerEvent event, {required bool update}) {
+            if (_activeSeekbarPointer != event.pointer) return;
+            if (update) updatePointer(event);
+            _activeSeekbarPointer = null;
+            unawaited(_finishSeekbarDrag(keepControlsVisible: false));
+          }
 
-        return SliderTheme(
-          data: SliderThemeData(
-            padding: EdgeInsets.zero,
-            trackHeight: _isScrubbing ? 4 : _seekbarVisualHeight,
-            trackShape: GradientBufferedSliderTrackShape(
-              buffered: buffered,
-              bufferedColor: Colors.white.withValues(alpha: 0.35),
-              gradientColors: const [
-                Color(0xFFC77DFF), // Tím
-                Color(0xFFFF9E9E), // Hồng cam (ở giữa)
-                Color(0xFFFFD275),
-              ],
-            ),
-            activeTrackColor: _isScrubbing
-                ? AppColor.secondColor
-                : Colors.white,
-            inactiveTrackColor: Colors.white.withValues(alpha: 0.15),
-            thumbShape: showThumb
-                ? const _LowPositionThumbShape(radius: 6, offsetY: 0)
-                : const _InvisibleThumbShape(radius: 6),
-            overlayShape: showThumb
-                ? const _LowPositionOverlayShape(radius: 12, offsetY: 0)
-                : const _InvisibleOverlayShape(radius: 14),
-            thumbColor: Colors.white,
-            overlayColor: AppColor.secondColor.withValues(alpha: 0.2),
-            showValueIndicator: ShowValueIndicator.never,
-          ),
-          child: SizedBox(
-            height: 18,
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                final seekbarWidth = constraints.maxWidth;
-                return GestureDetector(
-                  behavior: HitTestBehavior.opaque,
-                  onTapDown: (details) {
-                    _startSeekbarDrag(
-                      details.localPosition.dx,
-                      seekbarWidth,
-                      keepControlsVisible: false,
-                    );
-                  },
-                  onTapUp: (_) =>
-                      unawaited(_finishSeekbarDrag(keepControlsVisible: false)),
-                  onHorizontalDragStart: (details) {
-                    _startSeekbarDrag(
-                      details.localPosition.dx,
-                      seekbarWidth,
-                      keepControlsVisible: false,
-                    );
-                  },
-                  onHorizontalDragUpdate: (details) {
-                    _updateSeekbarDrag(details.localPosition.dx, seekbarWidth);
-                  },
-                  onHorizontalDragEnd: (_) =>
-                      unawaited(_finishSeekbarDrag(keepControlsVisible: false)),
-                  onHorizontalDragCancel: () =>
-                      unawaited(_finishSeekbarDrag(keepControlsVisible: false)),
-                  child: SizedBox(
-                    height: lerpDouble(
-                      _thumbRadius * 2,
-                      _seekbarHitHeight,
-                      _expandT,
-                    )!, // tăng hit area khi expand
-                    child: IgnorePointer(
-                      child: Slider(
-                        value: sliderValue.clamp(0.0, 1.0).toDouble(),
-                        onChanged: (_) {},
-                      ),
-                    ),
-                  ),
+          void seekBy(double delta) {
+            final value = vp.value;
+            final durationMs = value.duration.inMilliseconds;
+            if (durationMs <= 0) return;
+            final fraction =
+                (value.position.inMilliseconds / durationMs + delta).clamp(
+                  0.0,
+                  1.0,
+                );
+            unawaited(_seekTo(fraction));
+          }
+
+          final value = vp.value;
+          final semanticValue =
+              '${_formatDuration(value.position)} / ${_formatDuration(value.duration)}';
+
+          return Semantics(
+            label: 'Thanh tiến trình video',
+            value: semanticValue,
+            slider: true,
+            onIncrease: () => seekBy(0.05),
+            onDecrease: () => seekBy(-0.05),
+            child: Listener(
+              behavior: HitTestBehavior.opaque,
+              onPointerDown: (event) {
+                if (_activeSeekbarPointer != null || !vp.value.isInitialized) {
+                  return;
+                }
+                final fraction = fractionFor(event.localPosition);
+                if (fraction == null) return;
+                _activeSeekbarPointer = event.pointer;
+                _startSeekbarDragAtFraction(
+                  fraction,
+                  keepControlsVisible: false,
+                  pausePlayback: false,
+                  seekDuringDrag: false,
                 );
               },
+              onPointerMove: updatePointer,
+              onPointerUp: (event) => finishPointer(event, update: true),
+              onPointerCancel: (event) => finishPointer(event, update: false),
+              child: CustomPaint(
+                painter: _PinnedSeekbarPainter(
+                  controller: vp,
+                  scrubProgress: _scrubProgress,
+                  isScrubbing: _isScrubbing,
+                ),
+                child: const SizedBox(
+                  width: double.infinity,
+                  height: _seekbarHitHeight,
+                ),
+              ),
             ),
-          ),
-        );
-      },
+          );
+        },
+      ),
     );
   }
 
@@ -5838,6 +5910,104 @@ class _ComposerAvatar extends StatelessWidget {
           ? null
           : const Icon(Icons.person_rounded, color: Colors.white54, size: 20),
     );
+  }
+}
+
+class _PinnedSeekbarPainter extends CustomPainter {
+  _PinnedSeekbarPainter({
+    required this.controller,
+    required this.scrubProgress,
+    required this.isScrubbing,
+  }) : super(repaint: isScrubbing ? scrubProgress : controller);
+
+  final VideoPlayerController controller;
+  final ValueListenable<double> scrubProgress;
+  final bool isScrubbing;
+
+  static const _gradientColors = [
+    Color(0xFFC77DFF),
+    Color(0xFFFF9E9E),
+    Color(0xFFFFD275),
+  ];
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (size.width <= 0 || size.height <= 0) return;
+
+    final value = controller.value;
+    final durationMs = value.duration.inMilliseconds;
+    final safeDurationMs = durationMs <= 0 ? 1 : durationMs;
+    final positionMs = value.position.inMilliseconds.clamp(0, safeDurationMs);
+    final playbackProgress = positionMs / safeDurationMs;
+    final progress = (isScrubbing ? scrubProgress.value : playbackProgress)
+        .clamp(0.0, 1.0);
+
+    final buffered = value.buffered.isEmpty
+        ? 0.0
+        : (value.buffered.last.end.inMilliseconds / safeDurationMs).clamp(
+            0.0,
+            1.0,
+          );
+
+    final trackHeight = isScrubbing ? 4.0 : 2.0;
+    final trackRect = Rect.fromLTWH(
+      0,
+      (size.height - trackHeight) / 2,
+      size.width,
+      trackHeight,
+    );
+    final trackRadius = Radius.circular(trackHeight / 2);
+
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(trackRect, trackRadius),
+      Paint()..color = Colors.white.withValues(alpha: 0.15),
+    );
+
+    if (buffered > 0) {
+      final bufferedRect = Rect.fromLTWH(
+        trackRect.left,
+        trackRect.top,
+        trackRect.width * buffered,
+        trackRect.height,
+      );
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(bufferedRect, trackRadius),
+        Paint()..color = Colors.white.withValues(alpha: 0.35),
+      );
+    }
+
+    if (progress > 0) {
+      final playedRect = Rect.fromLTWH(
+        trackRect.left,
+        trackRect.top,
+        trackRect.width * progress,
+        trackRect.height,
+      );
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(playedRect, trackRadius),
+        Paint()
+          ..shader = const LinearGradient(
+            colors: _gradientColors,
+          ).createShader(playedRect),
+      );
+    }
+
+    if (!isScrubbing) return;
+
+    final thumbCenter = Offset(size.width * progress, size.height / 2);
+    canvas.drawCircle(
+      thumbCenter,
+      12,
+      Paint()..color = AppColor.secondColor.withValues(alpha: 0.2),
+    );
+    canvas.drawCircle(thumbCenter, 6, Paint()..color = Colors.white);
+  }
+
+  @override
+  bool shouldRepaint(covariant _PinnedSeekbarPainter oldDelegate) {
+    return oldDelegate.controller != controller ||
+        oldDelegate.scrubProgress != scrubProgress ||
+        oldDelegate.isScrubbing != isScrubbing;
   }
 }
 

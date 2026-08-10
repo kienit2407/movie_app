@@ -25,6 +25,7 @@ class CountryBottomSheet extends StatefulWidget {
         curve: Curves.easeInOut,
         duration: Duration(milliseconds: 200),
       ),
+      useRootNavigator: true,
       context: context,
       builder: (context) => CountryBottomSheet(),
     );

@@ -28,6 +28,7 @@ class ComprehensiveFilterBottomSheet extends StatefulWidget {
         duration: Duration(milliseconds: 300),
       ),
       isScrollControlled: true,
+      useRootNavigator: true,
       context: context,
       constraints: BoxConstraints(
         maxHeight: MediaQuery.of(context).size.height * .8,
