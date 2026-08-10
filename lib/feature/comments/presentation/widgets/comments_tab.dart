@@ -32,7 +32,9 @@ class _CommentsTabState extends State<CommentsTab> with WidgetsBindingObserver {
   // Đầu nhánh 3 phải có ít nhất 3 bình luận phía dưới
   // mới hiện nút mở/thu gọn.
   static const int _collapseThreshold = 3;
-  final TextEditingController _composerController = TextEditingController();
+  final _EmojiComposerController _composerController = _EmojiComposerController(
+    emojiFontSize: 19,
+  );
   final FocusNode _composerFocus = FocusNode();
   final ScrollController _listController = ScrollController();
   final OverlayPortalController _composerOverlayController =
@@ -607,10 +609,6 @@ class _CommentsTabState extends State<CommentsTab> with WidgetsBindingObserver {
 
                 ancestorId = ancestor.replyToCommentId;
               }
-              // Chỉ nhánh 2 có từ 3 bình luận bên dưới mới hiện nút xổ.
-              final canShowBranchSummary =
-                  actualDepth == 1 &&
-                  totalDescendantCount >= _collapseThreshold;
               return _ThreadReplyBranch(
                 key: ValueKey<String>('thread-reply-${reply.id}'),
 
@@ -812,9 +810,11 @@ class _CommentsTabState extends State<CommentsTab> with WidgetsBindingObserver {
                             hintStyle: const TextStyle(color: Colors.white38),
                             filled: true,
                             fillColor: Colors.white.withValues(alpha: 0.07),
+                            isDense:
+                                true, // isDense: true → bỏ bớt khoảng trống mặc định của InputDecoration.
                             contentPadding: const EdgeInsets.symmetric(
                               horizontal: 16,
-                              vertical: 12,
+                              vertical: 10,
                             ),
                             // Bình thường, chưa focus
                             enabledBorder: OutlineInputBorder(
@@ -831,8 +831,6 @@ class _CommentsTabState extends State<CommentsTab> with WidgetsBindingObserver {
                                 width: 1.5,
                               ),
                             ),
-                            
-                          
                           ),
                         ),
                         if (!_composerFocused)
@@ -2462,4 +2460,82 @@ String _relativeTime(DateTime dateTime) {
     return '${(difference.inDays / 30).floor()} tháng trước';
   }
   return '${(difference.inDays / 365).floor()} năm trước';
+}
+class _EmojiComposerController extends TextEditingController {
+  _EmojiComposerController({
+    this.emojiFontSize = 19,
+  });
+
+  final double emojiFontSize;
+
+  @override
+  TextSpan buildTextSpan({
+    required BuildContext context,
+    TextStyle? style,
+    required bool withComposing,
+  }) {
+    final baseStyle = style ?? const TextStyle();
+    final currentText = text;
+    final composing = value.composing;
+
+    final hasValidComposing =
+        withComposing &&
+        composing.isValid &&
+        !composing.isCollapsed &&
+        composing.start >= 0 &&
+        composing.end <= currentText.length;
+
+    // Không có composing region:
+    // render toàn bộ bằng đúng helper emoji mà list comment đang dùng.
+    if (!hasValidComposing) {
+      return TextSpan(
+        style: baseStyle,
+        children: _commentBodySpans(
+          currentText,
+          emojiFontSize: emojiFontSize,
+        ),
+      );
+    }
+
+    // Giữ composing region để bàn phím,
+    // đặc biệt bàn phím tiếng Việt, hoạt động bình thường.
+    final before = currentText.substring(
+      0,
+      composing.start,
+    );
+
+    final composingText = currentText.substring(
+      composing.start,
+      composing.end,
+    );
+
+    final after = currentText.substring(
+      composing.end,
+    );
+
+    return TextSpan(
+      style: baseStyle,
+      children: [
+        ..._commentBodySpans(
+          before,
+          emojiFontSize: emojiFontSize,
+        ),
+
+        TextSpan(
+          style: baseStyle.copyWith(
+            decoration: TextDecoration.underline,
+          ),
+          children: _commentBodySpans(
+            composingText,
+            emojiFontSize: emojiFontSize,
+          ),
+        ),
+
+        ..._commentBodySpans(
+          after,
+          emojiFontSize: emojiFontSize,
+        ),
+      ],
+    );
+  }
 }

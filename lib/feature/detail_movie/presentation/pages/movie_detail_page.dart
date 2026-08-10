@@ -1014,6 +1014,7 @@ class _MovieDetailPageContent extends StatefulWidget {
 class _MovieDetailPageContentState extends State<_MovieDetailPageContent>
     with SingleTickerProviderStateMixin {
   YoutubePlayerController? _youtubeController;
+  bool _moviePlayerIsActive = false;
   late final TabController _tabController;
   bool _isPlayerError = false;
   bool _isPlayerReady = false;
@@ -1114,6 +1115,17 @@ class _MovieDetailPageContentState extends State<_MovieDetailPageContent>
         debugPrint('=== State is not DetailMovieSuccessed ===');
       }
     });
+  }
+
+  void _pauseTrailerForMoviePlayer() {
+    _moviePlayerIsActive = true;
+
+    final controller = _youtubeController;
+    if (controller == null) return;
+
+    try {
+      controller.pause();
+    } catch (_) {}
   }
 
   Future<void> _scrollToTabBarPinned() async {
@@ -1244,7 +1256,6 @@ class _MovieDetailPageContentState extends State<_MovieDetailPageContent>
 
   @override
   void dispose() {
-    _youtubeController?.dispose();
     _scrollController.dispose();
     _tabController.dispose();
     super.dispose();
@@ -1267,37 +1278,66 @@ class _MovieDetailPageContentState extends State<_MovieDetailPageContent>
 
   void _initializeYouTubePlayer(String trailerUrl) {
     if (_youtubeController != null) return;
+
     final videoId = _extractYouTubeId(trailerUrl);
-    if (videoId != null) {
-      Future.delayed(const Duration(milliseconds: 600), () {
-        if (!mounted) return;
-        _youtubeController =
-            YoutubePlayerController(
-              initialVideoId: videoId,
-              flags: YoutubePlayerFlags(
-                startAt: widget.startAt?.inSeconds ?? 0,
-                autoPlay: true,
-                mute: false,
-                enableCaption: false,
-                showLiveFullscreenButton: false,
-                forceHD: false,
-                disableDragSeek: true,
-                loop: true,
-              ),
-            )..addListener(() {
-              if (mounted && _youtubeController != null) {
-                if (_youtubeController!.value.errorCode != 0) {
-                  if (!_isPlayerError) {
-                    setState(() => _isPlayerError = true);
-                  }
-                }
-              }
-            });
-        if (mounted) setState(() {});
-      });
-    } else {
-      setState(() => _isPlayerError = true);
+
+    if (videoId == null) {
+      if (mounted) {
+        setState(() {
+          _isPlayerError = true;
+        });
+      }
+      return;
     }
+
+    Future.delayed(const Duration(milliseconds: 600), () {
+      if (!mounted) return;
+
+      _youtubeController =
+          YoutubePlayerController(
+            initialVideoId: videoId,
+            flags: YoutubePlayerFlags(
+              startAt: widget.startAt?.inSeconds ?? 0,
+
+              // Quan trọng:
+              // player phim đã mở thì trailer
+              // KHÔNG được autoplay.
+              autoPlay: !_moviePlayerIsActive,
+
+              mute: false,
+              enableCaption: false,
+              showLiveFullscreenButton: false,
+              forceHD: false,
+              disableDragSeek: true,
+              loop: true,
+            ),
+          )..addListener(() {
+            if (!mounted || _youtubeController == null) {
+              return;
+            }
+
+            if (_youtubeController!.value.errorCode != 0) {
+              if (!_isPlayerError) {
+                setState(() {
+                  _isPlayerError = true;
+                });
+              }
+            }
+          });
+
+      // Bảo hiểm thêm:
+      // trong thời gian tạo controller,
+      // player phim có thể vừa được mở.
+      if (_moviePlayerIsActive) {
+        try {
+          _youtubeController?.pause();
+        } catch (_) {}
+      }
+
+      if (mounted) {
+        setState(() {});
+      }
+    });
   }
 
   void _toggleMute() {
@@ -2106,11 +2146,22 @@ class _MovieDetailPageContentState extends State<_MovieDetailPageContent>
       String episodeLink,
     ) {
       if (episodes.isEmpty) return;
+
+      if (serverIndex < 0 || serverIndex >= episodes.length) {
+        return;
+      }
+
+      final link = episodeLink.trim();
+      if (link.isEmpty) return;
+
+      // Dừng trailer TRƯỚC khi player thật mở.
+      _pauseTrailerForMoviePlayer();
+
       context.openMoviePlayer(
         MoviePlayerArgs(
           movie.slug,
           movie.poster_url,
-          episodeLink,
+          link,
           episodeIndex,
           episodes[serverIndex].server_name,
           movie.name,
