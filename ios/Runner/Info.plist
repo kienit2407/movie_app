@@ -65,6 +65,8 @@
 		<string>This app uses tracking to personalize your movie recommendations.</string>
 		<key>NSPhotoLibraryUsageDescription</key>
 		<string>Liquid Phim cần quyền truy cập thư viện ảnh để bạn chọn ảnh đại diện.</string>
+		<key>NSCameraUsageDescription</key>
+		<string>Liquid Phim cần quyền sử dụng camera để bạn chụp ảnh đại diện.</string>
 		<key>UIApplicationSupportsIndirectInputEvents</key>
 		<true/>
 		<key>UIBackgroundModes</key>

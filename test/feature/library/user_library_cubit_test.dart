@@ -56,12 +56,63 @@ void main() {
     expect(cubit.state.errorMessage, isNotNull);
     await cubit.close();
   });
+
+  test('removes several history items in one cubit action', () async {
+    final repository = _FakeLibraryRepository(user: _user)
+      ..history.addAll([_history(1), _history(2), _history(3)]);
+    final cubit = UserLibraryCubit(
+      repository: repository,
+      client: SupabaseClient('https://example.supabase.co', 'anon-key'),
+    );
+    await cubit.refresh();
+
+    await cubit.removeHistoryItems({'movie-1', 'movie-3'});
+
+    expect(cubit.state.history.map((item) => item.slug), ['movie-2']);
+    expect(repository.history.map((item) => item.slug), ['movie-2']);
+    await cubit.close();
+  });
+
+  test('publishes the exact user returned after a profile update', () async {
+    final repository = _FakeLibraryRepository(
+      user: _user,
+      profileUpdateResult: _updatedUser,
+    );
+    final cubit = UserLibraryCubit(
+      repository: repository,
+      client: SupabaseClient('https://example.supabase.co', 'anon-key'),
+    );
+
+    await cubit.updateProfile(
+      displayName: 'Liquid User mới',
+      avatarUrl: 'https://example.com/new-avatar.jpg',
+    );
+
+    expect(cubit.state.user, same(_updatedUser));
+    expect(
+      cubit.state.user?.userMetadata?['avatar_url'],
+      'https://example.com/new-avatar.jpg',
+    );
+    await cubit.close();
+  });
 }
 
 final _user = User(
   id: 'user-1',
   appMetadata: const {},
   userMetadata: const {'full_name': 'Liquid User'},
+  aud: 'authenticated',
+  email: 'user@example.com',
+  createdAt: '2026-08-02T00:00:00Z',
+);
+
+final _updatedUser = User(
+  id: 'user-1',
+  appMetadata: const {},
+  userMetadata: const {
+    'full_name': 'Liquid User mới',
+    'avatar_url': 'https://example.com/new-avatar.jpg',
+  },
   aud: 'authenticated',
   email: 'user@example.com',
   createdAt: '2026-08-02T00:00:00Z',
@@ -117,10 +168,15 @@ final _movie = MovieModel(
 );
 
 class _FakeLibraryRepository implements UserLibraryRepository {
-  _FakeLibraryRepository({this.user, this.failFavorite = false});
+  _FakeLibraryRepository({
+    this.user,
+    this.failFavorite = false,
+    this.profileUpdateResult,
+  });
 
   User? user;
   final bool failFavorite;
+  final User? profileUpdateResult;
   final List<UserFavorite> favorites = [];
   final List<UserWatchHistory> history = [];
   final List<UserWatchHistory> writtenHistory = [];
@@ -146,15 +202,27 @@ class _FakeLibraryRepository implements UserLibraryRepository {
   }
 
   @override
+  Future<void> removeFavorites(Iterable<String> slugs) async {
+    final targets = slugs.toSet();
+    favorites.removeWhere((item) => targets.contains(item.slug));
+  }
+
+  @override
   Future<void> removeWatchHistory(String slug) async {
     history.removeWhere((item) => item.slug == slug);
   }
 
   @override
-  Future<void> updateProfile({
+  Future<void> removeWatchHistoryItems(Iterable<String> slugs) async {
+    final targets = slugs.toSet();
+    history.removeWhere((item) => targets.contains(item.slug));
+  }
+
+  @override
+  Future<User> updateProfile({
     required String displayName,
     String? avatarUrl,
-  }) async {}
+  }) async => profileUpdateResult ?? user!;
 
   @override
   Future<String> uploadAvatar(

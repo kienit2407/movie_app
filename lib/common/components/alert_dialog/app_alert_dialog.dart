@@ -1,27 +1,31 @@
 import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
-import 'package:movie_app/common/helpers/navigation/app_navigation.dart';
 import 'package:movie_app/core/config/themes/app_color.dart';
 
-class AppAlertDialog extends StatefulWidget {
-  const AppAlertDialog({super.key, this.content, this.icon, this.title, this.buttonTitle, this.onPressed});
+class AppAlertDialog extends StatelessWidget {
+  const AppAlertDialog({
+    super.key,
+    this.content,
+    this.icon,
+    this.title,
+    this.buttonTitle,
+    this.onPressed,
+    this.cancelButtonTitle,
+    this.onCancel,
+    this.isDestructive = false,
+  });
+
   final String? title;
   final String? content;
   final String? buttonTitle;
   final Icon? icon;
   final VoidCallback? onPressed;
+  final String? cancelButtonTitle;
+  final VoidCallback? onCancel;
+  final bool isDestructive;
 
-  @override
-  State<AppAlertDialog> createState() => _AppAlertDialogState();
-}
-
-class _AppAlertDialogState extends State<AppAlertDialog> {
-  @override
-  void initState() {
-    // closeDialog();
-    super.initState();
-  }
   @override
   Widget build(BuildContext context) {
     return Column(
@@ -40,35 +44,33 @@ class _AppAlertDialogState extends State<AppAlertDialog> {
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                     colors: [
-                      Colors.white60.withOpacity(.3),
-                      Colors.white10.withOpacity(.1),
+                      Colors.white60.withValues(alpha: .3),
+                      Colors.white10.withValues(alpha: .1),
                     ],
                   ),
                   borderRadius: BorderRadius.circular(15),
                   border: Border.all(color: Colors.white60),
                 ),
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    vertical: 20,
-                  ),
+                  padding: const EdgeInsets.symmetric(vertical: 20),
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     // mainAxisSize: MainAxisSize.min,
                     children: [
                       Container(
-                        padding: EdgeInsets.all(30),
+                        padding: const EdgeInsets.all(24),
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
                           gradient: LinearGradient(
                             colors: [Color(0xffE91C2D), Color(0xffF83947)],
                           ),
                         ),
-                        child: widget.icon ?? Icon(Iconsax.danger, size: 30),
+                        child: icon ?? const Icon(Iconsax.danger, size: 30),
                       ),
                       const SizedBox(height: 15),
                       Text(
-                        widget.title ?? 'Chúc mừng!',
-                        style: TextStyle(
+                        title ?? 'Chúc mừng!',
+                        style: const TextStyle(
                           color: AppColor.secondColor,
                           fontWeight: FontWeight.w600,
                           fontSize: 13,
@@ -76,9 +78,9 @@ class _AppAlertDialogState extends State<AppAlertDialog> {
                       ),
                       const SizedBox(height: 10),
                       Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 20,),
+                        padding: const EdgeInsets.symmetric(horizontal: 20),
                         child: Text(
-                          '${widget.content}',
+                          content ?? '',
                           textAlign: TextAlign.center,
                           style: TextStyle(
                             color: Colors.white,
@@ -88,22 +90,44 @@ class _AppAlertDialogState extends State<AppAlertDialog> {
                         ),
                       ),
                       const SizedBox(height: 20),
-                      SizedBox(
-                        width: double.maxFinite,
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 20),
-                          child: ElevatedButton(
-                            onPressed: widget.onPressed ?? () {
-                              AppNavigator.pop(context);
-                            },
-                            child: Text(
-                              widget.buttonTitle ?? 'Đồng ý',
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w500,
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 20),
+                        child: Row(
+                          children: [
+                            if (cancelButtonTitle != null) ...[
+                              Expanded(
+                                child: OutlinedButton(
+                                  onPressed:
+                                      onCancel ??
+                                      () => Navigator.pop(context, false),
+                                  child: Text(cancelButtonTitle!, ),
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                            ],
+                            Expanded(
+                              child: ElevatedButton(
+                                style: isDestructive
+                                    ? ElevatedButton.styleFrom(
+                                        backgroundColor: const Color(
+                                          0xffE91C2D,
+                                        ),
+                                        foregroundColor: Colors.white,
+                                      )
+                                    : null,
+                                onPressed:
+                                    onPressed ??
+                                    () => Navigator.pop(context, true),
+                                child: Text(
+                                  buttonTitle ?? 'Đồng ý',
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
                               ),
                             ),
-                          ),
+                          ],
                         ),
                       ),
                     ],
@@ -116,5 +140,4 @@ class _AppAlertDialogState extends State<AppAlertDialog> {
       ],
     );
   }
-
 }

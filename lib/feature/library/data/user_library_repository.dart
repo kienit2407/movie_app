@@ -187,10 +187,12 @@ abstract interface class UserLibraryRepository {
   Future<List<UserWatchHistory>> getWatchHistory();
   Future<void> addFavorite(UserFavorite favorite);
   Future<void> removeFavorite(String slug);
+  Future<void> removeFavorites(Iterable<String> slugs);
   Future<void> upsertWatchHistory(UserWatchHistory history);
   Future<void> removeWatchHistory(String slug);
+  Future<void> removeWatchHistoryItems(Iterable<String> slugs);
   Future<String> uploadAvatar(Uint8List bytes, {required String extension});
-  Future<void> updateProfile({required String displayName, String? avatarUrl});
+  Future<User> updateProfile({required String displayName, String? avatarUrl});
 }
 
 class SupabaseUserLibraryRepository implements UserLibraryRepository {
@@ -242,6 +244,17 @@ class SupabaseUserLibraryRepository implements UserLibraryRepository {
       .eq('movie_slug', slug);
 
   @override
+  Future<void> removeFavorites(Iterable<String> slugs) async {
+    final values = slugs.toSet().toList(growable: false);
+    if (values.isEmpty) return;
+    await _client
+        .from('user_favorites')
+        .delete()
+        .eq('user_id', _userId)
+        .inFilter('movie_slug', values);
+  }
+
+  @override
   Future<void> upsertWatchHistory(UserWatchHistory history) => _client
       .from('user_watch_history')
       .upsert(history.toUpsert(_userId), onConflict: 'user_id,movie_slug');
@@ -252,6 +265,17 @@ class SupabaseUserLibraryRepository implements UserLibraryRepository {
       .delete()
       .eq('user_id', _userId)
       .eq('movie_slug', slug);
+
+  @override
+  Future<void> removeWatchHistoryItems(Iterable<String> slugs) async {
+    final values = slugs.toSet().toList(growable: false);
+    if (values.isEmpty) return;
+    await _client
+        .from('user_watch_history')
+        .delete()
+        .eq('user_id', _userId)
+        .inFilter('movie_slug', values);
+  }
 
   @override
   Future<String> uploadAvatar(
@@ -284,7 +308,7 @@ class SupabaseUserLibraryRepository implements UserLibraryRepository {
   }
 
   @override
-  Future<void> updateProfile({
+  Future<User> updateProfile({
     required String displayName,
     String? avatarUrl,
   }) async {
@@ -302,7 +326,13 @@ class SupabaseUserLibraryRepository implements UserLibraryRepository {
       currentMetadata['avatar_url'] = avatarUrl.trim();
       currentMetadata['picture'] = avatarUrl.trim();
     }
-    await _client.auth.updateUser(UserAttributes(data: currentMetadata));
+    final response = await _client.auth.updateUser(
+      UserAttributes(data: currentMetadata),
+    );
+    final updatedUser = response.user;
+    if (updatedUser == null) {
+      throw const AuthException('Không thể đọc hồ sơ vừa cập nhật.');
+    }
     final nextAvatarPath = _avatarObjectPath(avatarUrl);
     if (previousAvatarPath != null &&
         nextAvatarPath != null &&
@@ -313,6 +343,7 @@ class SupabaseUserLibraryRepository implements UserLibraryRepository {
         // Profile was already updated; stale avatar cleanup can be retried later.
       }
     }
+    return updatedUser;
   }
 
   String? _avatarObjectPath(String? url) {

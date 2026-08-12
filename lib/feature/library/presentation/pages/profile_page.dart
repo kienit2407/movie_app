@@ -1,12 +1,17 @@
 import 'package:fast_cached_network_image/fast_cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
+import 'package:iconsax_flutter/iconsax_flutter.dart';
 import 'package:movie_app/core/config/routes/app_router.dart';
 import 'package:movie_app/core/config/themes/app_color.dart';
 import 'package:movie_app/core/config/di/service_locator.dart';
 import 'package:movie_app/core/config/utils/movie_player_args.dart';
+import 'package:movie_app/core/config/utils/animated_dialog.dart';
 import 'package:movie_app/core/player_overlay_launcher.dart';
+import 'package:movie_app/common/components/alert_dialog/app_alert_dialog.dart';
 import 'package:movie_app/feature/detail_movie/domain/usecase/get_detail_movie_usecase.dart';
 import 'package:movie_app/feature/library/data/user_library_repository.dart';
 import 'package:movie_app/feature/library/presentation/cubit/user_library_cubit.dart';
@@ -25,6 +30,9 @@ class ProfilePage extends StatefulWidget {
 class _ProfilePageState extends State<ProfilePage>
     with AutomaticKeepAliveClientMixin {
   final ScrollController _scrollController = ScrollController();
+  final Set<String> _selectedHistorySlugs = <String>{};
+
+  bool get _isSelectingHistory => _selectedHistorySlugs.isNotEmpty;
 
   @override
   bool get wantKeepAlive => true;
@@ -36,10 +44,14 @@ class _ProfilePageState extends State<ProfilePage>
   }
 
   void _onHubTabReselected() {
-    if (HubTabReselectNotifier.instance.index != 3 ||
-        !_scrollController.hasClients) {
+    if (HubTabReselectNotifier.instance.index != 3) {
       return;
     }
+    if (_isSelectingHistory) {
+      setState(_selectedHistorySlugs.clear);
+      return;
+    }
+    if (!_scrollController.hasClients) return;
     _scrollController.animateTo(
       0,
       duration: MediaQuery.disableAnimationsOf(context)
@@ -57,26 +69,60 @@ class _ProfilePageState extends State<ProfilePage>
   }
 
   Future<void> _signOut() async {
-    final confirmed = await showDialog<bool>(
+    final confirmed = await showAnimatedDialog<bool>(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('Đăng xuất?'),
-        content: const Text('Bạn có chắc muốn đăng xuất khỏi tài khoản này?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext, false),
-            child: const Text('Hủy'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(dialogContext, true),
-            child: const Text('Đăng xuất'),
-          ),
-        ],
+      dialog: const AppAlertDialog(
+        title: 'Đăng xuất?',
+        content: 'Bạn có chắc muốn đăng xuất khỏi tài khoản này?',
+        buttonTitle: 'Đăng xuất',
+        cancelButtonTitle: 'Hủy',
+        isDestructive: true,
       ),
     );
     if (confirmed != true || !mounted) return;
     await Supabase.instance.client.auth.signOut();
     if (mounted) context.go(AppRoutes.home);
+  }
+
+  void _toggleHistorySelection(String slug) {
+    setState(() {
+      if (!_selectedHistorySlugs.add(slug)) {
+        _selectedHistorySlugs.remove(slug);
+      }
+    });
+  }
+
+  Future<bool> _confirmHistoryRemoval(int count) async {
+    final many = count > 1;
+    return await showAnimatedDialog<bool>(
+          context: context,
+          dialog: AppAlertDialog(
+            title: many ? 'Xóa $count phim đã chọn?' : 'Xóa lịch sử phim này?',
+            content: many
+                ? 'Bạn có đồng ý xóa $count phim khỏi lịch sử xem không?'
+                : 'Bạn có đồng ý xóa phim này khỏi lịch sử xem không?',
+            buttonTitle: 'Xóa',
+            cancelButtonTitle: 'Hủy',
+            isDestructive: true,
+          ),
+        ) ??
+        false;
+  }
+
+  Future<void> _removeHistory(String slug) async {
+    if (!await _confirmHistoryRemoval(1) || !mounted) return;
+    await context.read<UserLibraryCubit>().removeHistory(slug);
+  }
+
+  Future<void> _removeSelectedHistory() async {
+    final selected = Set<String>.from(_selectedHistorySlugs);
+    if (selected.isEmpty ||
+        !await _confirmHistoryRemoval(selected.length) ||
+        !mounted) {
+      return;
+    }
+    setState(_selectedHistorySlugs.clear);
+    await context.read<UserLibraryCubit>().removeHistoryItems(selected);
   }
 
   Future<void> _continueWatching(UserWatchHistory history) async {
@@ -141,118 +187,189 @@ class _ProfilePageState extends State<ProfilePage>
   @override
   Widget build(BuildContext context) {
     super.build(context);
-    return Scaffold(
-      backgroundColor: AppColor.bgApp,
-      body: SafeArea(
-        bottom: false,
-        child: BlocBuilder<UserLibraryCubit, UserLibraryState>(
-          builder: (context, state) {
-            final user = state.user;
-            if (user == null) {
-              return AuthRequiredView(
-                title: 'Hồ sơ của bạn',
-                description:
-                    'Đăng nhập để chỉnh sửa hồ sơ và đồng bộ lịch sử xem.',
-                onSignedIn: () => context.read<UserLibraryCubit>().refresh(),
-              );
-            }
-            final metadata = user.userMetadata ?? const <String, dynamic>{};
-            final displayName = _firstNonEmpty([
-              metadata['full_name'],
-              metadata['name'],
-              metadata['user_name'],
-              user.email?.split('@').first,
-            ], fallback: 'Người dùng');
-            final avatarUrl = _firstNonEmpty([
-              metadata['avatar_url'],
-              metadata['picture'],
-            ]);
+    return PopScope(
+      canPop: !_isSelectingHistory,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop && _isSelectingHistory) {
+          setState(_selectedHistorySlugs.clear);
+        }
+      },
+      child: Stack(
+        children: [
+          Positioned.fill(
+            child: IgnorePointer(
+              child: Container(
+                decoration: BoxDecoration(
+                  gradient: RadialGradient(
+                    colors: [
+                      AppColor.firstColor.withValues(alpha: .4),
+                      AppColor.firstColor.withValues(alpha: .02),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+          Scaffold(
+            backgroundColor: Colors.transparent,
+            body: SafeArea(
+              bottom: false,
+              child: BlocBuilder<UserLibraryCubit, UserLibraryState>(
+                builder: (context, state) {
+                  final user = state.user;
+                  if (user == null) {
+                    return AuthRequiredView(
+                      title: 'Hồ sơ của bạn',
+                      description:
+                          'Đăng nhập để chỉnh sửa hồ sơ và đồng bộ lịch sử xem.',
+                      onSignedIn: () =>
+                          context.read<UserLibraryCubit>().refresh(),
+                    );
+                  }
+                  final metadata =
+                      user.userMetadata ?? const <String, dynamic>{};
+                  final displayName = _firstNonEmpty([
+                    metadata['full_name'],
+                    metadata['name'],
+                    metadata['user_name'],
+                    user.email?.split('@').first,
+                  ], fallback: 'Người dùng');
+                  final avatarUrl = _firstNonEmpty([
+                    metadata['avatar_url'],
+                    metadata['picture'],
+                  ]);
 
-            return RefreshIndicator.adaptive(
-              onRefresh: context.read<UserLibraryCubit>().refresh,
-              child: CustomScrollView(
-                key: const PageStorageKey('profile-scroll'),
-                controller: _scrollController,
-                slivers: [
-                  SliverToBoxAdapter(
-                    child: _ProfileHeader(
-                      displayName: displayName,
-                      email: user.email ?? '',
-                      avatarUrl: avatarUrl,
-                      onEdit: () => context.push(AppRoutes.editProfile),
-                      onSignOut: _signOut,
-                    ),
-                  ),
-                  SliverPadding(
-                    padding: const EdgeInsets.fromLTRB(16, 20, 16, 10),
-                    sliver: SliverToBoxAdapter(
-                      child: const Text(
-                        'Lịch sử xem',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 20,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                    ),
-                  ),
-                  if (state.isLoading && state.history.isEmpty)
-                    const SliverFillRemaining(
-                      hasScrollBody: false,
-                      child: Center(
-                        child: CircularProgressIndicator.adaptive(),
-                      ),
-                    )
-                  else if (state.history.isEmpty)
-                    SliverFillRemaining(
-                      hasScrollBody: false,
-                      child: Center(
-                        child: Text(
-                          'Chưa có lịch sử xem',
-                          style: TextStyle(
-                            color: Colors.white.withValues(alpha: .55),
+                  return RefreshIndicator.adaptive(
+                    onRefresh: context.read<UserLibraryCubit>().refresh,
+                    child: CustomScrollView(
+                      key: const PageStorageKey('profile-scroll'),
+                      controller: _scrollController,
+                      slivers: [
+                        SliverToBoxAdapter(
+                          child: _ProfileHeader(
+                            displayName: displayName,
+                            email: user.email ?? '',
+                            avatarUrl: avatarUrl,
+                            onEdit: () => context.push(AppRoutes.editProfile),
+                            onSignOut: _signOut,
                           ),
                         ),
-                      ),
-                    )
-                  else
-                    SliverPadding(
-                      padding: const EdgeInsets.fromLTRB(12, 6, 12, 120),
-                      sliver: SliverGrid(
-                        gridDelegate:
-                            const SliverGridDelegateWithMaxCrossAxisExtent(
-                              maxCrossAxisExtent: 150,
-                              mainAxisSpacing: 18,
-                              crossAxisSpacing: 10,
-                              childAspectRatio: .55,
+                        SliverPadding(
+                          padding: const EdgeInsets.fromLTRB(16, 20, 16, 10),
+                          sliver: SliverToBoxAdapter(
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    _isSelectingHistory
+                                        ? '${_selectedHistorySlugs.length} đã chọn'
+                                        : 'Lịch sử xem',
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 20,
+                                      fontWeight: FontWeight.w800,
+                                    ),
+                                  ),
+                                ),
+                                if (_isSelectingHistory) ...[
+                                  IconButton(
+                                    tooltip: 'Hủy chọn',
+                                    onPressed: () =>
+                                        setState(_selectedHistorySlugs.clear),
+                                    icon: const Icon(Icons.close_rounded),
+                                  ),
+                                  IconButton(
+                                    tooltip: 'Xóa phim đã chọn',
+                                    onPressed: _removeSelectedHistory,
+                                    icon: Icon(
+                                      Iconsax.trash_copy,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ],
+                              ],
                             ),
-                        delegate: SliverChildBuilderDelegate((context, index) {
-                          final movie = state.history[index];
-                          return LibraryMovieCard(
-                            key: ValueKey(movie.slug),
-                            slug: movie.slug,
-                            name: movie.name,
-                            originName: movie.originName,
-                            posterUrl: movie.posterUrl,
-                            episodeCurrent: movie.episodeCurrent,
-                            quality: movie.quality,
-                            lang: movie.lang,
-                            year: movie.year,
-                            rating: movie.rating,
-                            progress: movie.progress,
-                            onTap: () => _continueWatching(movie),
-                            onRemove: () => context
-                                .read<UserLibraryCubit>()
-                                .removeHistory(movie.slug),
-                          );
-                        }, childCount: state.history.length),
-                      ),
+                          ),
+                        ),
+                        if (state.isLoading && state.history.isEmpty)
+                          const SliverFillRemaining(
+                            hasScrollBody: false,
+                            child: Center(
+                              child: CircularProgressIndicator.adaptive(),
+                            ),
+                          )
+                        else if (state.history.isEmpty)
+                          SliverFillRemaining(
+                            hasScrollBody: false,
+                            child: Center(
+                              child: Text(
+                                'Chưa có lịch sử xem',
+                                style: TextStyle(
+                                  color: Colors.white.withValues(alpha: .55),
+                                ),
+                              ),
+                            ),
+                          )
+                        else
+                          SliverPadding(
+                            padding: const EdgeInsets.fromLTRB(12, 6, 12, 120),
+                            sliver: SliverGrid(
+                              gridDelegate:
+                                  const SliverGridDelegateWithMaxCrossAxisExtent(
+                                    maxCrossAxisExtent: 150,
+                                    mainAxisSpacing: 18,
+                                    crossAxisSpacing: 10,
+                                    childAspectRatio: .55,
+                                  ),
+                              delegate: SliverChildBuilderDelegate((
+                                context,
+                                index,
+                              ) {
+                                final movie = state.history[index];
+                                final previousDate = index == 0
+                                    ? null
+                                    : state.history[index - 1].watchedAt;
+                                return LibraryMovieCard(
+                                  key: ValueKey(movie.slug),
+                                  slug: movie.slug,
+                                  name: movie.name,
+                                  originName: movie.originName,
+                                  posterUrl: movie.posterUrl,
+                                  episodeCurrent: movie.episodeCurrent,
+                                  quality: movie.quality,
+                                  lang: movie.lang,
+                                  year: movie.year,
+                                  activityDate: movie.watchedAt,
+                                  showDateBadge: startsNewLibraryDateGroup(
+                                    movie.watchedAt,
+                                    previousDate,
+                                  ),
+                                  rating: movie.rating,
+                                  progress: movie.progress,
+                                  isSelectionMode: _isSelectingHistory,
+                                  isSelected: _selectedHistorySlugs.contains(
+                                    movie.slug,
+                                  ),
+                                  onTap: () => _continueWatching(movie),
+                                  onSelectionTap: () =>
+                                      _toggleHistorySelection(movie.slug),
+                                  onLongPress: () {
+                                    HapticFeedback.mediumImpact();
+                                    _toggleHistorySelection(movie.slug);
+                                  },
+                                  onRemove: () => _removeHistory(movie.slug),
+                                );
+                              }, childCount: state.history.length),
+                            ),
+                          ),
+                      ],
                     ),
-                ],
+                  );
+                },
               ),
-            );
-          },
-        ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -284,28 +401,85 @@ class _ProfileHeader extends StatelessWidget {
             child: IconButton(
               tooltip: 'Đăng xuất',
               onPressed: onSignOut,
-              icon: const Icon(Icons.logout_rounded, color: Colors.white70),
+              icon: const Icon(Iconsax.logout_1_copy, color: Colors.white70),
             ),
           ),
+
           _Avatar(url: avatarUrl, size: 112),
+
           const SizedBox(height: 16),
-          Text(
-            displayName,
-            textAlign: TextAlign.center,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 24,
-              fontWeight: FontWeight.w900,
-            ),
+
+          // Tên luôn nằm chính giữa,
+          // icon edit nằm riêng bên phải.
+          LayoutBuilder(
+            builder: (context, constraints) {
+              const gap = 10.0;
+              const editButtonWidth = 46.0;
+
+              // Bên trái chừa đúng bằng:
+              // khoảng cách + chiều rộng nút edit.
+              const sideSpace = gap + editButtonWidth;
+
+              return Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  // Spacer giả để giữ tên chính giữa tuyệt đối.
+                  const SizedBox(width: sideSpace),
+
+                  // Tên.
+                  ConstrainedBox(
+                    constraints: BoxConstraints(
+                      maxWidth: constraints.maxWidth - sideSpace * 2,
+                    ),
+                    child: Text(
+                      displayName,
+                      textAlign: TextAlign.center,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 20,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+
+                  // Khoảng cách tính từ chữ.
+                  const SizedBox(width: gap),
+
+                  // Nút edit.
+                  SizedBox(
+                    width: editButtonWidth,
+                    child: InkWell(
+                      onTap: onEdit,
+                      borderRadius: BorderRadius.circular(30.r),
+                      child: Ink(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 15,
+                          vertical: 5,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.white12,
+                          borderRadius: BorderRadius.circular(30.r),
+                        ),
+                        child: const Icon(
+                          Iconsax.edit_2,
+                          color: Colors.white54,
+                          size: 16,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              );
+            },
           ),
+
           const SizedBox(height: 5),
+
           Text(email, style: const TextStyle(color: Colors.white54)),
+
           const SizedBox(height: 18),
-          FilledButton.tonalIcon(
-            onPressed: onEdit,
-            icon: const Icon(Icons.edit_outlined),
-            label: const Text('Chỉnh sửa hồ sơ'),
-          ),
         ],
       ),
     );
@@ -334,7 +508,7 @@ class _Avatar extends StatelessWidget {
                 color: Color(0xff292B38),
                 child: Icon(Icons.person, color: Colors.white70, size: 54),
               )
-            : FastCachedImage(url: url, fit: BoxFit.cover),
+            : FastCachedImage(key: ValueKey(url), url: url, fit: BoxFit.cover),
       ),
     );
   }

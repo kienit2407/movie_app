@@ -26,6 +26,16 @@ class MovieSectionWithScroll extends StatefulWidget {
 }
 
 class _MovieSectionWithScrollState extends State<MovieSectionWithScroll> {
+  static const Map<String, String> _themeImageBySlug = {
+    'phim-bo': 'assets/images/phim_bo.png',
+    'phim-le': 'assets/images/phim_le.png',
+    'tv-shows': 'assets/images/tv_show.png',
+    'hoat-hinh': 'assets/images/hoat_hinh.png',
+    'phim-vietsub': 'assets/images/vietsub.png',
+    'phim-thuyet-minh': 'assets/images/thuyet_minh.png',
+    'phim-long-tieng': 'assets/images/long_tieng.png',
+  };
+
   late ScrollController _scrollController;
   late final RecommendScrollCubit _scrollCubit;
 
@@ -93,7 +103,9 @@ class _MovieSectionWithScrollState extends State<MovieSectionWithScroll> {
                     child: _movieThemeItem(
                       ListGadient.listGadient[index %
                           ListGadient.listGadient.length],
-                      SortMap.sortMovie[index].values.single,
+                      sortMovie.values.single,
+                      _themeImageBySlug[sortMovie.keys.single] ??
+                          'assets/images/hoat_hinh.png',
                     ),
                   );
                 }),
@@ -138,7 +150,7 @@ class _MovieSectionWithScrollState extends State<MovieSectionWithScroll> {
     );
   }
 
-  Widget _movieThemeItem(Gradient gadient, String content) {
+  Widget _movieThemeItem(Gradient gadient, String content, String imageAsset) {
     return SizedBox(
       height: 110.h,
       width: 150.w,
@@ -169,28 +181,62 @@ class _MovieSectionWithScrollState extends State<MovieSectionWithScroll> {
                 gradient: RadialGradient(
                   center: Alignment.center,
                   radius: 0.8,
-                  colors: [Colors.white.withOpacity(0.2), Colors.transparent],
+                  colors: [
+                    Colors.white.withValues(alpha: 0.2),
+                    Colors.transparent,
+                  ],
                 ),
               ),
             ),
           ),
-
-          Align(
-            alignment: Alignment.bottomLeft,
+          Positioned(
+            bottom: 0,
+            right: 0,
+            left: 0,
+            top: 20,
+            child: Image.asset(imageAsset, fit: BoxFit.contain),
+          ),
+          Positioned.fill(
+            child: ClipRRect(
+              borderRadius: BorderRadius.only(
+                topLeft: Radius.circular(15.r),
+                topRight: Radius.circular(30.r),
+                bottomLeft: Radius.circular(30.r),
+                bottomRight: Radius.circular(15.r),
+              ),
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      Colors.transparent,
+                      Color(0xff0F111A).withOpacity(.1),
+                      Color(0xff0F111A).withOpacity(.3),
+                      Color(0xff0F111A).withOpacity(.9),
+                    ],
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                  ),
+                ),
+              ),
+            ),
+          ),
+          Positioned(
+            bottom: 10,
+            left: 5,
             child: Container(
               width: 100.w,
               margin: EdgeInsets.only(left: 10.w),
               child: Column(
                 spacing: 5.h,
                 crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.center,
+                mainAxisAlignment: MainAxisAlignment.end,
                 children: [
                   Text(
                     content,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
-                      fontSize: 16.sp,
+                      fontSize: 12.sp,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
@@ -200,6 +246,7 @@ class _MovieSectionWithScrollState extends State<MovieSectionWithScroll> {
                       Text(
                         'Xem Thêm',
                         style: TextStyle(
+                          color: Colors.white.withOpacity(.8),
                           fontWeight: FontWeight.w500,
                           fontSize: 9.sp,
                         ),

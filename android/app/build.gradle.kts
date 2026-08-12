@@ -25,7 +25,7 @@ android {
         applicationId = "com.example.movie_app"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
-        minSdk = flutter.minSdkVersion
+        minSdk = 24
         targetSdk = flutter.targetSdkVersion
         multiDexEnabled = true
         versionCode = flutter.versionCode
@@ -47,4 +47,6 @@ flutter {
 
 dependencies {
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
+    implementation("androidx.appcompat:appcompat:1.7.1")
+    implementation("com.google.android.gms:play-services-cast-framework:22.3.1")
 }

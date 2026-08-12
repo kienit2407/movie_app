@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 
-Future<BuildContext?> showAnimatedDialog({
+Future<T?> showAnimatedDialog<T>({
   required BuildContext context,
   required Widget dialog,
 }) async {
-  await showGeneralDialog(
+  return showGeneralDialog<T>(
     barrierDismissible: true,
     barrierLabel: '',
     context: context,
@@ -19,5 +19,4 @@ Future<BuildContext?> showAnimatedDialog({
       );
     },
   );
-  return null;
 }

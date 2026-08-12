@@ -9,7 +9,7 @@ class ListGadient {
       end: Alignment.bottomRight,
     ),
     LinearGradient(
-      colors: [Color(0xff5433FF), Color(0xff20BDFF), Color(0xffA5FECB)],
+      colors: [Color(0xff90190A), Color(0xffB1786D), Color(0xffC0BEBE)],
       begin: Alignment.topLeft,
       end: Alignment.bottomRight,
     ),
@@ -34,7 +34,7 @@ class ListGadient {
       end: Alignment.bottomRight,
     ),
     LinearGradient(
-      colors: [Color(0xfff7f0ac), Color(0xffacf7f0), Color(0xfff0acf7)],
+      colors: [Color(0xffA8304E), Color(0xffD17849), Color(0xffF7B92A)],
       begin: Alignment.topLeft,
       end: Alignment.bottomRight,
     ),

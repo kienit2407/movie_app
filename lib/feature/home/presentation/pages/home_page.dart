@@ -51,6 +51,7 @@ import 'package:movie_app/feature/home/presentation/widgets/home_skeleton.dart';
 import 'package:movie_app/feature/home/presentation/widgets/overlay_gadient.dart';
 import 'package:movie_app/feature/home/presentation/widgets/recommend_movie_widget.dart';
 import 'package:movie_app/feature/home/presentation/widgets/year_bottom_sheet.dart';
+import 'package:movie_app/feature/home/presentation/widgets/top_movie_rankings.dart';
 import 'package:movie_app/feature/hub/presentation/pages/hub_page.dart';
 import 'package:movie_app/feature/movie_pagination/presentation/bloc/fetch_fillter_cubit.dart';
 import 'package:movie_app/feature/movie_pagination/presentation/bloc/fetch_fillter_state.dart';
@@ -91,6 +92,7 @@ class _HomePageState extends State<HomePage>
   bool _carouselReady = false;
   bool _carouselReadyFrameScheduled = false;
   bool _notificationSetupStarted = false;
+  int _rankingsRefreshGeneration = 0;
 
   HomeUiState get _uiState => _homeUiCubit.state;
 
@@ -625,6 +627,9 @@ class _HomePageState extends State<HomePage>
             indexCarouselController = CarouselSliderController();
 
             await context.read<CarouselDisplayCubit>().getLatestMovie();
+            if (mounted) {
+              setState(() => _rankingsRefreshGeneration++);
+            }
           },
           child: BlocConsumer<CarouselDisplayCubit, CarouselDisplayState>(
             listener: (context, state) {
@@ -691,6 +696,8 @@ class _HomePageState extends State<HomePage>
               const MovieSectionWithScroll(),
               SizedBox(height: 30.h),
               _lastedMovie(),
+              SizedBox(height: 30.h),
+              TopMovieRankings(refreshGeneration: _rankingsRefreshGeneration),
               SizedBox(height: 30.h),
               BlocBuilder<HomeUiCubit, HomeUiState>(
                 buildWhen: (previous, current) =>

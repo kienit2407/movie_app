@@ -33,17 +33,22 @@ import 'package:lottie/lottie.dart';
 import 'package:movie_app/common/components/alert_dialog/app_alert_dialog.dart';
 import 'package:movie_app/core/config/utils/animated_dialog.dart';
 import 'package:movie_app/core/config/utils/cover_map.dart';
+import 'package:movie_app/feature/detail_movie/presentation/widgets/view_count_section.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:toastification/toastification.dart';
 import 'package:video_player/video_player.dart';
 import 'package:movie_app/core/config/themes/app_color.dart';
+import 'package:movie_app/core/casting/casting_service.dart';
 import 'package:movie_app/core/ios_now_playing_service.dart';
 import 'package:movie_app/core/ios_picture_in_picture_service.dart';
 import 'package:movie_app/core/player_overlay_controller.dart';
 import 'package:movie_app/core/playback_wakelock.dart';
 import 'package:movie_app/feature/detail_movie/data/model/detail_movie_model.dart';
+import 'package:movie_app/feature/detail_movie/presentation/widgets/cast_device_sheet.dart';
 import 'package:movie_app/feature/library/data/user_library_repository.dart';
 import 'package:movie_app/feature/library/presentation/cubit/user_library_cubit.dart';
+import 'package:movie_app/feature/movie_engagement/data/movie_engagement_repository.dart';
+import 'package:movie_app/feature/movie_engagement/domain/playback_view_tracker.dart';
 
 enum SeekDirection { forward, backward }
 
@@ -227,6 +232,9 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
   double? _videoSnapTarget;
   AnimationStatusListener? _snapStatusListener;
   double _dragStartHeight = 0;
+  late final AnimationController _portraitContentCtrl;
+  late final CurvedAnimation _portraitContentCurve;
+  late final Animation<Offset> _portraitContentSlide;
   Orientation? _lastOrientation;
   bool _orientationChangeInFlight = false;
   bool _orientationSyncScheduled = false;
@@ -249,6 +257,15 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
   bool _startingPictureInPicture = false;
   late final PlayerCubit _playerCubit;
   late final UserLibraryCubit? _libraryCubit;
+  late final MovieEngagementRepository _engagementRepository;
+  late final CastingService _castingService;
+  StreamSubscription<CastSessionEvent>? _castEventsSubscription;
+  CastSessionEvent _castSession = const CastSessionEvent(
+    state: CastingState.disconnected,
+  );
+  final PlaybackViewTracker _viewTracker = PlaybackViewTracker();
+  Timer? _viewQualificationTimer;
+  bool _viewRecorded = false;
   int _playerInitGeneration = 0;
   bool _isVideoLoading = false;
   bool _isCommentsEmptyHovered = false;
@@ -257,6 +274,29 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
   DateTime? _lastNowPlayingUpdate;
   bool? _lastNowPlayingIsPlaying;
   bool get _usesNativeIosVideoView => Platform.isIOS;
+  bool get _isGoogleCasting =>
+      _castSession.type == CastingType.googleCast && _castSession.isConnected;
+  bool get _isAirPlayActive =>
+      _castSession.type == CastingType.airPlay && _castSession.isConnected;
+  bool get _isExternalPlaybackActive =>
+      _castSession.state == CastingState.connecting ||
+      _isGoogleCasting ||
+      _isAirPlayActive;
+  bool get _isGoogleCastPlaying => _castSession.state == CastingState.playing;
+  String get _playbackPosterUrl {
+    for (final candidate in [
+      widget.thumbnailUrl,
+      widget.movie.thumb_url,
+      widget.movie.poster_url,
+    ]) {
+      final url = candidate?.trim() ?? '';
+      if (url.isNotEmpty) return url;
+    }
+    return '';
+  }
+
+  bool _effectiveIsPlaying(bool localValue) =>
+      _isGoogleCasting ? _isGoogleCastPlaying : localValue;
   bool get _isPlayerLoading {
     if (_playerLoadError != null) return false;
 
@@ -279,6 +319,11 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
     WidgetsBinding.instance.addObserver(this);
     _playerCubit = context.read<PlayerCubit>();
     _libraryCubit = context.read<UserLibraryCubit?>();
+    _engagementRepository = SupabaseMovieEngagementRepository();
+    _castingService = PlatformCastingService();
+    _castEventsSubscription = _castingService.events.listen(
+      _handleCastSessionEvent,
+    );
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _playerCubit.updateCurrentEpisode(
         widget.slug,
@@ -296,6 +341,21 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
       vsync: this,
       duration: const Duration(milliseconds: 220),
     );
+    _portraitContentCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 260),
+      reverseDuration: const Duration(milliseconds: 220),
+      value: 1,
+    );
+    _portraitContentCurve = CurvedAnimation(
+      parent: _portraitContentCtrl,
+      curve: Curves.easeOutCubic,
+      reverseCurve: Curves.easeInCubic,
+    );
+    _portraitContentSlide = Tween<Offset>(
+      begin: const Offset(0, 0.08),
+      end: Offset.zero,
+    ).animate(_portraitContentCurve);
     widget.overlayController?.attachTransientOverlayDismissHandler(
       owner: this,
       dismiss: _dismissCommentsOverlay,
@@ -352,6 +412,7 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
     _removeVpListeners();
     _autoToastTimer?.cancel();
     _statusHeaderTimer?.cancel();
+    _viewQualificationTimer?.cancel();
 
     unawaited(SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge));
     PlaybackWakelock.unawaitedSetEnabled(false);
@@ -372,6 +433,8 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
 
     _arrowCtrl.dispose();
     _videoSnapCtrl.dispose();
+    _portraitContentCurve.dispose();
+    _portraitContentCtrl.dispose();
     _landscapeZoomSnapCtrl.dispose();
     _panelCtrl.dispose();
     _searchController.dispose();
@@ -387,6 +450,7 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
     _connectivityConfirmTimer?.cancel();
     _connectivitySubscription?.cancel();
     _wifiQualityTimer?.cancel();
+    _castEventsSubscription?.cancel();
     super.dispose();
   }
 
@@ -394,6 +458,10 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
     _seekThrottle?.cancel();
     _seekThrottle = Timer(Duration(milliseconds: ms), () {
       if (!mounted) return;
+      if (_isGoogleCasting) {
+        unawaited(_castingService.seekGoogleCast(target));
+        return;
+      }
       _videoPlayerController?.seekTo(target);
     });
   }
@@ -780,11 +848,13 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
   void _syncPlaybackSideEffects({bool force = false}) {
     final value = _videoPlayerController?.value;
     if (value == null) {
+      _syncViewQualification();
       PlaybackWakelock.unawaitedSetEnabled(false);
       return;
     }
 
     final isPlaying = value.isInitialized && value.isPlaying;
+    _syncViewQualification(value: value);
     PlaybackWakelock.unawaitedSetEnabled(isPlaying);
 
     if (!_usesNativeIosVideoView || !value.isInitialized) {
@@ -809,6 +879,128 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
         position: value.position,
         isPlaying: isPlaying,
         assetUrl: _currentEpisodeLink,
+      ),
+    );
+  }
+
+  bool _isQualifiedLocalPlayback(VideoPlayerValue? value) =>
+      !_isGoogleCasting &&
+      value != null &&
+      value.isInitialized &&
+      value.isPlaying &&
+      !value.isBuffering &&
+      !_isPlaybackBuffering &&
+      !value.hasError;
+
+  void _syncViewQualification({VideoPlayerValue? value}) {
+    if (_viewRecorded) {
+      _viewQualificationTimer?.cancel();
+      _viewQualificationTimer = null;
+      return;
+    }
+
+    final isQualifiedPlayback =
+        _isQualifiedLocalPlayback(value ?? _videoPlayerController?.value) ||
+        _isGoogleCastPlaying;
+    final reachedThreshold = _viewTracker.update(
+      isPlaying: isQualifiedPlayback,
+    );
+
+    if (reachedThreshold) {
+      _viewRecorded = true;
+      _viewQualificationTimer?.cancel();
+      _viewQualificationTimer = null;
+      unawaited(_recordMovieView());
+      return;
+    }
+
+    if (!isQualifiedPlayback) {
+      _viewQualificationTimer?.cancel();
+      _viewQualificationTimer = null;
+      return;
+    }
+
+    _viewQualificationTimer ??= Timer.periodic(
+      const Duration(seconds: 1),
+      (_) => _syncViewQualification(),
+    );
+  }
+
+  Future<void> _recordMovieView() async {
+    try {
+      await _engagementRepository.recordView(widget.movie);
+    } catch (error) {
+      debugPrint('Record movie view failed: $error');
+    }
+  }
+
+  Future<void> _handleCastSessionEvent(CastSessionEvent event) async {
+    final wasConnected = _isGoogleCasting;
+    if (!mounted) return;
+    setState(() => _castSession = event);
+
+    final controller = _videoPlayerController;
+    if (event.type == CastingType.airPlay) {
+      _syncViewQualification(value: controller?.value);
+      return;
+    }
+
+    _syncViewQualification(value: controller?.value);
+    if (event.isConnected) {
+      if (controller?.value.isInitialized ?? false) {
+        await controller!.pause();
+        if (event.position > Duration.zero &&
+            (controller.value.position - event.position).abs() >
+                const Duration(seconds: 2)) {
+          await controller.seekTo(event.position);
+        }
+      }
+      _syncViewQualification(value: controller?.value);
+      PlaybackWakelock.unawaitedSetEnabled(false);
+      return;
+    }
+
+    if (wasConnected &&
+        event.position > Duration.zero &&
+        (controller?.value.isInitialized ?? false)) {
+      await controller!.seekTo(event.position);
+    }
+    _syncViewQualification(value: controller?.value);
+  }
+
+  CastMedia? _currentCastMedia({
+    String? url,
+    Duration? position,
+    Duration? duration,
+  }) {
+    final sourceUrl = (url ?? _currentEpisodeLink)?.trim() ?? '';
+    if (sourceUrl.isEmpty) return null;
+    final value = _videoPlayerController?.value;
+
+    return CastMedia(
+      url: sourceUrl,
+      movieName: widget.movieName,
+      slug: widget.slug,
+      serverName: _friendlyCurrentServerLabel(),
+      serverIndex: _selectedServerIndex,
+      episodeName: _historyEpisodeName(
+        _selectedServerIndex,
+        _currentEpisodeIndex,
+      ),
+      episodeIndex: _currentEpisodeIndex,
+      position: position ?? value?.position ?? Duration.zero,
+      duration: duration ?? value?.duration ?? Duration.zero,
+      posterUrl: widget.thumbnailUrl ?? widget.movie.poster_url,
+    );
+  }
+
+  void _showCastingOptions() {
+    HapticFeedback.lightImpact();
+    unawaited(
+      CastDeviceSheet.show(
+        context,
+        service: _castingService,
+        media: _currentCastMedia(),
       ),
     );
   }
@@ -1208,7 +1400,7 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
 
     final chewieController = ChewieController(
       videoPlayerController: initializedVideoController,
-      autoPlay: true,
+      autoPlay: !_isGoogleCasting,
       looping: false,
       aspectRatio: 16 / 9,
       autoInitialize: true,
@@ -1374,14 +1566,14 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
         'RestorePosition: Seek completed, position after seek: $posAfterSeek',
       );
       await Future.delayed(const Duration(milliseconds: 200));
-      await chewieController.play();
+      if (!_isGoogleCasting) await chewieController.play();
       final posAfterPlay = initializedVideoController.value.position;
       debugPrint('RestorePosition: After play, position: $posAfterPlay');
     } else {
       debugPrint(
         'RestorePosition: Not restoring, _lastPosition=$_lastPosition, restoreLastPosition=$restoreLastPosition',
       );
-      await chewieController.play();
+      if (!_isGoogleCasting) await chewieController.play();
     }
 
     if (!mounted || generation != _playerInitGeneration) return;
@@ -1450,6 +1642,14 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
     _scrollToCurrentEpisode();
     _lastPosition = null; // <<< quan trọng: không carry qua tập mới
     _disposeAndInitializePlayer(link, restoreLastPosition: false);
+    if (_isGoogleCasting) {
+      final media = _currentCastMedia(
+        url: link,
+        position: Duration.zero,
+        duration: Duration.zero,
+      );
+      if (media != null) unawaited(_castingService.loadGoogleCast(media));
+    }
   }
 
   void _removeVpListeners() {
@@ -1949,6 +2149,16 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
       link,
       restoreLastPosition: shouldRestorePosition,
     );
+    if (_isGoogleCasting) {
+      final media = _currentCastMedia(
+        url: link,
+        position: shouldRestorePosition
+            ? _lastPosition ?? Duration.zero
+            : Duration.zero,
+        duration: Duration.zero,
+      );
+      if (media != null) unawaited(_castingService.loadGoogleCast(media));
+    }
   }
 
   Future<void> _toggleFullscreen() async {
@@ -1965,17 +2175,25 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
     });
 
     _orientationChangeFallbackTimer = Timer(
-      const Duration(milliseconds: 1200),
+      const Duration(milliseconds: 1500),
       () {
         if (!mounted || !_orientationChangeInFlight) return;
         setState(() => _orientationChangeInFlight = false);
+        if (MediaQuery.orientationOf(context) == Orientation.portrait) {
+          _showPortraitContent();
+        }
       },
     );
 
     try {
       if (targetLandscape) {
+        await _hidePortraitContentBeforeRotation();
+        if (!mounted) return;
+        await SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
         await SupportRotateScreen.onlyLandscape();
       } else {
+        _portraitContentCtrl.stop();
+        _portraitContentCtrl.value = 0;
         await SupportRotateScreen.onlyPotrait();
       }
     } on PlatformException catch (error) {
@@ -1983,7 +2201,32 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
       _orientationChangeFallbackTimer?.cancel();
       if (!mounted) return;
       setState(() => _orientationChangeInFlight = false);
+      if (targetLandscape) {
+        _showPortraitContent();
+        _syncPlayerSystemUi();
+      }
     }
+  }
+
+  bool get _reduceOrientationMotion =>
+      MediaQuery.maybeOf(context)?.disableAnimations ?? false;
+
+  Future<void> _hidePortraitContentBeforeRotation() async {
+    if (_portraitContentCtrl.value <= 0) return;
+    if (_reduceOrientationMotion) {
+      _portraitContentCtrl.value = 0;
+      return;
+    }
+    await _portraitContentCtrl.reverse();
+  }
+
+  void _showPortraitContent() {
+    if (!mounted) return;
+    if (_reduceOrientationMotion) {
+      _portraitContentCtrl.value = 1;
+      return;
+    }
+    unawaited(_portraitContentCtrl.forward());
   }
 
   void _syncFullscreenWithOrientation(Orientation orientation) {
@@ -2009,6 +2252,14 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
         _showControls = false;
         _showSeekOverlay = false;
       });
+      if (fullscreen) {
+        _portraitContentCtrl.stop();
+        _portraitContentCtrl.value = 0;
+      } else {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          _showPortraitContent();
+        });
+      }
       _syncPlayerSystemUi();
     });
   }
@@ -2021,6 +2272,16 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
   }
 
   Future<void> _togglePlayPause() async {
+    if (_isGoogleCasting) {
+      if (_isGoogleCastPlaying) {
+        await _castingService.pauseGoogleCast();
+      } else {
+        await _castingService.playGoogleCast();
+      }
+      _resetHideControlsTimer();
+      return;
+    }
+
     final vp = _videoPlayerController;
 
     if (vp == null || !vp.value.isInitialized) {
@@ -2346,6 +2607,32 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
     return const ColoredBox(color: Colors.black);
   }
 
+  Widget _buildCastingPosterOverlay() {
+    final posterUrl = _playbackPosterUrl;
+    if (posterUrl.isEmpty || !_isExternalPlaybackActive) {
+      return const SizedBox.shrink();
+    }
+
+    return Positioned.fill(
+      key: const ValueKey('external-playback-poster'),
+      child: IgnorePointer(
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            FastCachedImage(
+              key: ValueKey(posterUrl),
+              url: posterUrl,
+              fit: BoxFit.cover,
+              loadingBuilder: (_, _) => const ColoredBox(color: Colors.black),
+              errorBuilder: (_, _, _) => const ColoredBox(color: Colors.black),
+            ),
+            ColoredBox(color: Colors.black.withValues(alpha: 0.18)),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildPlaybackStatusOverlay() {
     final controller = _videoPlayerController;
 
@@ -2410,6 +2697,10 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
     final newPosition = Duration(
       milliseconds: (position * duration.inMilliseconds).round(),
     );
+    if (_isGoogleCasting) {
+      await _castingService.seekGoogleCast(newPosition);
+      return;
+    }
     await controller.seekTo(newPosition);
   }
 
@@ -3178,6 +3469,7 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
               )
             else
               _buildPlayerPlaceholder(),
+            _buildCastingPosterOverlay(),
             _buildPlayPauseOverlay(),
             _buildPlaybackStatusOverlay(),
             if (_showSeekOverlay && _seekDir != null) _buildSeekOverlay(50),
@@ -3208,6 +3500,17 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
                           },
                         ),
                         const Spacer(),
+                        IconButton(
+                          tooltip: 'Phát trên TV',
+                          onPressed: _showCastingOptions,
+                          icon: Icon(
+                            Iconsax.mirroring_screen_copy,
+                            color: _isExternalPlaybackActive
+                                ? AppColor.secondColor
+                                : Colors.white,
+                            size: 21,
+                          ),
+                        ),
                         if (widget.movie.episode_current != 'Full')
                           _buildAutoPlayToggleButton(),
                       ],
@@ -3546,13 +3849,14 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
   }
 
   Widget _buildOverlayFadingInformation({required Widget child}) {
+    final orientationChild = _buildPortraitContentTransition(child);
     final progress = widget.overlayProgress;
-    if (progress == null) return Flexible(child: child);
+    if (progress == null) return Flexible(child: orientationChild);
 
     return Flexible(
       child: ValueListenableBuilder<double>(
         valueListenable: progress,
-        child: RepaintBoundary(child: child),
+        child: RepaintBoundary(child: orientationChild),
         builder: (context, value, content) {
           final fadeProgress = Curves.easeOutCubic.transform(
             (value / 0.72).clamp(0.0, 1.0),
@@ -3564,6 +3868,27 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
               excluding: opacity < 0.05,
               child: Opacity(opacity: opacity, child: content),
             ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildPortraitContentTransition(Widget child) {
+    return RepaintBoundary(
+      key: const ValueKey('portrait-player-information'),
+      child: AnimatedBuilder(
+        animation: _portraitContentCtrl,
+        child: FadeTransition(
+          key: const ValueKey('portrait-information-fade'),
+          opacity: _portraitContentCurve,
+          child: SlideTransition(position: _portraitContentSlide, child: child),
+        ),
+        builder: (context, animatedChild) {
+          final hidden = _portraitContentCtrl.value < 0.99;
+          return IgnorePointer(
+            ignoring: hidden,
+            child: ExcludeSemantics(excluding: hidden, child: animatedChild),
           );
         },
       ),
@@ -3791,6 +4116,11 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
                                                                 ),
                                                           ),
                                                         ),
+                                                      ),
+                                                      const SizedBox(width: 8),
+                                                      ViewCountSection(
+                                                        movie: widget.movie,
+                                                        compact: true,
                                                       ),
                                                     ],
                                                   );
@@ -4253,7 +4583,9 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
   Widget _buildEpisodeListForSeriesMovie() {
     final serverData = widget.episodes[_selectedServerIndex].server_data;
     _ensureEpisodeKeys(serverData.length);
-    final isPlaying = _videoPlayerController?.value.isPlaying ?? false;
+    final isPlaying = _effectiveIsPlaying(
+      _videoPlayerController?.value.isPlaying ?? false,
+    );
     final currentServer = widget.episodes[_selectedServerIndex];
 
     return _wrapOverscrollToResize(
@@ -4591,7 +4923,7 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
 
         return buildOverlay(
           isLoading: isLoading,
-          isPlaying: value.isPlaying,
+          isPlaying: _effectiveIsPlaying(value.isPlaying),
           canTogglePlayback: value.isInitialized && !value.hasError,
         );
       },
@@ -4639,7 +4971,9 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
   }
 
   Widget _buildEpisodeListForSingle() {
-    final isPlayingIocn = _videoPlayerController?.value.isPlaying ?? false;
+    final isPlayingIocn = _effectiveIsPlaying(
+      _videoPlayerController?.value.isPlaying ?? false,
+    );
     return Scrollbar(
       controller: _scrollController,
       child: _wrapOverscrollToResize(
@@ -4959,6 +5293,7 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
                   shape: BoxShape.circle,
                 ),
                 child: IconButton(
+                  key: const ValueKey('player-fullscreen-button'),
                   padding: const EdgeInsets.all(5),
                   onPressed: _toggleFullscreen,
                   icon: SvgPicture.asset(
@@ -5076,6 +5411,7 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
                           shape: BoxShape.circle,
                         ),
                         child: IconButton(
+                          key: const ValueKey('player-fullscreen-button'),
                           padding: EdgeInsets.all(5),
                           onPressed: _toggleFullscreen,
                           icon: SvgPicture.asset(
@@ -5241,6 +5577,7 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
                   shape: BoxShape.circle,
                 ),
                 child: IconButton(
+                  key: const ValueKey('player-fullscreen-button'),
                   padding: EdgeInsets.all(5),
                   onPressed: _toggleFullscreen,
                   icon: SvgPicture.asset(
@@ -5308,9 +5645,24 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
           final semanticValue =
               '${_formatDuration(value.position)} / ${_formatDuration(value.duration)}';
 
+          String semanticValueAfter(double delta) {
+            final durationMs = value.duration.inMilliseconds;
+            if (durationMs <= 0) return semanticValue;
+
+            final targetMs =
+                (value.position.inMilliseconds + durationMs * delta)
+                    .round()
+                    .clamp(0, durationMs)
+                    .toInt();
+            return '${_formatDuration(Duration(milliseconds: targetMs))} / '
+                '${_formatDuration(value.duration)}';
+          }
+
           return Semantics(
             label: 'Thanh tiến trình video',
             value: semanticValue,
+            increasedValue: semanticValueAfter(0.05),
+            decreasedValue: semanticValueAfter(-0.05),
             slider: true,
             onIncrease: () => seekBy(0.05),
             onDecrease: () => seekBy(-0.05),
@@ -5597,7 +5949,9 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
   }
 
   Widget _buildLandscapePlayer() {
-    final isPlayingIocn = _videoPlayerController?.value.isPlaying ?? false;
+    final isPlayingIocn = _effectiveIsPlaying(
+      _videoPlayerController?.value.isPlaying ?? false,
+    );
     return Scaffold(
       endDrawer: Drawer(
         width: MediaQuery.of(context).size.width * 0.5,
@@ -5650,6 +6004,7 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
                     ),
                   ),
                 _buildLandscapeZoomableVideo(fillScale: fillScale),
+                _buildCastingPosterOverlay(),
                 _buildLandscapeBoundaryFlash(),
                 _buildLandscapeStatusHeader(),
                 _buildPlayPauseOverlay(),
@@ -5680,6 +6035,18 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
                           ),
 
                           const Spacer(),
+
+                          IconButton(
+                            tooltip: 'Phát trên TV',
+                            onPressed: _showCastingOptions,
+                            icon: Icon(
+                              Iconsax.mirroring_screen_copy,
+                              color: _isExternalPlaybackActive
+                                  ? AppColor.secondColor
+                                  : Colors.white,
+                              size: 22,
+                            ),
+                          ),
 
                           if (widget.movie.episode_current != 'Full')
                             _buildAutoPlayToggleButton(),

@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:hive_ce_flutter/hive_flutter.dart';
+import 'package:movie_app/feature/home/notification/isolated_hive_bootstrap.dart';
 import 'package:movie_app/feature/home/domain/entities/new_movie_entity.dart';
 import 'package:movie_app/feature/home/notification/new_movie_notification_constants.dart';
 
@@ -103,14 +104,14 @@ abstract interface class NewMovieInboxStore {
 }
 
 class HiveNewMovieInboxStore implements NewMovieInboxStore {
-  Future<void>? _initialization;
+  HiveNewMovieInboxStore({IsolatedHiveBootstrap? hiveBootstrap})
+    : _hiveBootstrap = hiveBootstrap ?? IsolatedHiveBootstrap.shared;
+
+  final IsolatedHiveBootstrap _hiveBootstrap;
   Future<IsolatedBox<dynamic>>? _box;
 
-  Future<void> _ensureInitialized() =>
-      _initialization ??= IsolatedHive.initFlutter();
-
   Future<IsolatedBox<dynamic>> _openBox() async {
-    await _ensureInitialized();
+    await _hiveBootstrap.ensureInitialized();
     return _box ??= IsolatedHive.openBox<dynamic>(
       NewMovieNotificationConstants.inboxBox,
     );

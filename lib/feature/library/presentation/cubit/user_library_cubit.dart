@@ -155,13 +155,23 @@ class UserLibraryCubit extends Cubit<UserLibraryState> {
   }
 
   Future<void> removeFavorite(String slug) async {
+    await removeFavorites({slug});
+  }
+
+  Future<void> removeFavorites(Set<String> slugs) async {
     if (!state.isAuthenticated) return;
+    final targets = slugs.where((slug) => slug.isNotEmpty).toSet();
+    if (targets.isEmpty) return;
     final previous = state.favorites;
     emit(
-      state.copyWith(favorites: previous.where((e) => e.slug != slug).toList()),
+      state.copyWith(
+        favorites: previous
+            .where((item) => !targets.contains(item.slug))
+            .toList(growable: false),
+      ),
     );
     try {
-      await _repository.removeFavorite(slug);
+      await _repository.removeFavorites(targets);
     } catch (_) {
       emit(
         state.copyWith(
@@ -213,13 +223,26 @@ class UserLibraryCubit extends Cubit<UserLibraryState> {
   }
 
   Future<void> removeHistory(String slug) async {
+    await removeHistoryItems({slug});
+  }
+
+  Future<void> removeHistoryItems(Set<String> slugs) async {
     if (!state.isAuthenticated) return;
+    final targets = slugs.where((slug) => slug.isNotEmpty).toSet();
+    if (targets.isEmpty) return;
+    for (final slug in targets) {
+      _pendingHistory.remove(slug);
+    }
     final previous = state.history;
     emit(
-      state.copyWith(history: previous.where((e) => e.slug != slug).toList()),
+      state.copyWith(
+        history: previous
+            .where((item) => !targets.contains(item.slug))
+            .toList(growable: false),
+      ),
     );
     try {
-      await _repository.removeWatchHistory(slug);
+      await _repository.removeWatchHistoryItems(targets);
     } catch (_) {
       emit(
         state.copyWith(
@@ -234,11 +257,11 @@ class UserLibraryCubit extends Cubit<UserLibraryState> {
     required String displayName,
     String? avatarUrl,
   }) async {
-    await _repository.updateProfile(
+    final updatedUser = await _repository.updateProfile(
       displayName: displayName,
       avatarUrl: avatarUrl,
     );
-    emit(state.copyWith(user: _repository.currentUser, clearError: true));
+    emit(state.copyWith(user: updatedUser, clearError: true));
   }
 
   Future<String> uploadAvatar(List<int> bytes, {required String extension}) {

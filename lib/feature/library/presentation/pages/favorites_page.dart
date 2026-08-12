@@ -1,10 +1,19 @@
+import 'dart:math';
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:iconsax_flutter/iconsax_flutter.dart';
+import 'package:movie_app/common/components/alert_dialog/app_alert_dialog.dart';
+import 'package:movie_app/common/helpers/static_data.dart';
 import 'package:movie_app/core/config/themes/app_color.dart';
+import 'package:movie_app/core/config/utils/animated_dialog.dart';
+import 'package:movie_app/core/config/utils/sharder_text.dart';
+import 'package:movie_app/feature/hub/presentation/pages/hub_page.dart';
 import 'package:movie_app/feature/library/presentation/cubit/user_library_cubit.dart';
 import 'package:movie_app/feature/library/presentation/widgets/auth_required_view.dart';
 import 'package:movie_app/feature/library/presentation/widgets/library_movie_card.dart';
-import 'package:movie_app/feature/hub/presentation/pages/hub_page.dart';
 
 class FavoritesPage extends StatefulWidget {
   const FavoritesPage({super.key});
@@ -16,6 +25,13 @@ class FavoritesPage extends StatefulWidget {
 class _FavoritesPageState extends State<FavoritesPage>
     with AutomaticKeepAliveClientMixin {
   final ScrollController _scrollController = ScrollController();
+  final GlobalKey _largeTitleKey = GlobalKey();
+  final Set<String> _selectedSlugs = <String>{};
+
+  late final Map<LinearGradient, Color> _selectedGradient;
+  bool _showSmallTitle = false;
+
+  bool get _isSelecting => _selectedSlugs.isNotEmpty;
 
   @override
   bool get wantKeepAlive => true;
@@ -23,12 +39,30 @@ class _FavoritesPageState extends State<FavoritesPage>
   @override
   void initState() {
     super.initState();
+    final gradients = StaticData.randomeGadientTitlePage;
+    _selectedGradient = gradients[Random().nextInt(gradients.length)];
+    _scrollController.addListener(_checkLargeTitleVisibility);
     HubTabReselectNotifier.instance.addListener(_onHubTabReselected);
+  }
+
+  void _checkLargeTitleVisibility() {
+    final renderObject = _largeTitleKey.currentContext?.findRenderObject();
+    if (renderObject is! RenderBox) return;
+    final position = renderObject.localToGlobal(Offset.zero);
+    final largeTitleBottom = position.dy + renderObject.size.height;
+    final appBarHeight = MediaQuery.paddingOf(context).top + kToolbarHeight;
+    final shouldShowSmallTitle = largeTitleBottom < appBarHeight + 10;
+    if (shouldShowSmallTitle == _showSmallTitle) return;
+    setState(() => _showSmallTitle = shouldShowSmallTitle);
   }
 
   void _onHubTabReselected() {
     if (HubTabReselectNotifier.instance.index != 2 ||
         !_scrollController.hasClients) {
+      return;
+    }
+    if (_isSelecting) {
+      setState(_selectedSlugs.clear);
       return;
     }
     _scrollController.animateTo(
@@ -40,126 +74,329 @@ class _FavoritesPageState extends State<FavoritesPage>
     );
   }
 
+  void _toggleSelection(String slug) {
+    setState(() {
+      if (!_selectedSlugs.add(slug)) _selectedSlugs.remove(slug);
+    });
+  }
+
+  Future<bool> _confirmRemoval(int count) async {
+    final many = count > 1;
+    return await showAnimatedDialog<bool>(
+          context: context,
+          dialog: AppAlertDialog(
+            title: many ? 'Xóa $count phim đã chọn?' : 'Xóa phim này?',
+            content: many
+                ? 'Bạn có đồng ý xóa $count phim khỏi danh sách yêu thích không?'
+                : 'Bạn có đồng ý xóa phim này khỏi danh sách yêu thích không?',
+            buttonTitle: 'Xóa',
+            cancelButtonTitle: 'Hủy',
+            isDestructive: true,
+          ),
+        ) ??
+        false;
+  }
+
+  Future<void> _removeOne(String slug) async {
+    if (!await _confirmRemoval(1) || !mounted) return;
+    await context.read<UserLibraryCubit>().removeFavorite(slug);
+  }
+
+  Future<void> _removeSelected() async {
+    final selected = Set<String>.from(_selectedSlugs);
+    if (selected.isEmpty ||
+        !await _confirmRemoval(selected.length) ||
+        !mounted) {
+      return;
+    }
+    setState(_selectedSlugs.clear);
+    await context.read<UserLibraryCubit>().removeFavorites(selected);
+  }
+
   @override
   void dispose() {
     HubTabReselectNotifier.instance.removeListener(_onHubTabReselected);
-    _scrollController.dispose();
+    _scrollController
+      ..removeListener(_checkLargeTitleVisibility)
+      ..dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     super.build(context);
-    return Scaffold(
-      backgroundColor: AppColor.bgApp,
-      appBar: AppBar(
-        automaticallyImplyLeading: false,
-        backgroundColor: Colors.transparent,
-        title: const Text('Yêu thích'),
-      ),
-      body: BlocConsumer<UserLibraryCubit, UserLibraryState>(
-        listenWhen: (previous, current) =>
-            previous.errorMessage != current.errorMessage &&
-            current.errorMessage != null,
-        listener: (context, state) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(state.errorMessage!)),
-          );
-        },
-        builder: (context, state) {
-          if (!state.isAuthenticated) {
-            return AuthRequiredView(
-              title: 'Đăng nhập để lưu phim yêu thích',
-              description:
-                  'Danh sách của bạn sẽ được đồng bộ trên các thiết bị.',
-              onSignedIn: () => context.read<UserLibraryCubit>().refresh(),
-            );
-          }
-          if (state.isLoading && state.favorites.isEmpty) {
-            return const Center(child: CircularProgressIndicator.adaptive());
-          }
-          if (state.errorMessage != null && state.favorites.isEmpty) {
-            return Center(
-              child: Padding(
-                padding: const EdgeInsets.all(24),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(
-                      Icons.cloud_off_outlined,
-                      color: Colors.white54,
-                      size: 52,
+    final backgroundGradient = _selectedGradient.keys.single;
+    final appBarColor = _selectedGradient.values.single;
+    final duration = MediaQuery.disableAnimationsOf(context)
+        ? Duration.zero
+        : const Duration(milliseconds: 200);
+
+    return PopScope(
+      canPop: !_isSelecting,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop && _isSelecting) setState(_selectedSlugs.clear);
+      },
+      child: Scaffold(
+        backgroundColor: AppColor.bgApp,
+        body: Stack(
+          fit: StackFit.expand,
+          children: [
+            DecoratedBox(
+              decoration: BoxDecoration(gradient: backgroundGradient),
+            ),
+            BlocConsumer<UserLibraryCubit, UserLibraryState>(
+              listenWhen: (previous, current) =>
+                  previous.errorMessage != current.errorMessage &&
+                  current.errorMessage != null,
+              listener: (context, state) {
+                ScaffoldMessenger.of(
+                  context,
+                ).showSnackBar(SnackBar(content: Text(state.errorMessage!)));
+              },
+              builder: (context, state) => RefreshIndicator.adaptive(
+                color: Colors.white,
+                onRefresh: context.read<UserLibraryCubit>().refresh,
+                child: Scrollbar(
+                  controller: _scrollController,
+                  child: CustomScrollView(
+                    key: const PageStorageKey('favorites-scroll'),
+                    controller: _scrollController,
+                    physics: const BouncingScrollPhysics(
+                      parent: AlwaysScrollableScrollPhysics(),
                     ),
-                    const SizedBox(height: 14),
-                    Text(
-                      state.errorMessage!,
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(color: Colors.white70),
-                    ),
-                    const SizedBox(height: 18),
-                    OutlinedButton.icon(
-                      onPressed: context.read<UserLibraryCubit>().refresh,
-                      icon: const Icon(Icons.refresh),
-                      label: const Text('Thử lại'),
-                    ),
-                  ],
+                    slivers: [
+                      _buildAppBar(appBarColor, duration),
+                      _buildLargeTitle(),
+                      _buildContent(state),
+                    ],
+                  ),
                 ),
               ),
-            );
-          }
-          if (state.favorites.isEmpty) {
-            return RefreshIndicator.adaptive(
-              onRefresh: context.read<UserLibraryCubit>().refresh,
-              child: ListView(
-                physics: const AlwaysScrollableScrollPhysics(),
-                children: const [
-                  SizedBox(height: 190),
-                  Icon(Icons.favorite_border, color: Colors.white38, size: 58),
-                  SizedBox(height: 14),
-                  Center(
-                    child: Text(
-                      'Chưa có phim yêu thích',
-                      style: TextStyle(color: Colors.white70, fontSize: 16),
-                    ),
-                  ),
-                ],
-              ),
-            );
-          }
-          return RefreshIndicator.adaptive(
-            onRefresh: context.read<UserLibraryCubit>().refresh,
-            child: GridView.builder(
-              key: const PageStorageKey('favorites-grid'),
-              controller: _scrollController,
-              padding: const EdgeInsets.fromLTRB(12, 12, 12, 120),
-              gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-                maxCrossAxisExtent: 150,
-                mainAxisSpacing: 18,
-                crossAxisSpacing: 10,
-                childAspectRatio: .55,
-              ),
-              itemCount: state.favorites.length,
-              itemBuilder: (context, index) {
-                final movie = state.favorites[index];
-                return LibraryMovieCard(
-                  key: ValueKey(movie.slug),
-                  slug: movie.slug,
-                  name: movie.name,
-                  originName: movie.originName,
-                  posterUrl: movie.posterUrl,
-                  episodeCurrent: movie.episodeCurrent,
-                  quality: movie.quality,
-                  lang: movie.lang,
-                  year: movie.year,
-                  rating: movie.rating,
-                  onRemove: () => context
-                      .read<UserLibraryCubit>()
-                      .removeFavorite(movie.slug),
-                );
-              },
             ),
-          );
-        },
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAppBar(Color appBarColor, Duration duration) {
+    return SliverAppBar(
+      pinned: true,
+      automaticallyImplyLeading: false,
+      backgroundColor: Colors.transparent,
+      elevation: 0,
+      scrolledUnderElevation: 0,
+      systemOverlayStyle: SystemUiOverlayStyle.light,
+      leading: _isSelecting
+          ? IconButton(
+              tooltip: 'Hủy chọn',
+              onPressed: () => setState(_selectedSlugs.clear),
+              icon: const Icon(Icons.close_rounded, color: Colors.white),
+            )
+          : null,
+      actions: _isSelecting
+          ? [
+              IconButton(
+                tooltip: 'Xóa phim đã chọn',
+                onPressed: _removeSelected,
+                icon: const Icon(Iconsax.trash_copy, color: Colors.white),
+              ),
+              const SizedBox(width: 6),
+            ]
+          : null,
+      flexibleSpace: ClipRect(
+        child: BackdropFilter(
+          enabled: _showSmallTitle || _isSelecting,
+          filter: ImageFilter.blur(
+            sigmaX: _showSmallTitle || _isSelecting ? 30 : 0,
+            sigmaY: _showSmallTitle || _isSelecting ? 30 : 0,
+          ),
+          child: AnimatedContainer(
+            duration: duration,
+            decoration: _showSmallTitle || _isSelecting
+                ? BoxDecoration(
+                    border: Border.all(
+                      color: AppColor.buttonColor.withValues(alpha: .3),
+                    ),
+                    color: appBarColor.withValues(alpha: .7),
+                  )
+                : null,
+          ),
+        ),
+      ),
+      title: AnimatedSwitcher(
+        duration: duration,
+        child: _isSelecting
+            ? Text(
+                '${_selectedSlugs.length} đã chọn',
+                key: const ValueKey('selection-title'),
+                style: const TextStyle(
+                  fontSize: 17,
+                  fontWeight: FontWeight.w700,
+                ),
+              )
+            : AnimatedOpacity(
+                key: const ValueKey('favorites-title'),
+                duration: duration,
+                opacity: _showSmallTitle ? 1 : 0,
+                child: const Text(
+                  'Yêu thích',
+                  style: TextStyle(fontSize: 17, fontWeight: FontWeight.w600),
+                ),
+              ),
+      ),
+      centerTitle: true,
+    );
+  }
+
+  Widget _buildLargeTitle() {
+    return SliverToBoxAdapter(
+      child: Padding(
+        key: _largeTitleKey,
+        padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+        child: const SharderText(
+          gradient: LinearGradient(
+            colors: [
+              Colors.black,
+              Colors.black,
+              Color(0xff717285),
+              Colors.black,
+            ],
+            begin: Alignment.centerRight,
+            end: Alignment.centerLeft,
+          ),
+          child: Text(
+            'Yêu thích',
+            style: TextStyle(
+              fontSize: 34,
+              fontWeight: FontWeight.bold,
+              fontFamily: 'Inter',
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildContent(UserLibraryState state) {
+    if (!state.isAuthenticated) {
+      return SliverFillRemaining(
+        hasScrollBody: false,
+        child: AuthRequiredView(
+          title: 'Đăng nhập để lưu phim yêu thích',
+          description: 'Danh sách của bạn sẽ được đồng bộ trên các thiết bị.',
+          onSignedIn: () => context.read<UserLibraryCubit>().refresh(),
+        ),
+      );
+    }
+    if (state.isLoading && state.favorites.isEmpty) {
+      return const SliverFillRemaining(
+        hasScrollBody: false,
+        child: Center(child: CircularProgressIndicator.adaptive()),
+      );
+    }
+    if (state.errorMessage != null && state.favorites.isEmpty) {
+      return SliverFillRemaining(
+        hasScrollBody: false,
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(
+                  Icons.cloud_off_outlined,
+                  color: Colors.white54,
+                  size: 52,
+                ),
+                const SizedBox(height: 14),
+                Text(
+                  state.errorMessage!,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(color: Colors.white70),
+                ),
+                const SizedBox(height: 18),
+                OutlinedButton.icon(
+                  onPressed: context.read<UserLibraryCubit>().refresh,
+                  icon: const Icon(Icons.refresh),
+                  label: const Text('Thử lại'),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+    if (state.favorites.isEmpty) {
+      return const SliverFillRemaining(
+        hasScrollBody: false,
+        child: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.favorite_border, color: Colors.white38, size: 58),
+              SizedBox(height: 14),
+              Text(
+                'Chưa có phim yêu thích',
+                style: TextStyle(color: Colors.white70, fontSize: 16),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return SliverPadding(
+      padding: const EdgeInsets.fromLTRB(12, 12, 12, 120),
+      sliver: SliverGrid(
+        gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+          maxCrossAxisExtent: 150,
+          mainAxisSpacing: 18,
+          crossAxisSpacing: 10,
+          childAspectRatio: .55,
+        ),
+        delegate: SliverChildBuilderDelegate(
+          (context, index) {
+            final movie = state.favorites[index];
+            final selected = _selectedSlugs.contains(movie.slug);
+            final previousDate = index == 0
+                ? null
+                : state.favorites[index - 1].addedAt;
+            return LibraryMovieCard(
+              key: ValueKey(movie.slug),
+              slug: movie.slug,
+              name: movie.name,
+              originName: movie.originName,
+              posterUrl: movie.posterUrl,
+              episodeCurrent: movie.episodeCurrent,
+              quality: movie.quality,
+              lang: movie.lang,
+              year: movie.year,
+              activityDate: movie.addedAt,
+              showDateBadge: startsNewLibraryDateGroup(
+                movie.addedAt,
+                previousDate,
+              ),
+              rating: movie.rating,
+              isSelectionMode: _isSelecting,
+              isSelected: selected,
+              onSelectionTap: () => _toggleSelection(movie.slug),
+              onLongPress: () {
+                HapticFeedback.mediumImpact();
+                _toggleSelection(movie.slug);
+              },
+              onRemove: () => _removeOne(movie.slug),
+            );
+          },
+          childCount: state.favorites.length,
+          findChildIndexCallback: (key) {
+            final slug = (key as ValueKey<String>).value;
+            final index = state.favorites.indexWhere(
+              (item) => item.slug == slug,
+            );
+            return index < 0 ? null : index;
+          },
+        ),
       ),
     );
   }

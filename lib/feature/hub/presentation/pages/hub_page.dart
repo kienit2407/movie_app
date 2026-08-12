@@ -460,7 +460,7 @@ class _HubAvatarIcon extends StatelessWidget {
         border: selected ? Border.all(color: Colors.white, width: 1.5) : null,
       ),
       child: ClipOval(
-        child: FastCachedImage(url: url, fit: BoxFit.cover),
+        child: FastCachedImage(key: ValueKey(url), url: url, fit: BoxFit.cover),
       ),
     );
   }

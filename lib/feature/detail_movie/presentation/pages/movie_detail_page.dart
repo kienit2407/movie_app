@@ -23,11 +23,13 @@ import 'package:movie_app/core/config/utils/format_episode.dart';
 import 'package:movie_app/core/config/utils/movie_player_args.dart';
 import 'package:movie_app/core/config/utils/show_detail_movie_dialog.dart';
 import 'package:movie_app/core/player_overlay_launcher.dart';
+import 'package:movie_app/core/player_overlay_controller.dart';
 import 'package:movie_app/feature/detail_movie/data/model/detail_movie_model.dart';
 import 'package:movie_app/feature/detail_movie/domain/usecase/get_detail_movie_usecase.dart';
 import 'package:movie_app/feature/detail_movie/presentation/bloc/detail_movie_cubit.dart';
 import 'package:movie_app/feature/detail_movie/presentation/bloc/detail_movie_state.dart';
 import 'package:movie_app/common/helpers/watch_progress_storage.dart';
+import 'package:movie_app/feature/detail_movie/presentation/widgets/view_count_section.dart';
 import 'package:movie_app/feature/home/domain/entities/fillterType.dart';
 import 'package:movie_app/feature/home/domain/entities/fillter_genre_movie_req.dart';
 import 'package:movie_app/feature/home/domain/entities/new_movie_entity.dart';
@@ -1038,6 +1040,8 @@ class _MovieDetailPageContentState extends State<_MovieDetailPageContent>
   @override
   void initState() {
     super.initState();
+    _moviePlayerIsActive = PlayerOverlayController.instance.isVisible;
+    PlayerOverlayController.instance.addListener(_syncTrailerWithMainPlayer);
     _scrollController.addListener(_onScroll);
     _tabController = TabController(length: 4, vsync: this);
     _tabController.addListener(() {
@@ -1125,6 +1129,17 @@ class _MovieDetailPageContentState extends State<_MovieDetailPageContent>
 
     try {
       controller.pause();
+    } catch (_) {}
+  }
+
+  void _syncTrailerWithMainPlayer() {
+    final isActive = PlayerOverlayController.instance.isVisible;
+    _moviePlayerIsActive = isActive;
+    if (!isActive) return;
+    final controller = _youtubeController;
+    if (controller == null) return;
+    try {
+      if (controller.value.isPlaying) controller.pause();
     } catch (_) {}
   }
 
@@ -1256,6 +1271,8 @@ class _MovieDetailPageContentState extends State<_MovieDetailPageContent>
 
   @override
   void dispose() {
+    PlayerOverlayController.instance.removeListener(_syncTrailerWithMainPlayer);
+    _youtubeController?.dispose();
     _scrollController.dispose();
     _tabController.dispose();
     super.dispose();
@@ -1322,6 +1339,9 @@ class _MovieDetailPageContentState extends State<_MovieDetailPageContent>
                   _isPlayerError = true;
                 });
               }
+            }
+            if (_moviePlayerIsActive && _youtubeController!.value.isPlaying) {
+              _youtubeController!.pause();
             }
           });
 
@@ -1413,7 +1433,21 @@ class _MovieDetailPageContentState extends State<_MovieDetailPageContent>
                     children: [
                       const SizedBox(height: 4),
                       _buildButtons(movie, episodes),
-                      const SizedBox(height: 24),
+                      const SizedBox(height: 10),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          ViewCountSection(movie: movie),
+                          IconButton(
+                            style: IconButton.styleFrom(
+                              padding: EdgeInsets.zero,
+                            ),
+                            onPressed: () {},
+                            icon: Icon(Iconsax.share),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 5),
                       _buildTitleSection(movie),
                       const SizedBox(height: 16),
                       _buildInfoChips(movie),
@@ -1525,7 +1559,11 @@ class _MovieDetailPageContentState extends State<_MovieDetailPageContent>
                   progressIndicatorColor: Colors.red,
                   onReady: () {
                     if (mounted) {
-                      _youtubeController?.play();
+                      if (_moviePlayerIsActive) {
+                        _youtubeController?.pause();
+                      } else {
+                        _youtubeController?.play();
+                      }
                       setState(() => _isPlayerReady = true);
                     }
                   },

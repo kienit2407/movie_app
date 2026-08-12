@@ -19,4 +19,10 @@
     <style name="NormalTheme" parent="@android:style/Theme.Black.NoTitleBar">
         <item name="android:windowBackground">?android:colorBackground</item>
     </style>
+    <style name="CastExpandedTheme" parent="Theme.AppCompat.NoActionBar">
+        <item name="colorPrimary">#10121A</item>
+        <item name="colorPrimaryDark">#080910</item>
+        <item name="colorAccent">#E91C2D</item>
+        <item name="android:windowBackground">#080910</item>
+    </style>
 </resources>

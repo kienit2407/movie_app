@@ -1,4 +1,5 @@
 import 'package:hive_ce_flutter/hive_flutter.dart';
+import 'package:movie_app/feature/home/notification/isolated_hive_bootstrap.dart';
 import 'package:movie_app/feature/home/notification/new_movie_notification_constants.dart';
 
 abstract interface class NewMovieNotificationStore {
@@ -18,23 +19,22 @@ abstract interface class NewMovieNotificationStore {
 }
 
 class HiveNewMovieNotificationStore implements NewMovieNotificationStore {
-  Future<void>? _initialization;
+  HiveNewMovieNotificationStore({IsolatedHiveBootstrap? hiveBootstrap})
+    : _hiveBootstrap = hiveBootstrap ?? IsolatedHiveBootstrap.shared;
+
+  final IsolatedHiveBootstrap _hiveBootstrap;
   Future<IsolatedBox<bool>>? _knownSlugsBox;
   Future<IsolatedBox<dynamic>>? _metadataBox;
 
-  Future<void> _ensureInitialized() {
-    return _initialization ??= IsolatedHive.initFlutter();
-  }
-
   Future<IsolatedBox<bool>> _openKnownSlugsBox() async {
-    await _ensureInitialized();
+    await _hiveBootstrap.ensureInitialized();
     return _knownSlugsBox ??= IsolatedHive.openBox<bool>(
       NewMovieNotificationConstants.knownSlugsBox,
     );
   }
 
   Future<IsolatedBox<dynamic>> _openMetadataBox() async {
-    await _ensureInitialized();
+    await _hiveBootstrap.ensureInitialized();
     return _metadataBox ??= IsolatedHive.openBox<dynamic>(
       NewMovieNotificationConstants.metadataBox,
     );
