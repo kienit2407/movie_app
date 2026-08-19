@@ -214,11 +214,10 @@ class _FloatingBlurHubBar extends StatelessWidget {
                               selected: selectedIndex == 1,
                               icon: const Icon(
                                 Iconsax.search_normal_1_copy,
-                                size: 23,
                               ),
                               activeIcon: const Icon(
-                                Iconsax.search_normal_1,
-                                size: 26,
+                                Iconsax.search_normal_1_copy,
+                                weight: 8,
                               ),
                               semanticLabel: 'Tìm kiếm',
                               onTap: () => onSelected(1),
