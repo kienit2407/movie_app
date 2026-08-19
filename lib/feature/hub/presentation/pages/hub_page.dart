@@ -4,7 +4,6 @@ import 'package:fast_cached_network_image/fast_cached_network_image.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_svg/svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
 import 'package:movie_app/core/config/themes/app_color.dart';
@@ -189,50 +188,53 @@ class _FloatingBlurHubBar extends StatelessWidget {
                         child: Row(
                           children: [
                             /// HOME
-                            /// Dùng SVG.
                             _HubTabButton(
                               selected: selectedIndex == 0,
-
-                              imageAsset: 'assets/images/home.png',
-
-                              activeImageAsset: 'assets/images/home_filled.png',
-
+                              icon: Image.asset(
+                                'assets/images/home.png',
+                                width: 24,
+                                height: 24,
+                                fit: BoxFit.contain,
+                                filterQuality: FilterQuality.high,
+                              ),
+                              activeIcon: Image.asset(
+                                'assets/images/home_filled.png',
+                                width: 26,
+                                height: 26,
+                                fit: BoxFit.contain,
+                                filterQuality: FilterQuality.high,
+                              ),
                               semanticLabel: 'Trang chủ',
-
                               onTap: () => onSelected(0),
-
                               reduceMotion: reduceMotion,
                             ),
 
                             /// SEARCH
-                            /// Dùng IconData bình thường.
                             _HubTabButton(
                               selected: selectedIndex == 1,
-
-                              icon: Iconsax.search_normal_1_copy,
-
-                              activeIcon: Iconsax.search_normal_1,
-
+                              icon: const Icon(
+                                Iconsax.search_normal_1_copy,
+                                size: 23,
+                              ),
+                              activeIcon: const Icon(
+                                Iconsax.search_normal_1,
+                                size: 26,
+                              ),
                               semanticLabel: 'Tìm kiếm',
-
                               onTap: () => onSelected(1),
-
                               reduceMotion: reduceMotion,
                             ),
 
                             /// FAVORITE
-                            /// Cũng dùng IconData.
                             _HubTabButton(
                               selected: selectedIndex == 2,
-
-                              icon: CupertinoIcons.heart,
-
-                              activeIcon: CupertinoIcons.heart_fill,
-
+                              icon: const Icon(CupertinoIcons.heart, size: 23),
+                              activeIcon: const Icon(
+                                CupertinoIcons.heart_fill,
+                                size: 25,
+                              ),
                               semanticLabel: 'Yêu thích',
-
                               onTap: () => onSelected(2),
-
                               reduceMotion: reduceMotion,
                             ),
 
@@ -258,61 +260,26 @@ class _FloatingBlurHubBar extends StatelessWidget {
   }
 }
 
-/// Một tab có thể nhận IconData hoặc SVG.
+/// Nút điều hướng chỉ quản lý tương tác và hiệu ứng chuyển trạng thái.
 ///
-/// Ví dụ IconData:
-///
-/// icon: CupertinoIcons.search
-/// activeIcon: CupertinoIcons.search
-///
-/// Hoặc SVG:
-///
-/// svgAsset: 'assets/icons/home.svg'
-/// activeSvgAsset: 'assets/icons/home_fill.svg'
+/// Giao diện icon được truyền từ nơi sử dụng để từng tab có thể tự chọn
+/// kích thước, màu sắc hoặc loại widget (Icon, Image, SVG...).
 class _HubTabButton extends StatelessWidget {
   const _HubTabButton({
     required this.selected,
+    required this.icon,
+    this.activeIcon,
     required this.semanticLabel,
     required this.onTap,
     required this.reduceMotion,
-
-    // Flutter Icon
-    this.icon,
-    this.activeIcon,
-
-    // SVG
-    this.svgAsset,
-    this.activeSvgAsset,
-
-    // PNG / JPG
-    this.imageAsset,
-    this.activeImageAsset,
-
-    this.size = 24,
-  }) : assert(
-         icon != null || svgAsset != null || imageAsset != null,
-         'Phải truyền icon, svgAsset hoặc imageAsset.',
-       );
+  });
 
   final bool selected;
-
-  // IconData
-  final IconData? icon;
-  final IconData? activeIcon;
-
-  // SVG
-  final String? svgAsset;
-  final String? activeSvgAsset;
-
-  // PNG / JPG
-  final String? imageAsset;
-  final String? activeImageAsset;
-
+  final Widget icon;
+  final Widget? activeIcon;
   final String semanticLabel;
   final VoidCallback onTap;
   final bool reduceMotion;
-
-  final double size;
 
   @override
   Widget build(BuildContext context) {
@@ -337,58 +304,24 @@ class _HubTabButton extends StatelessWidget {
                   duration: Duration(milliseconds: reduceMotion ? 70 : 170),
                   switchInCurve: Curves.easeOut,
                   switchOutCurve: Curves.easeIn,
-                  child: _buildIcon(),
+                  child: KeyedSubtree(
+                    key: ValueKey(selected),
+                    child: ExcludeSemantics(
+                      child: IconTheme.merge(
+                        data: IconThemeData(
+                          size: 24,
+                          color: selected ? Colors.white : Colors.white54,
+                        ),
+                        child: selected ? activeIcon ?? icon : icon,
+                      ),
+                    ),
+                  ),
                 ),
               ),
             ),
           ),
         ),
       ),
-    );
-  }
-
-  Widget _buildIcon() {
-    // =========================
-    // 1. PNG / JPG
-    // =========================
-    final currentImage = selected ? activeImageAsset ?? imageAsset : imageAsset;
-
-    if (currentImage != null) {
-      return Image.asset(
-        currentImage,
-        key: ValueKey<String>('image-$currentImage-$selected'),
-        width: size,
-        height: size,
-        fit: BoxFit.contain,
-        filterQuality: FilterQuality.high,
-      );
-    }
-
-    // =========================
-    // 2. SVG
-    // =========================
-    final currentSvg = selected ? activeSvgAsset ?? svgAsset : svgAsset;
-
-    if (currentSvg != null) {
-      return SvgPicture.asset(
-        currentSvg,
-        key: ValueKey<String>('svg-$currentSvg-$selected'),
-        width: size,
-        height: size,
-        fit: BoxFit.contain,
-      );
-    }
-
-    // =========================
-    // 3. IconData
-    // =========================
-    final currentIcon = selected ? activeIcon ?? icon : icon;
-
-    return Icon(
-      currentIcon,
-      key: ValueKey<String>('icon-${currentIcon?.codePoint}-$selected'),
-      size: size,
-      color: selected ? Colors.white : Colors.white54,
     );
   }
 }

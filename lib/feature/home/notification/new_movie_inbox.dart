@@ -2,9 +2,11 @@ import 'dart:async';
 
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:hive_ce_flutter/hive_flutter.dart';
+import 'package:movie_app/feature/home/notification/comment_notification.dart';
 import 'package:movie_app/feature/home/notification/isolated_hive_bootstrap.dart';
 import 'package:movie_app/feature/home/domain/entities/new_movie_entity.dart';
 import 'package:movie_app/feature/home/notification/new_movie_notification_constants.dart';
+import 'package:movie_app/feature/home/notification/new_movie_notification_service.dart';
 
 class NewMovieInboxItem {
   const NewMovieInboxItem({
@@ -198,23 +200,39 @@ class HiveNewMovieInboxStore implements NewMovieInboxStore {
 class NewMovieInboxState {
   const NewMovieInboxState({
     this.items = const <NewMovieInboxItem>[],
+    this.commentItems = const <CommentNotificationItem>[],
     this.isLoading = true,
   });
 
   final List<NewMovieInboxItem> items;
+  final List<CommentNotificationItem> commentItems;
   final bool isLoading;
-  int get unreadCount => items.where((item) => !item.isRead).length;
+  int get unreadCount =>
+      items.where((item) => !item.isRead).length +
+      commentItems.where((item) => !item.isRead).length;
 }
 
 class NewMovieInboxCubit extends Cubit<NewMovieInboxState> {
-  NewMovieInboxCubit(this._store) : super(const NewMovieInboxState()) {
+  NewMovieInboxCubit(
+    this._store, {
+    CommentNotificationRepository? commentRepository,
+    ApplicationBadgeUpdater? badgeUpdater,
+  }) : _commentRepository = commentRepository,
+       _badgeUpdater = badgeUpdater,
+       super(const NewMovieInboxState()) {
     _subscription = _store.watch().listen((_) => _scheduleRefresh());
+    _commentSubscription = _commentRepository?.watch().listen(
+      (_) => _scheduleRefresh(),
+    );
   }
 
   static const _refreshDebounceDuration = Duration(milliseconds: 50);
 
   final NewMovieInboxStore _store;
+  final CommentNotificationRepository? _commentRepository;
+  final ApplicationBadgeUpdater? _badgeUpdater;
   late final StreamSubscription<void> _subscription;
+  StreamSubscription<void>? _commentSubscription;
   Timer? _refreshDebounce;
 
   void _scheduleRefresh() {
@@ -227,8 +245,15 @@ class NewMovieInboxCubit extends Cubit<NewMovieInboxState> {
 
   Future<void> refresh() async {
     final items = await _store.getItems();
+    final commentItems = await _getCommentItems();
     if (isClosed) return;
-    emit(NewMovieInboxState(items: items, isLoading: false));
+    final nextState = NewMovieInboxState(
+      items: items,
+      commentItems: commentItems,
+      isLoading: false,
+    );
+    emit(nextState);
+    unawaited(_setBadgeCount(nextState.unreadCount));
   }
 
   Future<void> markAllRead() async {
@@ -240,14 +265,57 @@ class NewMovieInboxCubit extends Cubit<NewMovieInboxState> {
     final readItems = previousState.items
         .map((item) => item.isRead ? item : item.markRead(readAt))
         .toList(growable: false);
+    final readCommentItems = previousState.commentItems
+        .map((item) => item.isRead ? item : item.markRead(readAt))
+        .toList(growable: false);
 
-    emit(NewMovieInboxState(items: readItems, isLoading: false));
+    emit(
+      NewMovieInboxState(
+        items: readItems,
+        commentItems: readCommentItems,
+        isLoading: false,
+      ),
+    );
 
     try {
       await _store.markAllRead();
+      await _markCommentItemsRead();
+      await _setBadgeCount(0);
     } catch (_) {
       if (!isClosed) emit(previousState);
+      unawaited(_setBadgeCount(previousState.unreadCount));
       rethrow;
+    }
+  }
+
+  Future<List<CommentNotificationItem>> _getCommentItems() async {
+    final repository = _commentRepository;
+    if (repository == null) return const [];
+    try {
+      return await repository.getItems();
+    } catch (_) {
+      // Keep the local movie inbox usable before the Supabase migration is
+      // deployed or while the social inbox is temporarily unavailable.
+      return state.commentItems;
+    }
+  }
+
+  Future<void> _markCommentItemsRead() async {
+    final repository = _commentRepository;
+    if (repository == null) return;
+    try {
+      await repository.markAllRead();
+    } catch (_) {
+      // The Hive inbox and app badge should still be cleared if the optional
+      // server-backed comment inbox is temporarily unavailable.
+    }
+  }
+
+  Future<void> _setBadgeCount(int count) async {
+    try {
+      await _badgeUpdater?.setBadgeCount(count);
+    } catch (_) {
+      // Badge support depends on OS permission and launcher capabilities.
     }
   }
 
@@ -255,6 +323,7 @@ class NewMovieInboxCubit extends Cubit<NewMovieInboxState> {
   Future<void> close() async {
     _refreshDebounce?.cancel();
     await _subscription.cancel();
+    await _commentSubscription?.cancel();
     return super.close();
   }
 }

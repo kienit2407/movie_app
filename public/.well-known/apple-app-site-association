@@ -1,0 +1,15 @@
+{
+  "applinks": {
+    "apps": [],
+    "details": [
+      {
+        "appID": "9PMAHBK3B3.com.kinit.movieapp.24072005",
+        "paths": ["/movie/*"]
+      },
+      {
+        "appID": "9PMAHBK3B3.com.kinit.movieapp",
+        "paths": ["/movie/*"]
+      }
+    ]
+  }
+}

@@ -66,6 +66,7 @@ class _PlayerOverlayHostState extends State<PlayerOverlayHost>
     with TickerProviderStateMixin {
   static const Duration _settleDuration = Duration(milliseconds: 240);
   static const Duration _miniSnapDuration = Duration(milliseconds: 200);
+  static const Duration _miniResizeDuration = Duration(milliseconds: 220);
   static const double _miniWidthFactor = 0.55;
   static const double _miniMargin = 16;
   static const double _miniFlingVelocity = 600;
@@ -73,6 +74,7 @@ class _PlayerOverlayHostState extends State<PlayerOverlayHost>
   late PlayerOverlayController _controller;
   late final AnimationController _motion;
   late final AnimationController _miniSnapMotion;
+  late final AnimationController _miniResizeMotion;
   Animation<Offset>? _miniSnapAnimation;
   Offset? _miniPosition;
   Widget? _playerChild;
@@ -90,6 +92,10 @@ class _PlayerOverlayHostState extends State<PlayerOverlayHost>
       vsync: this,
       duration: _miniSnapDuration,
     )..addListener(_publishMiniSnapPosition);
+    _miniResizeMotion = AnimationController(
+      vsync: this,
+      duration: _miniResizeDuration,
+    );
     _controller.addListener(_handleControllerChanged);
     _syncSessionChild();
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -118,6 +124,7 @@ class _PlayerOverlayHostState extends State<PlayerOverlayHost>
     _miniSnapMotion
       ..removeListener(_publishMiniSnapPosition)
       ..dispose();
+    _miniResizeMotion.dispose();
     super.dispose();
   }
 
@@ -152,6 +159,9 @@ class _PlayerOverlayHostState extends State<PlayerOverlayHost>
     _miniSnapMotion.stop();
     _miniSnapAnimation = null;
     _miniPosition = null;
+    _miniResizeMotion
+      ..stop()
+      ..value = 0;
     _mountedSessionId = nextSessionId;
     _playerChild = args == null
         ? null
@@ -220,11 +230,12 @@ class _PlayerOverlayHostState extends State<PlayerOverlayHost>
     required double reservedBottom,
     required Size miniSize,
   }) {
-    final left = _miniMargin;
+    final left = padding.left + _miniMargin;
     final top = padding.top + _miniMargin;
-    final right = (screenSize.width - miniSize.width - _miniMargin)
-        .clamp(left, double.infinity)
-        .toDouble();
+    final right =
+        (screenSize.width - padding.right - miniSize.width - _miniMargin)
+            .clamp(left, double.infinity)
+            .toDouble();
     final bottom =
         (screenSize.height -
                 miniSize.height -
@@ -286,16 +297,63 @@ class _PlayerOverlayHostState extends State<PlayerOverlayHost>
     _miniSnapMotion.forward(from: 0);
   }
 
+  void _toggleMiniWidth() {
+    if (!_controller.isMini) return;
+
+    _miniSnapMotion.stop();
+    _miniSnapAnimation = null;
+    final target = _miniResizeMotion.value < 0.5 ? 1.0 : 0.0;
+    final disableAnimations =
+        MediaQuery.maybeOf(context)?.disableAnimations ?? false;
+    if (disableAnimations) {
+      _miniResizeMotion.value = target;
+      return;
+    }
+
+    unawaited(_miniResizeMotion.animateTo(target, curve: Curves.easeOutCubic));
+  }
+
+  Widget _buildBackgroundContent(BuildContext context) {
+    final mediaQuery = MediaQuery.of(context);
+    final viewport = mediaQuery.size;
+    final keepPortraitLayout =
+        _playerChild != null &&
+        _controller.target == PlayerOverlayTarget.expanded &&
+        viewport.width > viewport.height;
+
+    if (!keepPortraitLayout) return widget.child;
+
+    // Home và các tab vẫn được giữ mounted phía dưới player. Khi cửa sổ xoay
+    // ngang, không truyền constraint ngang tạm thời xuống các trang chỉ hỗ trợ
+    // dọc vì ScreenUtil sẽ làm các card/hero Column bị overflow. Player che kín
+    // phần này nên ta giữ nguyên layout dọc của nền cho đến khi trở về portrait.
+    final portraitSize = Size(viewport.height, viewport.width);
+    return ClipRect(
+      child: OverflowBox(
+        alignment: Alignment.topLeft,
+        minWidth: portraitSize.width,
+        maxWidth: portraitSize.width,
+        minHeight: portraitSize.height,
+        maxHeight: portraitSize.height,
+        child: MediaQuery(
+          data: mediaQuery.copyWith(size: portraitSize),
+          child: SizedBox.fromSize(size: portraitSize, child: widget.child),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Stack(
       fit: StackFit.expand,
       children: [
-        widget.child,
+        _buildBackgroundContent(context),
         if (_playerChild != null)
           AnimatedBuilder(
             animation: Listenable.merge([
               _controller.progress,
+              _miniResizeMotion,
               widget.router.routerDelegate,
             ]),
             child: _playerChild,
@@ -305,7 +363,15 @@ class _PlayerOverlayHostState extends State<PlayerOverlayHost>
               final path =
                   widget.router.routerDelegate.currentConfiguration.uri.path;
               final reservedBottom = _isHubRoute(path) ? 92.0 : 0.0;
-              final miniWidth = size.width * _miniWidthFactor;
+              final normalMiniWidth = size.width * _miniWidthFactor;
+              final availableWideWidth =
+                  size.width - padding.left - padding.right - (_miniMargin * 2);
+              final wideMiniWidth = availableWideWidth > normalMiniWidth
+                  ? availableWideWidth
+                  : normalMiniWidth;
+              final miniWidth =
+                  normalMiniWidth +
+                  ((wideMiniWidth - normalMiniWidth) * _miniResizeMotion.value);
               final miniHeight = miniWidth * 9 / 16;
               final miniSize = Size(miniWidth, miniHeight);
               final miniBounds = _miniMovementBounds(
@@ -399,6 +465,7 @@ class _PlayerOverlayHostState extends State<PlayerOverlayHost>
                                 _endMiniDrag(details.velocity, miniBounds),
                             onPanCancel: () =>
                                 _endMiniDrag(Velocity.zero, miniBounds),
+                            onDoubleTap: _toggleMiniWidth,
                           ),
                         ),
                       ),
@@ -420,6 +487,7 @@ class _MiniPlayerChrome extends StatelessWidget {
     required this.onPanUpdate,
     required this.onPanEnd,
     required this.onPanCancel,
+    required this.onDoubleTap,
   });
 
   final PlayerOverlayController controller;
@@ -428,6 +496,7 @@ class _MiniPlayerChrome extends StatelessWidget {
   final GestureDragUpdateCallback onPanUpdate;
   final GestureDragEndCallback onPanEnd;
   final GestureDragCancelCallback onPanCancel;
+  final VoidCallback onDoubleTap;
 
   @override
   Widget build(BuildContext context) {
@@ -468,38 +537,27 @@ class _MiniPlayerChrome extends StatelessWidget {
             unawaited(SupportRotateScreen.onlyPotrait());
             controller.expand();
           },
+          onDoubleTap: onDoubleTap,
           child: Stack(
             fit: StackFit.expand,
             children: [
-              Center(
-                child: loading
-                    ? const SizedBox(
-                        width: 24,
-                        height: 24,
-                        child: CircularProgressIndicator.adaptive(
-                          strokeWidth: 2,
-                          valueColor: AlwaysStoppedAnimation<Color>(
-                            Colors.white,
-                          ),
-                        ),
-                      )
-                    : IconButton(
-                        tooltip: value.isPlaying ? 'Tạm dừng' : 'Phát',
-                        onPressed: () {
-                          unawaited(controller.togglePlayback());
-                        },
-                        style: IconButton.styleFrom(
-                          backgroundColor: Colors.black45,
-                        ),
-                        icon: Icon(
-                          value.isPlaying
-                              ? Iconsax.pause_copy
-                              : Iconsax.play_copy,
-                          color: Colors.white,
-                          size: 22,
-                        ),
-                      ),
-              ),
+              if (!loading)
+                Center(
+                  child: IconButton(
+                    tooltip: value.isPlaying ? 'Tạm dừng' : 'Phát',
+                    onPressed: () {
+                      unawaited(controller.togglePlayback());
+                    },
+                    style: IconButton.styleFrom(
+                      backgroundColor: Colors.black45,
+                    ),
+                    icon: Icon(
+                      value.isPlaying ? Iconsax.pause_copy : Iconsax.play_copy,
+                      color: Colors.white,
+                      size: 22,
+                    ),
+                  ),
+                ),
               if (value != null)
                 Align(
                   alignment: Alignment.bottomCenter,

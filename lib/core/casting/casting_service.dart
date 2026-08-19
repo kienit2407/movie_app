@@ -91,6 +91,26 @@ class CastSessionEvent {
   }
 }
 
+class GoogleCastDevice {
+  const GoogleCastDevice({
+    required this.id,
+    required this.name,
+    this.description,
+  });
+
+  final String id;
+  final String name;
+  final String? description;
+
+  factory GoogleCastDevice.fromMap(Map<Object?, Object?> map) {
+    return GoogleCastDevice(
+      id: map['id']?.toString() ?? '',
+      name: map['name']?.toString() ?? 'Thiết bị Google Cast',
+      description: map['description']?.toString(),
+    );
+  }
+}
+
 abstract interface class CastingService {
   bool get supportsAirPlay;
   bool get supportsGoogleCast;
@@ -98,6 +118,17 @@ abstract interface class CastingService {
   Future<bool> showAirPlayPicker();
 
   Stream<CastSessionEvent> get events;
+
+  Stream<List<GoogleCastDevice>> get googleCastDevices;
+
+  Future<List<GoogleCastDevice>> startGoogleCastDiscovery();
+
+  Future<void> stopGoogleCastDiscovery();
+
+  Future<bool> connectGoogleCastDevice(
+    GoogleCastDevice device,
+    CastMedia media,
+  );
 
   Future<bool> showGoogleCastPicker(CastMedia media);
 
@@ -120,6 +151,8 @@ class PlatformCastingService implements CastingService {
   );
   static final StreamController<CastSessionEvent> _events =
       StreamController<CastSessionEvent>.broadcast(sync: true);
+  static final StreamController<List<GoogleCastDevice>> _googleCastDevices =
+      StreamController<List<GoogleCastDevice>>.broadcast(sync: true);
   static bool _handlerInstalled = false;
 
   PlatformCastingService() {
@@ -131,6 +164,20 @@ class PlatformCastingService implements CastingService {
     if (_handlerInstalled) return;
     _handlerInstalled = true;
     _channel.setMethodCallHandler((call) async {
+      if (call.method == 'googleCastDevicesChanged' && call.arguments is List) {
+        _googleCastDevices.add(
+          (call.arguments as List)
+              .whereType<Map>()
+              .map(
+                (device) =>
+                    GoogleCastDevice.fromMap(device.cast<Object?, Object?>()),
+              )
+              .where((device) => device.id.isNotEmpty)
+              .toList(growable: false),
+        );
+        return;
+      }
+
       final type = switch (call.method) {
         'googleCastStateChanged' => CastingType.googleCast,
         'airPlayStateChanged' => CastingType.airPlay,
@@ -175,6 +222,56 @@ class PlatformCastingService implements CastingService {
 
   @override
   Stream<CastSessionEvent> get events => _events.stream;
+
+  @override
+  Stream<List<GoogleCastDevice>> get googleCastDevices =>
+      _googleCastDevices.stream;
+
+  @override
+  Future<List<GoogleCastDevice>> startGoogleCastDiscovery() async {
+    if (!supportsGoogleCast) return const [];
+    try {
+      final devices = await _channel.invokeListMethod<Object?>(
+        'startGoogleCastDiscovery',
+      );
+      return (devices ?? const [])
+          .whereType<Map>()
+          .map(
+            (device) =>
+                GoogleCastDevice.fromMap(device.cast<Object?, Object?>()),
+          )
+          .where((device) => device.id.isNotEmpty)
+          .toList(growable: false);
+    } on PlatformException {
+      return const [];
+    } on MissingPluginException {
+      return const [];
+    }
+  }
+
+  @override
+  Future<void> stopGoogleCastDiscovery() async {
+    if (!supportsGoogleCast) return;
+    try {
+      await _channel.invokeMethod<void>('stopGoogleCastDiscovery');
+    } on PlatformException {
+      // Discovery cleanup is best effort.
+    } on MissingPluginException {
+      // Native bridge is unavailable on unsupported/test platforms.
+    }
+  }
+
+  @override
+  Future<bool> connectGoogleCastDevice(
+    GoogleCastDevice device,
+    CastMedia media,
+  ) {
+    if (!supportsGoogleCast) return Future.value(false);
+    return _invokeBool('connectGoogleCastDevice', {
+      'deviceId': device.id,
+      ..._mediaArguments(media),
+    });
+  }
 
   @override
   Future<bool> showAirPlayPicker() async {

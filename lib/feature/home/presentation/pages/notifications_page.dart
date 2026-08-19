@@ -12,6 +12,7 @@ import 'package:movie_app/common/helpers/static_data.dart';
 import 'package:movie_app/core/config/routes/app_router.dart';
 import 'package:movie_app/core/config/themes/app_color.dart';
 import 'package:movie_app/core/config/utils/sharder_text.dart';
+import 'package:movie_app/feature/home/notification/comment_notification.dart';
 import 'package:movie_app/feature/home/notification/new_movie_inbox.dart';
 
 class NotificationsPage extends StatefulWidget {
@@ -188,7 +189,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
       );
     }
 
-    if (state.items.isEmpty) {
+    if (state.items.isEmpty && state.commentItems.isEmpty) {
       return const SliverFillRemaining(
         hasScrollBody: false,
         child: Center(
@@ -211,7 +212,11 @@ class _NotificationsPageState extends State<NotificationsPage> {
       );
     }
 
-    final groups = _groupByDay(state.items);
+    final feedItems = <_NotificationFeedItem>[
+      ...state.items.map(_NotificationFeedItem.movie),
+      ...state.commentItems.map(_NotificationFeedItem.comment),
+    ]..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    final groups = _groupByDay(feedItems);
     final entries = <_NotificationListEntry>[
       for (final group in groups) ...[
         _NotificationListEntry.date(group.date),
@@ -245,10 +250,152 @@ class _NotificationsPageState extends State<NotificationsPage> {
               );
             }
 
-            return _NotificationMovieTile(key: entry.key, item: entry.item!);
+            final item = entry.item!;
+            final movie = item.movieItem;
+            if (movie != null) {
+              return _NotificationMovieTile(key: entry.key, item: movie);
+            }
+            return _CommentNotificationTile(
+              key: entry.key,
+              item: item.commentItem!,
+            );
           },
           childCount: entries.length,
           findChildIndexCallback: (key) => indicesByKey[key],
+        ),
+      ),
+    );
+  }
+}
+
+class _CommentNotificationTile extends StatelessWidget {
+  const _CommentNotificationTile({super.key, required this.item});
+
+  final CommentNotificationItem item;
+
+  @override
+  Widget build(BuildContext context) {
+    final pixelRatio = MediaQuery.devicePixelRatioOf(context);
+    final avatarSize = (48 * pixelRatio).round();
+    final imageFadeDuration = MediaQuery.disableAnimationsOf(context)
+        ? Duration.zero
+        : const Duration(milliseconds: 120);
+    final action = item.type == CommentNotificationType.reply
+        ? 'đã trả lời bình luận của bạn'
+        : 'đã thích bình luận của bạn';
+
+    return Card(
+      color: Colors.white.withValues(alpha: .055),
+      margin: const EdgeInsets.only(bottom: 10),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(14),
+        onTap: () => context.push(
+          AppRoutes.movieDetail.replaceAll(
+            ':slug',
+            Uri.encodeComponent(item.movieSlug),
+          ),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  ClipOval(
+                    child: SizedBox.square(
+                      dimension: 48,
+                      child: item.actorAvatarUrl?.trim().isNotEmpty == true
+                          ? FastCachedImage(
+                              url: item.actorAvatarUrl!,
+                              fit: BoxFit.cover,
+                              cacheWidth: avatarSize,
+                              cacheHeight: avatarSize,
+                              fadeInDuration: imageFadeDuration,
+                            )
+                          : const ColoredBox(
+                              color: Color(0xff292B38),
+                              child: Icon(
+                                Icons.person_outline_rounded,
+                                color: Colors.white60,
+                              ),
+                            ),
+                    ),
+                  ),
+                  Positioned(
+                    right: -3,
+                    bottom: -3,
+                    child: DecoratedBox(
+                      decoration: const BoxDecoration(
+                        color: AppColor.firstColor,
+                        shape: BoxShape.circle,
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.all(4),
+                        child: Icon(
+                          item.type == CommentNotificationType.reply
+                              ? Icons.reply_rounded
+                              : Icons.favorite_rounded,
+                          color: Colors.white,
+                          size: 13,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text.rich(
+                      TextSpan(
+                        style: const TextStyle(
+                          color: Colors.white,
+                          height: 1.35,
+                        ),
+                        children: [
+                          TextSpan(
+                            text: item.actorName,
+                            style: const TextStyle(fontWeight: FontWeight.w800),
+                          ),
+                          TextSpan(text: ' $action'),
+                        ],
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    if (item.bodyPreview.trim().isNotEmpty) ...[
+                      const SizedBox(height: 6),
+                      Text(
+                        '“${item.bodyPreview.trim()}”',
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: Colors.white60,
+                          height: 1.3,
+                        ),
+                      ),
+                    ],
+                    const SizedBox(height: 8),
+                    Text(
+                      DateFormat('HH:mm').format(item.createdAt),
+                      style: const TextStyle(
+                        color: AppColor.firstColor,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const Padding(
+                padding: EdgeInsets.only(top: 12),
+                child: Icon(Icons.chevron_right, color: Colors.white38),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -351,22 +498,41 @@ class _NotificationMovieTile extends StatelessWidget {
 class _NotificationListEntry {
   const _NotificationListEntry.date(DateTime value) : date = value, item = null;
 
-  const _NotificationListEntry.item(NewMovieInboxItem value)
+  const _NotificationListEntry.item(_NotificationFeedItem value)
     : date = null,
       item = value;
 
   final DateTime? date;
-  final NewMovieInboxItem? item;
+  final _NotificationFeedItem? item;
 
   Key get key => date != null
       ? ValueKey<String>('notification-date-${date!.millisecondsSinceEpoch}')
-      : ValueKey<String>('notification-item-${item!.slug}');
+      : item!.key;
+}
+
+class _NotificationFeedItem {
+  const _NotificationFeedItem.movie(NewMovieInboxItem value)
+    : movieItem = value,
+      commentItem = null;
+
+  const _NotificationFeedItem.comment(CommentNotificationItem value)
+    : movieItem = null,
+      commentItem = value;
+
+  final NewMovieInboxItem? movieItem;
+  final CommentNotificationItem? commentItem;
+
+  DateTime get createdAt => movieItem?.detectedAt ?? commentItem!.createdAt;
+
+  Key get key => movieItem != null
+      ? ValueKey<String>('notification-movie-${movieItem!.slug}')
+      : ValueKey<String>('notification-comment-${commentItem!.id}');
 }
 
 class _NotificationGroup {
   const _NotificationGroup(this.date, this.items);
   final DateTime date;
-  final List<NewMovieInboxItem> items;
+  final List<_NotificationFeedItem> items;
 }
 
 bool _shouldRebuildNotificationList(
@@ -374,7 +540,8 @@ bool _shouldRebuildNotificationList(
   NewMovieInboxState current,
 ) {
   if (previous.isLoading != current.isLoading ||
-      previous.items.length != current.items.length) {
+      previous.items.length != current.items.length ||
+      previous.commentItems.length != current.commentItems.length) {
     return true;
   }
 
@@ -392,13 +559,26 @@ bool _shouldRebuildNotificationList(
     }
   }
 
+  for (var index = 0; index < previous.commentItems.length; index++) {
+    final oldItem = previous.commentItems[index];
+    final newItem = current.commentItems[index];
+    if (oldItem.id != newItem.id ||
+        oldItem.type != newItem.type ||
+        oldItem.actorName != newItem.actorName ||
+        oldItem.actorAvatarUrl != newItem.actorAvatarUrl ||
+        oldItem.bodyPreview != newItem.bodyPreview ||
+        oldItem.createdAt != newItem.createdAt) {
+      return true;
+    }
+  }
+
   return false;
 }
 
-List<_NotificationGroup> _groupByDay(List<NewMovieInboxItem> items) {
-  final groups = <DateTime, List<NewMovieInboxItem>>{};
+List<_NotificationGroup> _groupByDay(List<_NotificationFeedItem> items) {
+  final groups = <DateTime, List<_NotificationFeedItem>>{};
   for (final item in items) {
-    final local = item.detectedAt.toLocal();
+    final local = item.createdAt.toLocal();
     final day = DateTime(local.year, local.month, local.day);
     groups.putIfAbsent(day, () => []).add(item);
   }

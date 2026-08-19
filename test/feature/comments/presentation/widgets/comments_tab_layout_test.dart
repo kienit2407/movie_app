@@ -164,6 +164,66 @@ void main() {
     await commentsCubit.close();
     authClient.dispose();
   });
+
+  testWidgets(
+    'owner can hide a root-overlay composer while comments stay mounted',
+    (tester) async {
+      final previousUpdateInterval =
+          VisibilityDetectorController.instance.updateInterval;
+      VisibilityDetectorController.instance.updateInterval = Duration.zero;
+      addTearDown(() {
+        VisibilityDetectorController.instance.updateInterval =
+            previousUpdateInterval;
+      });
+
+      final repository = _FailingCommentRepository();
+      final commentsCubit = CommentsCubit(
+        repository: repository,
+        movieSlug: 'test-movie',
+      );
+      await commentsCubit.loadInitial();
+      final authClient = SupabaseClient(
+        'http://127.0.0.1:54321',
+        'test-anon-key',
+        authOptions: const AuthClientOptions(autoRefreshToken: false),
+      );
+      final composerVisible = ValueNotifier<bool>(true);
+
+      await tester.pumpWidget(
+        MultiBlocProvider(
+          providers: [
+            BlocProvider.value(value: commentsCubit),
+            BlocProvider(create: (_) => AuthSessionCubit(client: authClient)),
+          ],
+          child: MaterialApp(
+            home: Scaffold(
+              body: CommentsTab(
+                composerVisibilityListenable: composerVisible,
+                isComposerOverlayVisible: () => composerVisible.value,
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.pump();
+      expect(find.byType(TextField), findsOneWidget);
+
+      composerVisible.value = false;
+      await tester.pump();
+      expect(find.byType(TextField), findsNothing);
+
+      composerVisible.value = true;
+      await tester.pump();
+      expect(find.byType(TextField), findsOneWidget);
+      expect(tester.takeException(), isNull);
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await commentsCubit.close();
+      authClient.dispose();
+      composerVisible.dispose();
+    },
+  );
 }
 
 class _FailingCommentRepository implements CommentRepository {

@@ -23,6 +23,7 @@ import 'package:movie_app/feature/home/domain/usecase/get_genre_movie.dart';
 import 'package:movie_app/feature/home/domain/usecase/get_latest_usecase.dart';
 import 'package:movie_app/feature/home/domain/usecase/get_movies_by_filter_usecase.dart';
 import 'package:movie_app/feature/home/notification/new_movie_background_service.dart';
+import 'package:movie_app/feature/home/notification/comment_notification.dart';
 import 'package:movie_app/feature/home/notification/new_movie_checker.dart';
 import 'package:movie_app/feature/home/notification/new_movie_notification_coordinator.dart';
 import 'package:movie_app/feature/home/notification/new_movie_notification_service.dart';
@@ -124,6 +125,9 @@ Future<void> _initializeGetit() async {
     HiveNewMovieNotificationStore.new,
   );
   sl.registerLazySingleton<NewMovieInboxStore>(HiveNewMovieInboxStore.new);
+  sl.registerLazySingleton<CommentNotificationRepository>(
+    SupabaseCommentNotificationRepository.new,
+  );
   sl.registerLazySingleton<NewMovieNotificationService>(
     NewMovieNotificationService.new,
   );

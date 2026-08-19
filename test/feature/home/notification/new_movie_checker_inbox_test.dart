@@ -135,7 +135,7 @@ class _FakeNotifier implements NewMovieNotifier {
   Future<bool> areNotificationsEnabled() async => enabled;
 
   @override
-  Future<void> showNewMovies(List<ItemEntity> movies) async {
+  Future<void> showNewMovies(List<ItemEntity> movies, {int? badgeCount}) async {
     shownMovies.addAll(movies);
   }
 }

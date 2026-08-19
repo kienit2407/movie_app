@@ -18,6 +18,7 @@ import 'package:movie_app/core/config/network/init_supabase.dart';
 import 'package:movie_app/core/config/themes/app_theme.dart';
 import 'package:movie_app/core/player_overlay_host.dart';
 import 'package:movie_app/core/player_overlay_controller.dart';
+import 'package:movie_app/core/movie_sharing/movie_deep_link_service.dart';
 import 'package:movie_app/feature/auth/domain/usecases/confirm_with_token.dart';
 import 'package:movie_app/feature/auth/domain/usecases/req_reset_password.dart';
 import 'package:movie_app/feature/auth/domain/usecases/sigin_with_facebook.dart';
@@ -35,6 +36,7 @@ import 'package:movie_app/feature/home/domain/usecase/get_movies_by_filter_useca
 import 'package:movie_app/feature/home/domain/usecase/get_genre_movie.dart';
 import 'package:movie_app/feature/home/domain/usecase/get_latest_usecase.dart';
 import 'package:movie_app/feature/home/notification/new_movie_notification_navigation.dart';
+import 'package:movie_app/feature/home/notification/comment_notification.dart';
 import 'package:movie_app/feature/home/notification/new_movie_inbox.dart';
 import 'package:movie_app/feature/home/notification/new_movie_notification_service.dart';
 import 'package:movie_app/feature/home/notification/new_movie_worker.dart';
@@ -51,6 +53,7 @@ import 'package:workmanager/workmanager.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  MovieDeepLinkService.instance.initialize();
   PaintingBinding.instance.imageCache.maximumSize = 500;
   PaintingBinding.instance.imageCache.maximumSizeBytes = 160 << 20;
   debugPrint('=== [1/8] WidgetsFlutterBinding initialized ===');
@@ -93,7 +96,6 @@ Future<void> main() async {
     onPayload: NewMovieNotificationNavigation.handlePayload,
     readLaunchPayload: true,
   );
-
   await LiquidGlassWidgets.initialize(enablePerformanceMonitor: false);
   debugPrint('=== Starting app... ===');
   runApp(
@@ -121,6 +123,19 @@ class MovieApp extends StatelessWidget {
       designSize: const Size(414, 896),
       minTextAdapt: true,
       splitScreenMode: true,
+      rebuildFactor: (oldData, newData) {
+        final playerOverlay = PlayerOverlayController.instance;
+        final keepPortraitScale =
+            playerOverlay.isVisible &&
+            playerOverlay.target == PlayerOverlayTarget.expanded &&
+            newData.orientation == Orientation.landscape;
+
+        // Các tab phía dưới player chỉ hỗ trợ portrait. Không cho ScreenUtil
+        // đổi scaleWidth/scaleHeight theo khung ngang trong lúc player phủ kín;
+        // nếu không 140.w có thể lớn hơn 300 px trong khi 260.h chỉ còn ~200 px.
+        if (keepPortraitScale) return false;
+        return RebuildFactors.size(oldData, newData);
+      },
       builder: (_, __) => MultiBlocProvider(
         providers: [
           BlocProvider(create: (context) => SplashCubit()..appStarted()),
@@ -138,7 +153,11 @@ class MovieApp extends StatelessWidget {
                 UserLibraryCubit(repository: sl<UserLibraryRepository>()),
           ),
           BlocProvider(
-            create: (context) => NewMovieInboxCubit(sl<NewMovieInboxStore>()),
+            create: (context) => NewMovieInboxCubit(
+              sl<NewMovieInboxStore>(),
+              commentRepository: sl<CommentNotificationRepository>(),
+              badgeUpdater: sl<NewMovieNotificationService>(),
+            ),
           ),
           BlocProvider(
             create: (context) =>

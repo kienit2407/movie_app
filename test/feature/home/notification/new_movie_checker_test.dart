@@ -271,7 +271,7 @@ class FakeNewMovieNotifier implements NewMovieNotifier {
   Future<bool> areNotificationsEnabled() async => enabled;
 
   @override
-  Future<void> showNewMovies(List<ItemEntity> movies) async {
+  Future<void> showNewMovies(List<ItemEntity> movies, {int? badgeCount}) async {
     if (throwWhenShowing) throw StateError('notification failed');
     shownBatches.add(List.of(movies));
   }

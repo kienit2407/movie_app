@@ -17,9 +17,16 @@ import 'package:toastification/toastification.dart';
 import 'package:visibility_detector/visibility_detector.dart';
 
 class CommentsTab extends StatefulWidget {
-  const CommentsTab({super.key, this.onComposerWillFocus});
+  const CommentsTab({
+    super.key,
+    this.onComposerWillFocus,
+    this.composerVisibilityListenable,
+    this.isComposerOverlayVisible,
+  });
 
   final Future<void> Function()? onComposerWillFocus;
+  final Listenable? composerVisibilityListenable;
+  final bool Function()? isComposerOverlayVisible;
 
   @override
   State<CommentsTab> createState() => _CommentsTabState();
@@ -47,6 +54,7 @@ class _CommentsTabState extends State<CommentsTab> with WidgetsBindingObserver {
   bool _composerFocused = false;
   bool _isPreparingComposerFocus = false;
   bool _isSubmitting = false;
+  bool _isVisibleInViewport = false;
   double _keyboardInset = 0;
 
   @override
@@ -55,6 +63,28 @@ class _CommentsTabState extends State<CommentsTab> with WidgetsBindingObserver {
     WidgetsBinding.instance.addObserver(this);
     _composerFocus.addListener(_onComposerFocusChanged);
     _listController.addListener(_onListScroll);
+    widget.composerVisibilityListenable?.addListener(
+      _syncComposerOverlayVisibility,
+    );
+  }
+
+  @override
+  void didUpdateWidget(CommentsTab oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!identical(
+      oldWidget.composerVisibilityListenable,
+      widget.composerVisibilityListenable,
+    )) {
+      oldWidget.composerVisibilityListenable?.removeListener(
+        _syncComposerOverlayVisibility,
+      );
+      widget.composerVisibilityListenable?.addListener(
+        _syncComposerOverlayVisibility,
+      );
+    }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _syncComposerOverlayVisibility();
+    });
   }
 
   @override
@@ -74,6 +104,9 @@ class _CommentsTabState extends State<CommentsTab> with WidgetsBindingObserver {
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    widget.composerVisibilityListenable?.removeListener(
+      _syncComposerOverlayVisibility,
+    );
     if (_composerOverlayController.isShowing) {
       _composerOverlayController.hide();
     }
@@ -110,7 +143,14 @@ class _CommentsTabState extends State<CommentsTab> with WidgetsBindingObserver {
   }
 
   void _onVisibilityChanged(VisibilityInfo info) {
-    final shouldShow = info.visibleBounds.height >= 48;
+    _isVisibleInViewport = info.visibleBounds.height >= 48;
+    _syncComposerOverlayVisibility();
+  }
+
+  void _syncComposerOverlayVisibility() {
+    if (!mounted) return;
+    final allowedByOwner = widget.isComposerOverlayVisible?.call() ?? true;
+    final shouldShow = _isVisibleInViewport && allowedByOwner;
     if (shouldShow == _composerOverlayController.isShowing) return;
 
     if (shouldShow) {

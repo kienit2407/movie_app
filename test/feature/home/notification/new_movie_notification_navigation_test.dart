@@ -24,11 +24,33 @@ void main() {
       );
     });
 
+    test('routes comment activity to the related movie', () {
+      final payload = jsonEncode({
+        'type': 'comment_reply',
+        'movie_slug': 'phim-dang-xem',
+      });
+
+      expect(
+        NewMovieNotificationNavigation.routeFromPayload(payload),
+        '/movie/phim-dang-xem',
+      );
+    });
+
     test('routes malformed payloads to Home', () {
       expect(
         NewMovieNotificationNavigation.routeFromPayload('not-json'),
         AppRoutes.home,
       );
+    });
+  });
+
+  group('Movie deep links', () {
+    test('custom movie URI resolves to the detail route', () {
+      final uri = Uri.parse('liquidphim://movie/phim-moi');
+
+      expect(uri.scheme, 'liquidphim');
+      expect(uri.host, 'movie');
+      expect(uri.pathSegments, ['phim-moi']);
     });
   });
 }

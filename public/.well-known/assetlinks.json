@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.example.movie_app",
+      "sha256_cert_fingerprints": [
+        "5B:6D:62:5D:BF:CD:67:9B:78:FE:AA:73:55:75:34:A8:90:F5:42:B6:B4:B8:3A:B0:F1:BB:98:69:7E:CB:E0:F8"
+      ]
+    }
+  }
+]

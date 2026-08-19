@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import 'package:movie_app/core/config/assets/app_image.dart';
 import 'package:movie_app/core/config/constants/const_globals.dart';
+import 'package:movie_app/core/config/routes/app_router.dart';
 import 'package:movie_app/core/config/themes/app_color.dart';
 import 'package:movie_app/feature/home/notification/new_movie_notification_navigation.dart';
 import 'package:movie_app/feature/intro/presentation/splash/bloc/splash_cubit.dart';
@@ -25,7 +27,13 @@ class _SplashPageState extends State<SplashPage> {
     await Future.delayed(const Duration(milliseconds: 450));
     if (!mounted) return;
 
-    context.go(NewMovieNotificationNavigation.takeRouteAfterSplash());
+    final route = NewMovieNotificationNavigation.takeRouteAfterSplash();
+    context.go(AppRoutes.home);
+    if (route != AppRoutes.home) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        goRouter.push(route);
+      });
+    }
   }
 
   @override
@@ -61,28 +69,32 @@ class _SplashPageState extends State<SplashPage> {
                   child: Transform.scale(scale: scale, child: child),
                 );
               },
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                spacing: 16,
-                children: [
-                  Container(
-                    width: 112,
-                    height: 112,
-                    decoration: BoxDecoration(
-                      image: DecorationImage(
-                        image: AssetImage(AppImage.splashIcon),
+              child: Padding(
+                padding: EdgeInsetsGeometry.only(top: 300.h),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.start,
+                  spacing: 16,
+                  children: [
+                    Container(
+                      width: 112,
+                      height: 112,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(30),
+                        image: DecorationImage(
+                          image: AssetImage(AppImage.splashIcon),
+                        ),
                       ),
                     ),
-                  ),
-                  Text(
-                    Global.instance.appName,
-                    style: const TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                      color: AppColor.secondColor,
+                    Text(
+                      Global.instance.appName,
+                      style: const TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        color: AppColor.secondColor,
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ],

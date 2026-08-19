@@ -1,0 +1,2 @@
+@echo off
+"/usr/local/bin/firebase"  /Users/kinit/Documents/movie_app/.firebase-cli-home/.cache/firebase/runtime\shell.js %*

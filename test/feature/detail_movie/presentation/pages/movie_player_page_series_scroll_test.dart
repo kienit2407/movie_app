@@ -9,6 +9,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:hive_ce/hive.dart';
 import 'package:hydrated_bloc/hydrated_bloc.dart';
 import 'package:movie_app/core/config/di/service_locator.dart';
+import 'package:movie_app/core/device_orientation_service.dart';
 import 'package:movie_app/feature/auth/presentation/session/auth_session_cubit.dart';
 import 'package:movie_app/feature/comments/domain/entities/comment.dart';
 import 'package:movie_app/feature/comments/domain/repositories/comment_repository.dart';
@@ -152,6 +153,40 @@ void main() {
     await tester.pump();
   });
 
+  testWidgets('episode search stays above the software keyboard', (
+    tester,
+  ) async {
+    await _setPortraitSurface(tester, topPadding: 47);
+    await _pumpPlayer(tester, episodeCurrent: 'Tập 80');
+
+    final search = find.byKey(const ValueKey('series-episode-search'));
+    final initialTop = tester.getTopLeft(search).dy;
+    await tester.tap(find.byType(TextField));
+    await tester.pump();
+
+    tester.view.viewInsets = const FakeViewPadding(bottom: 360);
+    await tester.pump(const Duration(milliseconds: 100));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 200));
+
+    const keyboardTop = 1000.0 - 360.0;
+    expect(
+      tester.getBottomLeft(search).dy,
+      lessThanOrEqualTo(keyboardTop - 14),
+    );
+    expect(tester.getTopLeft(search).dy, lessThan(initialTop));
+    expect(tester.takeException(), isNull);
+
+    tester.view.viewInsets = FakeViewPadding.zero;
+    await tester.pump(const Duration(milliseconds: 100));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 200));
+    expect(tester.getTopLeft(search).dy, closeTo(initialTop, 0.1));
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump();
+  });
+
   testWidgets('portrait video expands without a panel layout overflow', (
     tester,
   ) async {
@@ -175,6 +210,159 @@ void main() {
 
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pump();
+  });
+
+  testWidgets('fullscreen uses a rotated landscape layout without overflow', (
+    tester,
+  ) async {
+    await _setPortraitSurface(tester, topPadding: 47);
+    await _pumpPlayer(tester, episodeCurrent: 'Full', episodeCount: 1);
+
+    final dynamic playerState = tester.state(find.byType(MoviePlayerPage));
+    final Future<void> enterFullscreen =
+        playerState.toggleFullscreenForTest() as Future<void>;
+    await tester.pump();
+    tester.view.physicalSize = const Size(1000, 430);
+    await tester.pump();
+    await enterFullscreen;
+    await tester.pump();
+
+    expect(
+      find.byKey(const ValueKey('rotated-landscape-player')),
+      findsOneWidget,
+    );
+    expect(
+      tester.getSize(find.byKey(const ValueKey('landscape-control-bar'))).width,
+      closeTo(1000, 0.1),
+    );
+    final fullscreenLayoutException = tester.takeException();
+    expect(fullscreenLayoutException, isNull);
+
+    final Future<void> exitFullscreen =
+        playerState.toggleFullscreenForTest() as Future<void>;
+    tester.view.physicalSize = const Size(430, 1000);
+    await tester.pump();
+    await exitFullscreen;
+    await tester.pump();
+
+    expect(
+      find.byKey(const ValueKey('rotated-landscape-player')),
+      findsNothing,
+    );
+    expect(tester.takeException(), isNull);
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump(const Duration(milliseconds: 600));
+  });
+
+  testWidgets('native rotation restores the portrait video height', (
+    tester,
+  ) async {
+    await _setPortraitSurface(tester, topPadding: 47);
+    await _pumpPlayer(tester, episodeCurrent: 'Full', episodeCount: 1);
+
+    final dynamic playerState = tester.state(find.byType(MoviePlayerPage));
+    final initialHeight = playerState.portraitVideoHeightForTest as double;
+
+    final Future<void> enterFullscreen =
+        playerState.toggleFullscreenForTest() as Future<void>;
+    await tester.pump();
+    tester.view.physicalSize = const Size(1000, 430);
+    await tester.pump();
+    await tester.pump();
+    await enterFullscreen;
+
+    expect(
+      find.byKey(const ValueKey('rotated-landscape-player')),
+      findsOneWidget,
+    );
+
+    final Future<void> exitFullscreen =
+        playerState.toggleFullscreenForTest() as Future<void>;
+    await tester.pump();
+    tester.view.physicalSize = const Size(430, 1000);
+    await tester.pump();
+    await tester.pump();
+    await exitFullscreen;
+    await tester.pump();
+
+    expect(
+      playerState.portraitVideoHeightForTest as double,
+      closeTo(initialHeight, 0.1),
+    );
+    expect(tester.takeException(), isNull);
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump(const Duration(milliseconds: 600));
+  });
+
+  testWidgets('virtual fullscreen drawer uses half of its landscape viewport', (
+    tester,
+  ) async {
+    await _setPortraitSurface(tester);
+    await _pumpPlayer(tester, episodeCurrent: 'Full', episodeCount: 1);
+
+    final dynamic playerState = tester.state(find.byType(MoviePlayerPage));
+    final Future<void> enterFullscreen =
+        playerState.toggleFullscreenForTest() as Future<void>;
+    await tester.pump();
+    tester.view.physicalSize = const Size(1000, 430);
+    await tester.pump();
+    await enterFullscreen;
+    await tester.pump();
+
+    final landscapeScaffold = find.byType(Scaffold).last;
+    tester.state<ScaffoldState>(landscapeScaffold).openEndDrawer();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+
+    expect(tester.getSize(find.byType(Drawer)).width, closeTo(500, 1));
+    expect(tester.takeException(), isNull);
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump(const Duration(milliseconds: 600));
+  });
+
+  testWidgets('device sensor uses the same virtual fullscreen transition', (
+    tester,
+  ) async {
+    await _setPortraitSurface(tester, topPadding: 47);
+    await _pumpPlayer(tester, episodeCurrent: 'Full', episodeCount: 1);
+
+    final dynamic playerState = tester.state(find.byType(MoviePlayerPage));
+    expect(
+      find.byKey(const ValueKey('rotated-landscape-player')),
+      findsNothing,
+    );
+
+    playerState.handleDeviceOrientationForTest(
+      DevicePhysicalOrientation.landscapeLeft,
+    );
+    await tester.pump();
+    tester.view.physicalSize = const Size(1000, 430);
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byKey(const ValueKey('rotated-landscape-player')),
+      findsOneWidget,
+    );
+    expect(tester.takeException(), isNull);
+
+    playerState.handleDeviceOrientationForTest(
+      DevicePhysicalOrientation.portraitUp,
+    );
+    tester.view.physicalSize = const Size(430, 1000);
+    await tester.pump(const Duration(milliseconds: 400));
+    await tester.pump();
+
+    expect(
+      find.byKey(const ValueKey('rotated-landscape-player')),
+      findsNothing,
+    );
+    expect(tester.takeException(), isNull);
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump(const Duration(milliseconds: 600));
   });
 
   testWidgets('comments open from an app-level player overlay', (tester) async {
@@ -235,6 +423,7 @@ Future<void> _setPortraitSurface(
     tester.view.resetPhysicalSize();
     tester.view.resetPadding();
     tester.view.resetViewPadding();
+    tester.view.resetViewInsets();
   });
 }
 

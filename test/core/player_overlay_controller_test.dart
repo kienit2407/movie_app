@@ -122,6 +122,16 @@ void main() {
       expect(lifecycle.initCount, 1);
       expect(router.routeInformationProvider.value.uri.path, '/home');
 
+      tester.view.physicalSize = const Size(800, 400);
+      await tester.pump();
+      expect(
+        MediaQuery.sizeOf(tester.element(find.text('Home content'))),
+        const Size(400, 800),
+      );
+      expect(tester.takeException(), isNull);
+      tester.view.physicalSize = const Size(400, 800);
+      await tester.pump();
+
       controller.minimize();
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 120));
@@ -137,6 +147,7 @@ void main() {
         const ValueKey('mini-player-drag-surface'),
       );
       final initialMiniRect = tester.getRect(dragSurface);
+      expect(find.byType(CircularProgressIndicator), findsNothing);
       await tester.drag(dragSurface, const Offset(-100, -160));
       await tester.pump(const Duration(milliseconds: 300));
       expect(tester.getRect(dragSurface), initialMiniRect);
@@ -171,6 +182,20 @@ void main() {
       expect(snappedMiniRect.left, closeTo(16, 0.1));
       expect(snappedMiniRect.top, greaterThanOrEqualTo(16));
       expect(snappedMiniRect.bottom, lessThanOrEqualTo(692));
+      expect(lifecycle.initCount, 1);
+      expect(lifecycle.disposeCount, 0);
+
+      final doubleTapPosition = snappedMiniRect.center;
+      await tester.tapAt(doubleTapPosition);
+      await tester.pump(const Duration(milliseconds: 50));
+      await tester.tapAt(doubleTapPosition);
+      await tester.pumpAndSettle();
+
+      final wideMiniRect = tester.getRect(dragSurface);
+      expect(wideMiniRect.width, closeTo(368, 0.1));
+      expect(wideMiniRect.left, closeTo(16, 0.1));
+      expect(wideMiniRect.right, closeTo(384, 0.1));
+      expect(controller.isMini, isTrue);
       expect(lifecycle.initCount, 1);
       expect(lifecycle.disposeCount, 0);
 

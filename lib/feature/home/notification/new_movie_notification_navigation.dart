@@ -21,6 +21,15 @@ class NewMovieNotificationNavigation {
       if (data is Map && data['type'] == 'new_movies') {
         return AppRoutes.notifications;
       }
+      if (data is Map &&
+          (data['type'] == 'comment_reply' ||
+              data['type'] == 'comment_reaction')) {
+        final slug = data['movie_slug']?.toString().trim();
+        if (slug != null && slug.isNotEmpty) {
+          return '/movie/${Uri.encodeComponent(slug)}';
+        }
+        return AppRoutes.notifications;
+      }
     } catch (_) {
       // Invalid payloads safely fall back to Home.
     }
@@ -28,7 +37,11 @@ class NewMovieNotificationNavigation {
   }
 
   static void handlePayload(String payload) {
-    _pendingRoute = routeFromPayload(payload);
+    openRoute(routeFromPayload(payload));
+  }
+
+  static void openRoute(String route) {
+    _pendingRoute = route;
     _flushIfReady();
   }
 
@@ -51,7 +64,15 @@ class NewMovieNotificationNavigation {
       }
 
       _pendingRoute = null;
-      goRouter.go(route);
+      _openAboveHome(route);
     });
+  }
+
+  static void _openAboveHome(String route) {
+    if (route == AppRoutes.home) {
+      goRouter.go(AppRoutes.home);
+      return;
+    }
+    goRouter.push(route);
   }
 }

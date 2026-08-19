@@ -3,9 +3,10 @@ import 'package:flutter/material.dart';
 Future<T?> showAnimatedDialog<T>({
   required BuildContext context,
   required Widget dialog,
+  bool barrierDismissible = true,
 }) async {
   return showGeneralDialog<T>(
-    barrierDismissible: true,
+    barrierDismissible: barrierDismissible,
     barrierLabel: '',
     context: context,
     transitionDuration: Duration(milliseconds: 300),

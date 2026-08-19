@@ -13,6 +13,7 @@ import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
 import 'package:loading_animation_widget/loading_animation_widget.dart';
 import 'package:movie_app/common/components/app_auto_scroll_text.dart';
+import 'package:movie_app/common/components/alert_dialog/app_alert_dialog.dart';
 import 'package:movie_app/common/components/lost_network.dart';
 import 'package:movie_app/common/helpers/navigation/app_navigation.dart';
 import 'package:movie_app/core/config/constants/const_globals.dart';
@@ -293,29 +294,19 @@ class _HomePageState extends State<HomePage>
       final setup = await coordinator.prepareHome(latestMovies);
       if (!mounted || !setup.shouldShowOnboarding) return;
 
-      final shouldEnable = await showDialog<bool>(
+      final shouldEnable = await showAnimatedDialog<bool>(
         context: context,
         barrierDismissible: false,
-        builder: (dialogContext) {
-          return AlertDialog(
-            title: const Text('Nhận thông báo phim mới?'),
-            content: const Text(
+        dialog: const AppAlertDialog(
+          icon: Icon(Iconsax.notification_copy, size: 30),
+          title: 'Nhận thông báo phim mới?',
+          content:
               'Liquid Phim có thể kiểm tra định kỳ trong nền và thông báo '
               'khi phát hiện phim mới. Hệ điều hành có thể thực hiện việc '
               'kiểm tra trễ hơn 20 phút để tiết kiệm pin.',
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(dialogContext).pop(false),
-                child: const Text('Không bật'),
-              ),
-              FilledButton(
-                onPressed: () => Navigator.of(dialogContext).pop(true),
-                child: const Text('Bật thông báo'),
-              ),
-            ],
-          );
-        },
+          buttonTitle: 'Bật thông báo',
+          cancelButtonTitle: 'Không bật',
+        ),
       );
 
       if (shouldEnable == true) {
@@ -459,32 +450,42 @@ class _HomePageState extends State<HomePage>
             children: [
               Row(
                 children: [
-                  Image.asset(AppImage.splashIcon, scale: 28),
-                  const SizedBox(width: 10),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    spacing: 2.h,
-                    children: [
-                      Text(
-                        Global.instance.appName,
-                        style: TextStyle(
-                          fontSize: 13.sp,
-                          fontWeight: FontWeight.w700,
-                          color: AppColor.secondColor,
-                        ),
-                      ),
-                      Text(
-                        Global.instance.subTilleLogo,
-                        style: TextStyle(
-                          fontSize: 10.sp,
-                          fontWeight: FontWeight.w400,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ],
+                  Container(
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Image.asset(AppImage.splashIcon, scale: 28),
                   ),
-                  const Spacer(),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      spacing: 2.h,
+                      children: [
+                        Text(
+                          Global.instance.appName,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 13.sp,
+                            fontWeight: FontWeight.w700,
+                            color: AppColor.secondColor,
+                          ),
+                        ),
+                        Text(
+                          Global.instance.subTilleLogo,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 10.sp,
+                            fontWeight: FontWeight.w400,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                   IconButton.outlined(
                     onPressed: () {
                       ComprehensiveFilterBottomSheet.show(context);

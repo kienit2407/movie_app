@@ -99,7 +99,9 @@ class NewMovieChecker {
     await _inboxStore.addMovies(newMovies);
     final notificationsEnabled = await _notifier.areNotificationsEnabled();
     if (notificationsEnabled) {
-      await _notifier.showNewMovies(newMovies);
+      final inboxItems = await _inboxStore.getItems();
+      final unreadCount = inboxItems.where((item) => !item.isRead).length;
+      await _notifier.showNewMovies(newMovies, badgeCount: unreadCount);
     }
     await _store.markKnown(moviesBySlug.keys);
     await _store.recordSuccessfulCheck(DateTime.now());

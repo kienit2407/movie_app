@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'dart:io' show Platform;
 import 'dart:math' as math;
-import 'dart:ui';
+import 'dart:ui' show ImageFilter, lerpDouble;
 import 'package:battery_plus/battery_plus.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/cupertino.dart';
@@ -39,10 +39,12 @@ import 'package:toastification/toastification.dart';
 import 'package:video_player/video_player.dart';
 import 'package:movie_app/core/config/themes/app_color.dart';
 import 'package:movie_app/core/casting/casting_service.dart';
+import 'package:movie_app/core/device_orientation_service.dart';
 import 'package:movie_app/core/ios_now_playing_service.dart';
 import 'package:movie_app/core/ios_picture_in_picture_service.dart';
 import 'package:movie_app/core/player_overlay_controller.dart';
 import 'package:movie_app/core/playback_wakelock.dart';
+import 'package:movie_app/core/movie_sharing/movie_share_service.dart';
 import 'package:movie_app/feature/detail_movie/data/model/detail_movie_model.dart';
 import 'package:movie_app/feature/detail_movie/presentation/widgets/cast_device_sheet.dart';
 import 'package:movie_app/feature/library/data/user_library_repository.dart';
@@ -107,6 +109,7 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
   static const double kMinPanelHFull = 120; // title + handle (tối thiểu)
   static const double kMinPanelHRich = 260; // title + server list + TextField
   double _videoHeight = 0;
+  double? _portraitVideoHeightBeforeFullscreen;
   bool _lsDrawerOpen = false;
   double _minVideoHeight = 0;
   double _maxVideoHeight = 0;
@@ -208,6 +211,10 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
   late final AnimationController _arrowCtrl;
   Future<void> _historyWriteQueue = Future<void>.value();
   final TextEditingController _searchController = TextEditingController();
+  final FocusNode _episodeSearchFocusNode = FocusNode();
+  final GlobalKey _episodeSearchAnchorKey = GlobalKey();
+  double _episodeSearchKeyboardLift = 0;
+  Timer? _episodeKeyboardMetricsDebounce;
   final ScrollController _episodeScrollController = ScrollController();
 
   bool _isEpisodeUserDragging = false;
@@ -235,11 +242,11 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
   late final AnimationController _portraitContentCtrl;
   late final CurvedAnimation _portraitContentCurve;
   late final Animation<Offset> _portraitContentSlide;
-  Orientation? _lastOrientation;
   bool _orientationChangeInFlight = false;
-  bool _orientationSyncScheduled = false;
-  Orientation? _pendingOrientationSync;
   Timer? _orientationChangeFallbackTimer;
+  Orientation? _lastViewportOrientation;
+  StreamSubscription<DevicePhysicalOrientation>? _deviceOrientationSubscription;
+  DevicePhysicalOrientation? _lastDeviceOrientation;
   Timer? _autoToastTimer;
   bool _showAutoToast = false;
   String _autoToastText = '';
@@ -273,7 +280,7 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
   String? _playerLoadError;
   DateTime? _lastNowPlayingUpdate;
   bool? _lastNowPlayingIsPlaying;
-  bool get _usesNativeIosVideoView => Platform.isIOS;
+  bool get _supportsIosPlaybackIntegration => Platform.isIOS;
   bool get _isGoogleCasting =>
       _castSession.type == CastingType.googleCast && _castSession.isConnected;
   bool get _isAirPlayActive =>
@@ -317,6 +324,7 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
     super.initState();
 
     WidgetsBinding.instance.addObserver(this);
+    _episodeSearchFocusNode.addListener(_handleEpisodeSearchFocusChanged);
     _playerCubit = context.read<PlayerCubit>();
     _libraryCubit = context.read<UserLibraryCubit?>();
     _engagementRepository = SupabaseMovieEngagementRepository();
@@ -343,8 +351,8 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
     );
     _portraitContentCtrl = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 260),
-      reverseDuration: const Duration(milliseconds: 220),
+      duration: const Duration(milliseconds: 180),
+      reverseDuration: const Duration(milliseconds: 160),
       value: 1,
     );
     _portraitContentCurve = CurvedAnimation(
@@ -356,6 +364,18 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
       begin: const Offset(0, 0.08),
       end: Offset.zero,
     ).animate(_portraitContentCurve);
+    _deviceOrientationSubscription = DeviceOrientationService
+        .instance
+        .orientationChanges
+        .listen(
+          (orientation) {
+            unawaited(_applyDeviceOrientation(orientation));
+          },
+          onError: (Object error, StackTrace stackTrace) {
+            debugPrint('Không thể đọc hướng thiết bị: $error');
+          },
+        );
+    widget.overlayController?.addListener(_handleOverlayPresentationChanged);
     widget.overlayController?.attachTransientOverlayDismissHandler(
       owner: this,
       dismiss: _dismissCommentsOverlay,
@@ -380,11 +400,10 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
     }
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final screenHeight = MediaQuery.of(context).size.height;
-      final screenWidth = MediaQuery.of(context).size.width;
+      final screenSize = MediaQuery.sizeOf(context);
       setState(() {
-        _minVideoHeight = screenWidth * (9 / 16);
-        _maxVideoHeight = screenHeight;
+        _minVideoHeight = _collapsedVideoHeightFor(screenSize);
+        _maxVideoHeight = screenSize.height;
         _videoHeight = _minVideoHeight;
       });
     });
@@ -392,7 +411,6 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _scrollToCurrentEpisode(animated: false);
     });
-    unawaited(SupportRotateScreen.onlyPotrait());
   }
 
   @override
@@ -403,12 +421,14 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
     unawaited(_saveWatchProgress(flushRemote: true));
     widget.overlayController?.detachPlaybackController(owner: this);
     widget.overlayController?.detachTransientOverlayDismissHandler(owner: this);
+    widget.overlayController?.removeListener(_handleOverlayPresentationChanged);
     _removeCommentsOverlayEntry();
     _hideControlsTimer?.cancel();
     _seekThrottle?.cancel();
     _seekOverlayTimer?.cancel();
     _landscapeZoomLabelTimer?.cancel();
     _orientationChangeFallbackTimer?.cancel();
+    _episodeKeyboardMetricsDebounce?.cancel();
     _removeVpListeners();
     _autoToastTimer?.cancel();
     _statusHeaderTimer?.cancel();
@@ -437,6 +457,9 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
     _portraitContentCtrl.dispose();
     _landscapeZoomSnapCtrl.dispose();
     _panelCtrl.dispose();
+    _episodeSearchFocusNode
+      ..removeListener(_handleEpisodeSearchFocusChanged)
+      ..dispose();
     _searchController.dispose();
     _scrollController.dispose();
     _scrollMovie.dispose();
@@ -444,13 +467,14 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
     _landscapeEpisodeScrollController.dispose();
     _scrubProgress.dispose();
 
-    SupportRotateScreen.onlyPotrait();
+    unawaited(SupportRotateScreen.onlyPotrait());
     _batteryStateSubscription?.cancel();
     _connectivitySubscription?.cancel();
     _connectivityConfirmTimer?.cancel();
     _connectivitySubscription?.cancel();
     _wifiQualityTimer?.cancel();
     _castEventsSubscription?.cancel();
+    _deviceOrientationSubscription?.cancel();
     super.dispose();
   }
 
@@ -470,17 +494,24 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
     return VideoPlayerController.networkUrl(
       Uri.parse(videoUrl),
       videoPlayerOptions: VideoPlayerOptions(
-        allowBackgroundPlayback: _usesNativeIosVideoView,
+        allowBackgroundPlayback: _supportsIosPlaybackIntegration,
       ),
-      viewType: _usesNativeIosVideoView
+      // iOS đang xoay cửa sổ thật nên dùng UIView/AVPlayerLayer để UIKit giữ
+      // đúng videoGravity trong suốt transition. Android tiếp tục dùng texture.
+      viewType: _supportsIosPlaybackIntegration
           ? VideoViewType.platformView
           : VideoViewType.textureView,
     );
   }
 
+  double _resolvedVideoAspectRatio(VideoPlayerController controller) {
+    final aspectRatio = controller.value.aspectRatio;
+    return aspectRatio.isFinite && aspectRatio > 0 ? aspectRatio : 16 / 9;
+  }
+
   Future<void> _attachPictureInPicture() async {
     final controller = _videoPlayerController;
-    if (!_usesNativeIosVideoView ||
+    if (!_supportsIosPlaybackIntegration ||
         controller == null ||
         !controller.value.isInitialized) {
       return;
@@ -489,8 +520,24 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
     await IosNowPlayingService.configureSession();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      unawaited(IosPictureInPictureService.attach(controller));
+      unawaited(_attachPictureInPictureController(controller));
     });
+  }
+
+  Future<bool> _attachPictureInPictureController(
+    VideoPlayerController controller,
+  ) async {
+    try {
+      final attached = await IosPictureInPictureService.attach(controller);
+      if (!attached) {
+        debugPrint('[PiP] AVPlayerLayer chưa sẵn sàng để bật PiP.');
+      }
+      return attached;
+    } catch (error, stackTrace) {
+      debugPrint('[PiP] Không thể gắn player vào PiP: $error');
+      debugPrintStack(stackTrace: stackTrace);
+      return false;
+    }
   }
 
   Widget _buildNetworkIndicator() {
@@ -557,10 +604,7 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
   void _syncPlayerSystemUi() {
     if (!mounted) return;
 
-    final orientation = MediaQuery.orientationOf(context);
-    final isLandscape = orientation == Orientation.landscape;
-
-    if (isLandscape) {
+    if (_isFullscreen) {
       // Ngang: ẩn status bar thật vì mình sẽ dựng header giả.
       unawaited(
         SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky),
@@ -755,13 +799,13 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
   }
 
   Future<void> _detachPictureInPicture() async {
-    if (!_usesNativeIosVideoView) return;
+    if (!_supportsIosPlaybackIntegration) return;
     await IosPictureInPictureService.detach();
   }
 
   Future<void> _startPictureInPictureIfNeeded() async {
     final controller = _videoPlayerController;
-    if (!_usesNativeIosVideoView ||
+    if (!_supportsIosPlaybackIntegration ||
         controller == null ||
         !controller.value.isInitialized ||
         !controller.value.isPlaying ||
@@ -771,11 +815,20 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
 
     _startingPictureInPicture = true;
     try {
-      await IosPictureInPictureService.attach(controller);
+      final attached = await _attachPictureInPictureController(controller);
+      if (!attached) return;
+
       final started = await IosPictureInPictureService.start();
+      if (!started) {
+        debugPrint('[PiP] iOS chưa cho phép bắt đầu PiP.');
+        return;
+      }
       if (started && !controller.value.isPlaying) {
         await controller.play();
       }
+    } catch (error, stackTrace) {
+      debugPrint('[PiP] Không thể bắt đầu PiP: $error');
+      debugPrintStack(stackTrace: stackTrace);
     } finally {
       _startingPictureInPicture = false;
     }
@@ -798,6 +851,72 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
       unawaited(_saveWatchProgress(flushRemote: true));
       unawaited(_startPictureInPictureIfNeeded());
     }
+  }
+
+  @override
+  void didChangeMetrics() {
+    super.didChangeMetrics();
+    _episodeKeyboardMetricsDebounce?.cancel();
+    _episodeKeyboardMetricsDebounce = Timer(
+      const Duration(milliseconds: 90),
+      _scheduleEpisodeSearchKeyboardLiftUpdate,
+    );
+  }
+
+  void _handleEpisodeSearchFocusChanged() {
+    if (_episodeSearchFocusNode.hasFocus) {
+      _scheduleEpisodeSearchKeyboardLiftUpdate();
+      return;
+    }
+    _episodeKeyboardMetricsDebounce?.cancel();
+    _setEpisodeSearchKeyboardLift(0);
+  }
+
+  void _scheduleEpisodeSearchKeyboardLiftUpdate() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _updateEpisodeSearchKeyboardLift();
+    });
+  }
+
+  void _updateEpisodeSearchKeyboardLift() {
+    if (!_episodeSearchFocusNode.hasFocus) {
+      _setEpisodeSearchKeyboardLift(0);
+      return;
+    }
+
+    final anchorContext = _episodeSearchAnchorKey.currentContext;
+    final anchorBox = anchorContext?.findRenderObject() as RenderBox?;
+    if (anchorBox == null || !anchorBox.hasSize) return;
+
+    final view = View.of(context);
+    final keyboardInset = view.viewInsets.bottom / view.devicePixelRatio;
+    if (keyboardInset <= 0) {
+      _setEpisodeSearchKeyboardLift(0);
+      return;
+    }
+
+    final mediaQuery = MediaQuery.of(context);
+    final keyboardTop = mediaQuery.size.height - keyboardInset;
+    final currentBottom =
+        anchorBox.localToGlobal(Offset.zero).dy + anchorBox.size.height;
+    // localToGlobal đã bao gồm độ nâng hiện tại. Cộng ngược lại để luôn tính
+    // từ vị trí gốc, tránh panel nhảy lên/xuống khi keyboard đang animate.
+    final originalBottom = currentBottom + _episodeSearchKeyboardLift;
+    const keyboardGap = 14.0;
+    final requiredLift = math.max(
+      0.0,
+      originalBottom + keyboardGap - keyboardTop,
+    );
+    final maxLift = math.max(
+      0.0,
+      originalBottom - mediaQuery.padding.top - keyboardGap,
+    );
+    _setEpisodeSearchKeyboardLift(requiredLift.clamp(0.0, maxLift).toDouble());
+  }
+
+  void _setEpisodeSearchKeyboardLift(double value) {
+    if (!mounted || (_episodeSearchKeyboardLift - value).abs() < 0.5) return;
+    setState(() => _episodeSearchKeyboardLift = value);
   }
 
   String _nowPlayingSubtitle() {
@@ -857,7 +976,7 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
     _syncViewQualification(value: value);
     PlaybackWakelock.unawaitedSetEnabled(isPlaying);
 
-    if (!_usesNativeIosVideoView || !value.isInitialized) {
+    if (!_supportsIosPlaybackIntegration || !value.isInitialized) {
       return;
     }
 
@@ -1402,7 +1521,7 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
       videoPlayerController: initializedVideoController,
       autoPlay: !_isGoogleCasting,
       looping: false,
-      aspectRatio: 16 / 9,
+      aspectRatio: _resolvedVideoAspectRatio(initializedVideoController),
       autoInitialize: true,
       allowFullScreen: false,
       allowMuting: true,
@@ -1537,7 +1656,7 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
       videoPlayerController: initializedVideoController,
       autoPlay: false,
       looping: false,
-      aspectRatio: 16 / 9,
+      aspectRatio: _resolvedVideoAspectRatio(initializedVideoController),
       autoInitialize: true,
       allowFullScreen: false,
       allowMuting: true,
@@ -2161,64 +2280,183 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
     }
   }
 
+  Orientation? _physicalViewportOrientation() {
+    final views = WidgetsBinding.instance.platformDispatcher.views;
+    if (views.isEmpty) return null;
+    final size = views.first.physicalSize;
+    if (size.isEmpty) return null;
+    return size.width > size.height
+        ? Orientation.landscape
+        : Orientation.portrait;
+  }
+
+  void _scheduleViewportOrientationSync(Orientation orientation) {
+    if (_lastViewportOrientation == orientation) return;
+    _lastViewportOrientation = orientation;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _syncFullscreenWithViewport(orientation);
+    });
+  }
+
+  void _syncFullscreenWithViewport(
+    Orientation orientation, {
+    bool force = false,
+  }) {
+    final isLandscape = orientation == Orientation.landscape;
+    if (_orientationChangeInFlight && isLandscape != _isFullscreen && !force) {
+      return;
+    }
+    if (!_orientationChangeInFlight && isLandscape == _isFullscreen) return;
+
+    _orientationChangeFallbackTimer?.cancel();
+    final viewportSize = MediaQuery.sizeOf(context);
+    final portraitMinHeight = _collapsedVideoHeightFor(viewportSize);
+    final portraitMaxHeight = viewportSize.height;
+    final restoredPortraitHeight =
+        (_portraitVideoHeightBeforeFullscreen ?? portraitMinHeight).clamp(
+          portraitMinHeight,
+          portraitMaxHeight,
+        );
+
+    setState(() {
+      _isFullscreen = isLandscape;
+      _orientationChangeInFlight = false;
+      if (!isLandscape) {
+        _minVideoHeight = portraitMinHeight;
+        _maxVideoHeight = portraitMaxHeight;
+        _videoHeight = restoredPortraitHeight;
+        _portraitVideoHeightBeforeFullscreen = null;
+        _portraitContentCtrl.stop();
+        _portraitContentCtrl.value = 0;
+      }
+    });
+    _syncPlayerSystemUi();
+    if (isLandscape) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _scrollToCurrentEpisode(animated: false);
+      });
+    } else {
+      _resetLandscapeZoom();
+      _showPortraitContent();
+    }
+  }
+
+  Future<void> _requestPreferredOrientation(Orientation target) async {
+    try {
+      if (target == Orientation.landscape) {
+        await SupportRotateScreen.onlyLandscape();
+      } else {
+        await SupportRotateScreen.onlyPotrait();
+      }
+    } on PlatformException catch (error) {
+      debugPrint('Không thể đổi orientation thật của cửa sổ: $error');
+    }
+  }
+
+  Future<void> _applyDeviceOrientation(
+    DevicePhysicalOrientation orientation,
+  ) async {
+    _lastDeviceOrientation = orientation;
+    if (!mounted || _orientationChangeInFlight) return;
+
+    final overlayController = widget.overlayController;
+    if (overlayController != null &&
+        (!overlayController.isVisible ||
+            overlayController.isDragging ||
+            overlayController.target != PlayerOverlayTarget.expanded)) {
+      return;
+    }
+
+    final wantsLandscape =
+        orientation == DevicePhysicalOrientation.landscapeLeft ||
+        orientation == DevicePhysicalOrientation.landscapeRight;
+    final wantsPortrait = orientation == DevicePhysicalOrientation.portraitUp;
+    if ((wantsLandscape && !_isFullscreen) ||
+        (wantsPortrait && _isFullscreen)) {
+      await _toggleFullscreen();
+      final latestOrientation = _lastDeviceOrientation;
+      if (mounted &&
+          latestOrientation != null &&
+          latestOrientation != orientation) {
+        await _applyDeviceOrientation(latestOrientation);
+      }
+    }
+  }
+
+  void _handleOverlayPresentationChanged() {
+    final overlayController = widget.overlayController;
+    if (overlayController == null ||
+        !overlayController.isVisible ||
+        overlayController.isDragging ||
+        overlayController.target != PlayerOverlayTarget.expanded) {
+      return;
+    }
+
+    final orientation = _lastDeviceOrientation;
+    if (orientation != null) {
+      unawaited(_applyDeviceOrientation(orientation));
+    }
+  }
+
+  @visibleForTesting
+  Future<void> handleDeviceOrientationForTest(
+    DevicePhysicalOrientation orientation,
+  ) => _applyDeviceOrientation(orientation);
+
   Future<void> _toggleFullscreen() async {
     if (_orientationChangeInFlight) return;
 
-    final targetLandscape =
-        MediaQuery.orientationOf(context) == Orientation.portrait;
+    final targetLandscape = !_isFullscreen;
+    final targetOrientation = targetLandscape
+        ? Orientation.landscape
+        : Orientation.portrait;
     _hideControlsTimer?.cancel();
-    _orientationChangeFallbackTimer?.cancel();
+    _videoSnapCtrl.stop();
+    if (targetLandscape) {
+      _portraitVideoHeightBeforeFullscreen = _videoHeight.clamp(
+        _minVideoHeight,
+        _maxVideoHeight,
+      );
+    }
     setState(() {
+      _isFullscreen = targetLandscape;
       _orientationChangeInFlight = true;
       _showControls = false;
       _showSeekOverlay = false;
     });
+    if (targetLandscape) {
+      if (_reduceOrientationMotion) {
+        _portraitContentCtrl.value = 0;
+      } else {
+        unawaited(_portraitContentCtrl.reverse());
+      }
+    }
 
+    _syncPlayerSystemUi();
+    _orientationChangeFallbackTimer?.cancel();
     _orientationChangeFallbackTimer = Timer(
-      const Duration(milliseconds: 1500),
+      const Duration(milliseconds: 1400),
       () {
         if (!mounted || !_orientationChangeInFlight) return;
-        setState(() => _orientationChangeInFlight = false);
-        if (MediaQuery.orientationOf(context) == Orientation.portrait) {
-          _showPortraitContent();
+        final actualOrientation = _physicalViewportOrientation();
+        if (actualOrientation != null) {
+          _syncFullscreenWithViewport(actualOrientation, force: true);
         }
       },
     );
-
-    try {
-      if (targetLandscape) {
-        await _hidePortraitContentBeforeRotation();
-        if (!mounted) return;
-        await SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
-        await SupportRotateScreen.onlyLandscape();
-      } else {
-        _portraitContentCtrl.stop();
-        _portraitContentCtrl.value = 0;
-        await SupportRotateScreen.onlyPotrait();
-      }
-    } on PlatformException catch (error) {
-      debugPrint('Không thể đổi hướng màn hình: $error');
-      _orientationChangeFallbackTimer?.cancel();
-      if (!mounted) return;
-      setState(() => _orientationChangeInFlight = false);
-      if (targetLandscape) {
-        _showPortraitContent();
-        _syncPlayerSystemUi();
-      }
-    }
+    // Không giữ transition Flutter chờ native hoàn tất. Viewport thật bên dưới
+    // sẽ xác nhận thời điểm đổi layout qua OrientationBuilder.
+    unawaited(_requestPreferredOrientation(targetOrientation));
   }
+
+  @visibleForTesting
+  Future<void> toggleFullscreenForTest() => _toggleFullscreen();
+
+  @visibleForTesting
+  double get portraitVideoHeightForTest => _videoHeight;
 
   bool get _reduceOrientationMotion =>
       MediaQuery.maybeOf(context)?.disableAnimations ?? false;
-
-  Future<void> _hidePortraitContentBeforeRotation() async {
-    if (_portraitContentCtrl.value <= 0) return;
-    if (_reduceOrientationMotion) {
-      _portraitContentCtrl.value = 0;
-      return;
-    }
-    await _portraitContentCtrl.reverse();
-  }
 
   void _showPortraitContent() {
     if (!mounted) return;
@@ -2227,41 +2465,6 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
       return;
     }
     unawaited(_portraitContentCtrl.forward());
-  }
-
-  void _syncFullscreenWithOrientation(Orientation orientation) {
-    final shouldBeFullscreen = orientation == Orientation.landscape;
-    if (_isFullscreen == shouldBeFullscreen && !_orientationChangeInFlight) {
-      return;
-    }
-    _pendingOrientationSync = orientation;
-    if (_orientationSyncScheduled) return;
-    _orientationSyncScheduled = true;
-
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _orientationSyncScheduled = false;
-      final orientationToSync = _pendingOrientationSync ?? orientation;
-      _pendingOrientationSync = null;
-      if (!mounted) return;
-
-      final fullscreen = orientationToSync == Orientation.landscape;
-      _orientationChangeFallbackTimer?.cancel();
-      setState(() {
-        _isFullscreen = fullscreen;
-        _orientationChangeInFlight = false;
-        _showControls = false;
-        _showSeekOverlay = false;
-      });
-      if (fullscreen) {
-        _portraitContentCtrl.stop();
-        _portraitContentCtrl.value = 0;
-      } else {
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          _showPortraitContent();
-        });
-      }
-      _syncPlayerSystemUi();
-    });
   }
 
   Widget _buildStablePlayerSurface(ChewieController controller) {
@@ -2908,12 +3111,14 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
     // _resetHideControlsTimer();
   }
 
-  void _handleDoubleTap(TapDownDetails details) {
+  void _handleDoubleTap(TapDownDetails details, {double? interactionWidth}) {
     final controller = _chewieController;
     if (controller == null) return;
 
-    final screenWidth = MediaQuery.of(context).size.width;
-    final tapX = details.globalPosition.dx;
+    final screenWidth = interactionWidth ?? MediaQuery.sizeOf(context).width;
+    // localPosition nằm trong đúng hệ tọa độ của GestureDetector. Khi player
+    // ở landscape, trục X này luôn là chiều ngang thực tế của video.
+    final tapX = details.localPosition.dx;
 
     if (tapX < screenWidth * 0.4) {
       _handleYoutubeSeek(SeekDirection.backward);
@@ -2952,6 +3157,17 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
     return ((_videoHeight - _minVideoHeight) / denom).clamp(0.0, 1.0);
   }
 
+  double _collapsedVideoHeightFor(Size viewport) {
+    return math.min(viewport.width * (9 / 16), viewport.height);
+  }
+
+  Widget _buildViewportLandscapePlayer() {
+    return KeyedSubtree(
+      key: const ValueKey('rotated-landscape-player'),
+      child: _buildLandscapePlayer(),
+    );
+  }
+
   // double get _seekbarLift {
   //   final t = Curves.easeOut.transform(_expandT);
   //   return lerpDouble(0, 12, t)!; // nhích lên tối đa 12px
@@ -2968,32 +3184,16 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
         backgroundColor: Colors.black,
         body: OrientationBuilder(
           builder: (context, orientation) {
-            final previousOrientation = _lastOrientation;
-            final rotated =
-                previousOrientation != null &&
-                previousOrientation != orientation;
-
-            _lastOrientation = orientation;
-
-            if (previousOrientation == null || rotated) {
-              _syncFullscreenWithOrientation(orientation);
-            }
-
-            if (rotated) {
-              _scrollToCurrentEpisode(animated: false);
-            }
-
-            if (orientation == Orientation.portrait &&
-                (_landscapeZoomScale != _landscapeZoomMin ||
-                    _showLandscapeZoomLabel)) {
-              WidgetsBinding.instance.addPostFrameCallback((_) {
-                if (mounted) _resetLandscapeZoom();
-              });
-            }
-
-            return orientation == Orientation.landscape
-                ? _buildLandscapePlayer()
-                : _buildPortraitPlayer();
+            _scheduleViewportOrientationSync(orientation);
+            return Stack(
+              fit: StackFit.expand,
+              children: [
+                if (orientation == Orientation.landscape)
+                  _buildViewportLandscapePlayer()
+                else
+                  _buildPortraitPlayer(),
+              ],
+            );
           },
         ),
       ),
@@ -3258,8 +3458,7 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
     );
   }
 
-  Widget _buildLandscapeStatusHeader() {
-    final viewPadding = MediaQuery.viewPaddingOf(context);
+  Widget _buildLandscapeStatusHeader({required EdgeInsets viewPadding}) {
     final time = DateFormat('HH:mm').format(_statusNow);
 
     return Positioned(
@@ -3285,8 +3484,8 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
             ),
             child: Padding(
               padding: EdgeInsets.only(
-                left: viewPadding.left + 18,
-                right: viewPadding.right + 18,
+                left: viewPadding.left + 40,
+                right: viewPadding.right + 40,
                 top: 7,
                 bottom: 7,
               ),
@@ -3313,7 +3512,14 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
                   ),
 
                   // Phần trăm pin bên phải
-                  SizedBox(width: 80, child: _buildBatteryIndicator()),
+                  SizedBox(
+                    width: 80,
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerRight,
+                      child: _buildBatteryIndicator(),
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -3441,7 +3647,7 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
           children: [
             if (_videoPlayerController != null &&
                 _videoPlayerController!.value.isInitialized &&
-                !_usesNativeIosVideoView)
+                !_supportsIosPlaybackIntegration)
               Positioned.fill(
                 child: Opacity(
                   opacity: 0.8,
@@ -3702,7 +3908,9 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
   // Ambient blur "lụi" xuống đầu panel
   Widget _buildPanelAmbientTop() {
     final vp = _videoPlayerController;
-    if (vp == null || !vp.value.isInitialized || _usesNativeIosVideoView) {
+    if (vp == null ||
+        !vp.value.isInitialized ||
+        _supportsIosPlaybackIntegration) {
       return const SizedBox.shrink();
     }
 
@@ -3756,7 +3964,9 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
 
   Widget _buildTopAmbientStrip(double h) {
     final vp = _videoPlayerController;
-    if (vp == null || !vp.value.isInitialized || _usesNativeIosVideoView) {
+    if (vp == null ||
+        !vp.value.isInitialized ||
+        _supportsIosPlaybackIntegration) {
       return SizedBox(height: h);
     }
     return SizedBox(
@@ -3896,6 +4106,22 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
   }
 
   Widget _buildPortraitPlayer() {
+    final reduceMotion =
+        MediaQuery.maybeOf(context)?.disableAnimations ?? false;
+    return TweenAnimationBuilder<double>(
+      tween: Tween<double>(end: _episodeSearchKeyboardLift),
+      duration: reduceMotion
+          ? Duration.zero
+          : const Duration(milliseconds: 180),
+      curve: Curves.easeOutCubic,
+      child: _buildPortraitPlayerContent(),
+      builder: (context, lift, child) {
+        return Transform.translate(offset: Offset(0, -lift), child: child);
+      },
+    );
+  }
+
+  Widget _buildPortraitPlayerContent() {
     // Khi expand video, ẩn SafeArea để video nằm chính giữa
     final isExpanded = _videoHeight >= _maxVideoHeight - 100;
     final mq = MediaQuery.of(context);
@@ -3916,7 +4142,7 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
     final rightPad = insets.right * safeT;
     final collapsedVideoHeight = math.max(
       _minVideoHeight,
-      mq.size.width * (9 / 16),
+      _collapsedVideoHeightFor(mq.size),
     );
     final panelLayoutHeight = math.max(
       0.0,
@@ -3933,9 +4159,9 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
 
     // CHỐT: bình thường luôn hiện, expand thì phụ thuộc _showControls
     // final showSeekbar = isExpandedNow ? _showControls : true;
-    final showSeekbar = isExpandedNow
-        ? (_controlsVisible || _isScrubbing)
-        : true;
+    final showSeekbar =
+        !_orientationChangeInFlight &&
+        (isExpandedNow ? (_controlsVisible || _isScrubbing) : true);
     final collapsedSeekbarOffset = (_seekbarHitHeight / 2) - _thumbRadius + 1;
     return Padding(
       padding: EdgeInsets.only(top: topPad, left: leftPad, right: rightPad),
@@ -3967,16 +4193,24 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
                     child: LayoutBuilder(
                       builder: (context, c) {
                         final screen = MediaQuery.of(context).size;
-                        final newMin = screen.width * (9 / 16);
+                        final newMin = _collapsedVideoHeightFor(screen);
                         final newMax = screen.height;
 
                         final needSync =
                             (_maxVideoHeight - newMax).abs() > 0.5 ||
                             (_minVideoHeight - newMin).abs() > 0.5;
 
-                        if (needSync) {
+                        if (needSync &&
+                            !_orientationChangeInFlight &&
+                            mq.orientation == Orientation.portrait) {
                           WidgetsBinding.instance.addPostFrameCallback((_) {
-                            if (!mounted) return;
+                            if (!mounted ||
+                                _orientationChangeInFlight ||
+                                _isFullscreen ||
+                                _physicalViewportOrientation() !=
+                                    Orientation.portrait) {
+                              return;
+                            }
                             setState(() {
                               _maxVideoHeight = newMax;
                               _minVideoHeight = newMin;
@@ -4118,9 +4352,36 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
                                                         ),
                                                       ),
                                                       const SizedBox(width: 8),
+
                                                       ViewCountSection(
                                                         movie: widget.movie,
                                                         compact: true,
+                                                      ),
+                                                      const SizedBox(width: 8),
+                                                      IconButton(
+                                                        style:
+                                                            IconButton.styleFrom(
+                                                              padding:
+                                                                  EdgeInsets
+                                                                      .zero,
+                                                            ),
+                                                        onPressed: () => unawaited(
+                                                          MovieShareService.shareMovie(
+                                                            context: context,
+                                                            slug: widget.slug,
+                                                            movieName: widget
+                                                                .movieName,
+                                                          ),
+                                                        ),
+                                                        icon: Image.asset(
+                                                          'assets/icons/share.png',
+                                                          width: 20,
+                                                          height: 20,
+                                                          color: Colors.white
+                                                              .withValues(
+                                                                alpha: .4,
+                                                              ),
+                                                        ),
                                                       ),
                                                     ],
                                                   );
@@ -4478,6 +4739,7 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
       key: const ValueKey('series-episode-search'),
       height: _searchBarH,
       child: Padding(
+        key: _episodeSearchAnchorKey,
         padding: const EdgeInsets.symmetric(horizontal: 10),
         child: Container(
           margin: const EdgeInsets.only(bottom: 16),
@@ -4517,6 +4779,7 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
                 child: SizedBox(
                   height: 32,
                   child: TextField(
+                    focusNode: _episodeSearchFocusNode,
                     onSubmitted: (_) => _submitEpisode(),
                     controller: _searchController,
                     textInputAction: TextInputAction.search,
@@ -5582,7 +5845,7 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
                   onPressed: _toggleFullscreen,
                   icon: SvgPicture.asset(
                     _isFullscreen
-                        ? 'assets/icons/exit_fullscreen.svg'
+                        ? 'assets/icons/fullscreen_exit.svg'
                         : 'assets/icons/fullscreen.svg',
                     width: 25,
                     height: 25,
@@ -5703,7 +5966,10 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
     );
   }
 
-  Widget _buildLandscapeZoomableVideo({required double fillScale}) {
+  Widget _buildLandscapeZoomableVideo({
+    required double fillScale,
+    required double interactionWidth,
+  }) {
     final chewie = _chewieController;
     if (chewie == null) {
       return _buildPlayerPlaceholder();
@@ -5712,7 +5978,8 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
     return GestureDetector(
       behavior: HitTestBehavior.translucent,
       onTap: _toggleControls,
-      onDoubleTapDown: _handleDoubleTap,
+      onDoubleTapDown: (details) =>
+          _handleDoubleTap(details, interactionWidth: interactionWidth),
       onScaleStart: (details) => _handleLandscapeScaleStart(details, fillScale),
       onScaleUpdate: (details) =>
           _handleLandscapeScaleUpdate(details, fillScale),
@@ -5949,12 +6216,18 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
   }
 
   Widget _buildLandscapePlayer() {
+    return Builder(builder: _buildLandscapePlayerWithContext);
+  }
+
+  Widget _buildLandscapePlayerWithContext(BuildContext landscapeContext) {
     final isPlayingIocn = _effectiveIsPlaying(
       _videoPlayerController?.value.isPlaying ?? false,
     );
     return Scaffold(
       endDrawer: Drawer(
-        width: MediaQuery.of(context).size.width * 0.5,
+        // This context is below the virtual landscape MediaQuery. Using the
+        // State context here reads the portrait width and squeezes the drawer.
+        width: MediaQuery.sizeOf(landscapeContext).width * 0.5,
         backgroundColor: AppColor.bgApp,
         child: EpisodeDrawer(
           isPlayingIcon: isPlayingIocn,
@@ -5986,7 +6259,7 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
                 if (showLandscapeBlur &&
                     _videoPlayerController != null &&
                     _videoPlayerController!.value.isInitialized &&
-                    !_usesNativeIosVideoView)
+                    !_supportsIosPlaybackIntegration)
                   Positioned.fill(
                     child: Opacity(
                       opacity: 0.35,
@@ -6003,10 +6276,15 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
                       ),
                     ),
                   ),
-                _buildLandscapeZoomableVideo(fillScale: fillScale),
+                _buildLandscapeZoomableVideo(
+                  fillScale: fillScale,
+                  interactionWidth: viewport.width,
+                ),
                 _buildCastingPosterOverlay(),
                 _buildLandscapeBoundaryFlash(),
-                _buildLandscapeStatusHeader(),
+                _buildLandscapeStatusHeader(
+                  viewPadding: MediaQuery.viewPaddingOf(context),
+                ),
                 _buildPlayPauseOverlay(),
                 _buildPlaybackStatusOverlay(),
                 _buildLandscapeZoomLabel(),
@@ -6110,12 +6388,16 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
                   left: 0,
                   right: 0,
                   bottom: 50,
-                  child: (_controlsVisible || _isScrubbing)
-                      ? Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 50),
-                          child: _buildControlBar(3),
-                        )
-                      : const SizedBox.shrink(),
+                  child: SizedBox(
+                    key: const ValueKey('landscape-control-bar'),
+                    width: double.infinity,
+                    child: (_controlsVisible || _isScrubbing)
+                        ? Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 50),
+                            child: _buildControlBar(3),
+                          )
+                        : const SizedBox.shrink(),
+                  ),
                 ),
                 if (_showSeekOverlay && _seekDir != null)
                   _buildSeekOverlay(200),

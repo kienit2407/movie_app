@@ -6,6 +6,8 @@ import android.view.Gravity
 import android.view.View
 import android.widget.FrameLayout
 import androidx.mediarouter.app.MediaRouteButton
+import androidx.mediarouter.media.MediaRouteSelector
+import androidx.mediarouter.media.MediaRouter
 import com.google.android.gms.cast.MediaInfo
 import com.google.android.gms.cast.MediaLoadRequestData
 import com.google.android.gms.cast.MediaMetadata
@@ -34,8 +36,32 @@ class GoogleCastBridge(
     private var routeButton: MediaRouteButton? = null
     private var pendingMedia: CastMediaPayload? = null
     private var remoteMediaClient: RemoteMediaClient? = null
+    private var mediaRouter: MediaRouter? = null
+    private var discoverySelector: MediaRouteSelector? = null
+    private var discoveryActive = false
     private var lastPositionMs = 0L
     private var lastWasPlaying = false
+
+    private val discoveryCallback = object : MediaRouter.Callback() {
+        override fun onRouteAdded(router: MediaRouter, route: MediaRouter.RouteInfo) {
+            publishDiscoveredDevices()
+        }
+
+        override fun onRouteRemoved(router: MediaRouter, route: MediaRouter.RouteInfo) {
+            publishDiscoveredDevices()
+        }
+
+        override fun onRouteChanged(router: MediaRouter, route: MediaRouter.RouteInfo) {
+            publishDiscoveredDevices()
+        }
+
+        override fun onProviderChanged(
+            router: MediaRouter,
+            provider: MediaRouter.ProviderInfo,
+        ) {
+            publishDiscoveredDevices()
+        }
+    }
 
     private val remoteMediaCallback = object : RemoteMediaClient.Callback() {
         override fun onStatusUpdated() {
@@ -124,6 +150,12 @@ class GoogleCastBridge(
         when (call.method) {
             "showAirPlayPicker" -> result.success(false)
             "isGoogleCastAvailable" -> result.success(initializeCast())
+            "startGoogleCastDiscovery" -> startGoogleCastDiscovery(result)
+            "stopGoogleCastDiscovery" -> {
+                stopGoogleCastDiscovery()
+                result.success(null)
+            }
+            "connectGoogleCastDevice" -> connectGoogleCastDevice(call, result)
             "showGoogleCastPicker" -> showGoogleCastPicker(call, result)
             "loadGoogleCastMedia" -> loadGoogleCastMedia(call, result)
             "googleCastPlay" -> result.success(remoteMediaClient?.play() != null)
@@ -136,6 +168,90 @@ class GoogleCastBridge(
             "showGoogleCastControls" -> showExpandedControls(result)
             else -> result.notImplemented()
         }
+    }
+
+    private fun startGoogleCastDiscovery(result: MethodChannel.Result) {
+        if (!initializeCast()) {
+            result.success(emptyList<Map<String, String>>())
+            return
+        }
+
+        val context = castContext ?: run {
+            result.success(emptyList<Map<String, String>>())
+            return
+        }
+        val router = mediaRouter ?: MediaRouter.getInstance(activity).also {
+            mediaRouter = it
+        }
+        val selector = context.mergedSelector ?: MediaRouteSelector.EMPTY
+        discoverySelector = selector
+        if (!discoveryActive) {
+            router.addCallback(
+                selector,
+                discoveryCallback,
+                MediaRouter.CALLBACK_FLAG_PERFORM_ACTIVE_SCAN,
+            )
+            discoveryActive = true
+        }
+        result.success(currentDiscoveredDevices())
+    }
+
+    private fun stopGoogleCastDiscovery() {
+        if (!discoveryActive) return
+        mediaRouter?.removeCallback(discoveryCallback)
+        discoveryActive = false
+    }
+
+    private fun currentDiscoveredRoutes(): List<MediaRouter.RouteInfo> {
+        val router = mediaRouter ?: return emptyList()
+        val selector = discoverySelector ?: return emptyList()
+        return router.routes.filter { route ->
+            route.isEnabled &&
+                !route.isDefault &&
+                !route.isDeviceSpeaker &&
+                route.matchesSelector(selector)
+        }
+    }
+
+    private fun currentDiscoveredDevices(): List<Map<String, String>> =
+        currentDiscoveredRoutes().map { route ->
+            buildMap {
+                put("id", route.id)
+                put("name", route.name)
+                route.description?.takeIf { it.isNotBlank() }?.let {
+                    put("description", it)
+                }
+            }
+        }
+
+    private fun publishDiscoveredDevices() {
+        activity.runOnUiThread {
+            channel.invokeMethod(
+                "googleCastDevicesChanged",
+                currentDiscoveredDevices(),
+            )
+        }
+    }
+
+    private fun connectGoogleCastDevice(
+        call: MethodCall,
+        result: MethodChannel.Result,
+    ) {
+        if (!initializeCast()) {
+            result.success(false)
+            return
+        }
+        val media = CastMediaPayload.from(call.arguments)
+        val routeId = call.argument<String>("deviceId")
+        val route = currentDiscoveredRoutes().firstOrNull { it.id == routeId }
+        if (media == null || route == null) {
+            result.success(false)
+            return
+        }
+
+        pendingMedia = media
+        route.select()
+        result.success(true)
     }
 
     private fun showGoogleCastPicker(
@@ -308,6 +424,7 @@ class GoogleCastBridge(
     }
 
     fun dispose() {
+        stopGoogleCastDiscovery()
         castContext?.sessionManager?.removeSessionManagerListener(
             sessionListener,
             CastSession::class.java,

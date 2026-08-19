@@ -61,18 +61,13 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Chọn thiết bị'), findsOneWidget);
-    expect(find.text('Google Cast'), findsOneWidget);
+    expect(find.text('Phòng khách'), findsOneWidget);
 
-    await tester.tap(find.text('Google Cast'));
+    await tester.tap(find.text('Phòng khách'));
     await tester.pumpAndSettle();
 
     expect(service.pickerCalls, 1);
     expect(service.lastMedia?.url, media.url);
-    expect(find.text('Chọn thiết bị'), findsOneWidget);
-
-    await tester.tapAt(const Offset(10, 300));
-    await tester.pumpAndSettle();
-
     expect(find.text('Chọn thiết bị'), findsNothing);
   });
 }
@@ -80,9 +75,33 @@ void main() {
 class _FakeCastingService implements CastingService {
   int pickerCalls = 0;
   CastMedia? lastMedia;
+  final StreamController<List<GoogleCastDevice>> devicesController =
+      StreamController<List<GoogleCastDevice>>.broadcast();
 
   @override
   Stream<CastSessionEvent> get events => const Stream.empty();
+
+  @override
+  Stream<List<GoogleCastDevice>> get googleCastDevices =>
+      devicesController.stream;
+
+  @override
+  Future<List<GoogleCastDevice>> startGoogleCastDiscovery() async => const [
+    GoogleCastDevice(id: 'living-room', name: 'Phòng khách'),
+  ];
+
+  @override
+  Future<void> stopGoogleCastDiscovery() async {}
+
+  @override
+  Future<bool> connectGoogleCastDevice(
+    GoogleCastDevice device,
+    CastMedia media,
+  ) async {
+    pickerCalls++;
+    lastMedia = media;
+    return true;
+  }
 
   @override
   bool get supportsAirPlay => false;

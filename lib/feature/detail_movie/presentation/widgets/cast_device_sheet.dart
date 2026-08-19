@@ -7,11 +7,14 @@ import 'package:movie_app/common/components/alert_dialog/app_alert_dialog.dart';
 import 'package:movie_app/core/casting/casting_service.dart';
 import 'package:movie_app/core/config/utils/animated_dialog.dart';
 
-class CastDeviceSheet extends StatelessWidget {
+class CastDeviceSheet extends StatefulWidget {
   const CastDeviceSheet({super.key, required this.service, this.media});
 
   final CastingService service;
   final CastMedia? media;
+
+  @override
+  State<CastDeviceSheet> createState() => _CastDeviceSheetState();
 
   static Future<void> show(
     BuildContext context, {
@@ -86,9 +89,69 @@ class CastDeviceSheet extends StatelessWidget {
       builder: (_) => CastDeviceSheet(service: service, media: media),
     );
   }
+}
+
+class _CastDeviceSheetState extends State<CastDeviceSheet> {
+  StreamSubscription<List<GoogleCastDevice>>? _devicesSubscription;
+  Timer? _searchTimeout;
+  List<GoogleCastDevice> _devices = const [];
+  bool _isSearching = false;
+  bool _searchFinished = false;
+  String? _connectingDeviceId;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.service.supportsGoogleCast) {
+      _devicesSubscription = widget.service.googleCastDevices.listen(
+        _updateDevices,
+      );
+      unawaited(_startDiscovery());
+    }
+  }
+
+  @override
+  void dispose() {
+    _searchTimeout?.cancel();
+    _devicesSubscription?.cancel();
+    unawaited(widget.service.stopGoogleCastDiscovery());
+    super.dispose();
+  }
+
+  void _updateDevices(List<GoogleCastDevice> devices) {
+    if (!mounted) return;
+    setState(() {
+      _devices = devices;
+      if (devices.isNotEmpty) {
+        _isSearching = false;
+        _searchFinished = true;
+      }
+    });
+  }
+
+  Future<void> _startDiscovery() async {
+    _searchTimeout?.cancel();
+    setState(() {
+      _isSearching = true;
+      _searchFinished = false;
+    });
+
+    final devices = await widget.service.startGoogleCastDiscovery();
+    if (!mounted) return;
+    _updateDevices(devices);
+    if (devices.isNotEmpty) return;
+
+    _searchTimeout = Timer(const Duration(seconds: 8), () {
+      if (!mounted || _devices.isNotEmpty) return;
+      setState(() {
+        _isSearching = false;
+        _searchFinished = true;
+      });
+    });
+  }
 
   Future<void> _showAirPlay(BuildContext context) async {
-    final opened = await service.showAirPlayPicker();
+    final opened = await widget.service.showAirPlayPicker();
     if (!context.mounted) return;
     if (opened) return;
     await _showInfo(
@@ -98,8 +161,11 @@ class CastDeviceSheet extends StatelessWidget {
     );
   }
 
-  Future<void> _showGoogleCast(BuildContext context) async {
-    final castMedia = media;
+  Future<void> _connectGoogleCastDevice(
+    BuildContext context,
+    GoogleCastDevice device,
+  ) async {
+    final castMedia = widget.media;
     if (castMedia == null) {
       await _showInfo(
         context,
@@ -109,12 +175,20 @@ class CastDeviceSheet extends StatelessWidget {
       return;
     }
 
-    final opened = await service.showGoogleCastPicker(castMedia);
+    setState(() => _connectingDeviceId = device.id);
+    final connected = await widget.service.connectGoogleCastDevice(
+      device,
+      castMedia,
+    );
     if (!context.mounted) return;
-    if (opened) return;
+    setState(() => _connectingDeviceId = null);
+    if (connected) {
+      Navigator.of(context).pop();
+      return;
+    }
     await _showInfo(
       context,
-      title: 'Không thể mở Google Cast',
+      title: 'Không thể kết nối Google Cast',
       content:
           'Hãy kiểm tra Google Play services và bảo đảm điện thoại, Chromecast hoặc Google TV đang cùng Wi-Fi.',
     );
@@ -138,7 +212,7 @@ class CastDeviceSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isIos = service.supportsAirPlay;
+    final isIos = widget.service.supportsAirPlay;
     return BackdropFilter(
       filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
       child: AnimatedContainer(
@@ -170,30 +244,105 @@ class CastDeviceSheet extends StatelessWidget {
                 spacing: 10,
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                  Icon(Iconsax.mobile_copy, size: 20,),
+                  Icon(Iconsax.mobile_copy, size: 20),
                   Text(
                     'Chọn thiết bị',
                     style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
-                    
                   ),
                 ],
               ),
             ),
             const SizedBox(height: 15),
-            _DeviceOption(
-              icon: isIos
-                  ? Icons.airplay_rounded
-                  : Iconsax.mirroring_screen_copy,
-              title: isIos
-                  ? 'Các thiết bị AirPlay và Bluetooth'
-                  : 'Google Cast',
-              subtitle: isIos ? null : 'Chromecast và Google TV',
-              onTap: isIos
-                  ? () => _showAirPlay(context)
-                  : () => _showGoogleCast(context),
+            if (isIos)
+              _DeviceOption(
+                icon: Icons.airplay_rounded,
+                title: 'Các thiết bị AirPlay và Bluetooth',
+                onTap: () => _showAirPlay(context),
+              )
+            else
+              _buildGoogleCastContent(context),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildGoogleCastContent(BuildContext context) {
+    if (_devices.isNotEmpty) {
+      return Column(
+        mainAxisSize: MainAxisSize.min,
+        children: _devices
+            .map((device) {
+              final connecting = _connectingDeviceId == device.id;
+              return _DeviceOption(
+                icon: Iconsax.mirroring_screen_copy,
+                title: device.name,
+                subtitle: connecting
+                    ? 'Đang kết nối...'
+                    : (device.description?.trim().isNotEmpty == true
+                          ? device.description
+                          : 'Google Cast'),
+                trailing: connecting
+                    ? const SizedBox.square(
+                        dimension: 18,
+                        child: CircularProgressIndicator.adaptive(
+                          strokeWidth: 2,
+                        ),
+                      )
+                    : null,
+                onTap: connecting
+                    ? null
+                    : () => _connectGoogleCastDevice(context, device),
+              );
+            })
+            .toList(growable: false),
+      );
+    }
+
+    if (_isSearching && !_searchFinished) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+        child: Row(
+          children: [
+            SizedBox.square(
+              dimension: 20,
+              child: CircularProgressIndicator.adaptive(strokeWidth: 2),
+            ),
+            SizedBox(width: 16),
+            Expanded(
+              child: Text(
+                'Đang tìm thiết bị Google Cast...',
+                style: TextStyle(color: Colors.white70, fontSize: 14),
+              ),
             ),
           ],
         ),
+      );
+    }
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(24, 12, 24, 16),
+      child: Column(
+        children: [
+          const Icon(Icons.cast_outlined, color: Colors.white38, size: 34),
+          const SizedBox(height: 10),
+          const Text(
+            'Không tìm thấy thiết bị',
+            style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+          ),
+          const SizedBox(height: 5),
+          const Text(
+            'Hãy bảo đảm điện thoại và Chromecast hoặc Google TV đang cùng Wi-Fi.',
+            textAlign: TextAlign.center,
+            style: TextStyle(color: Colors.white38, fontSize: 12),
+          ),
+          const SizedBox(height: 12),
+          TextButton.icon(
+            onPressed: _startDiscovery,
+            icon: const Icon(Icons.refresh_rounded, size: 18),
+            label: const Text('Tìm lại'),
+          ),
+        ],
       ),
     );
   }
@@ -205,12 +354,14 @@ class _DeviceOption extends StatelessWidget {
     required this.title,
     required this.onTap,
     this.subtitle,
+    this.trailing,
   });
 
   final IconData icon;
   final String title;
   final String? subtitle;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
+  final Widget? trailing;
 
   @override
   Widget build(BuildContext context) {
@@ -249,6 +400,7 @@ class _DeviceOption extends StatelessWidget {
                   ],
                 ),
               ),
+              if (trailing != null) ...[const SizedBox(width: 12), trailing!],
             ],
           ),
         ),

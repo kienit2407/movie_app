@@ -2,7 +2,9 @@ import 'dart:async';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:movie_app/feature/home/domain/entities/new_movie_entity.dart';
+import 'package:movie_app/feature/home/notification/comment_notification.dart';
 import 'package:movie_app/feature/home/notification/new_movie_inbox.dart';
+import 'package:movie_app/feature/home/notification/new_movie_notification_service.dart';
 
 void main() {
   group('NewMovieInboxCubit', () {
@@ -37,6 +39,35 @@ void main() {
 
       expect(store.getItemsCalls, 1);
     });
+
+    test('combines movie and comment unread counts and clears badge', () async {
+      final store = _FakeInboxStore(items: [_inboxItem('movie-1')]);
+      final comments = _FakeCommentNotificationRepository([
+        _commentItem('reply-1'),
+      ]);
+      final badge = _FakeBadgeUpdater();
+      final cubit = NewMovieInboxCubit(
+        store,
+        commentRepository: comments,
+        badgeUpdater: badge,
+      );
+      addTearDown(() async {
+        await cubit.close();
+        await store.close();
+        await comments.close();
+      });
+
+      await cubit.refresh();
+
+      expect(cubit.state.unreadCount, 2);
+      expect(badge.counts, [2]);
+
+      await cubit.markAllRead();
+
+      expect(cubit.state.unreadCount, 0);
+      expect(comments.markAllReadCalls, 1);
+      expect(badge.counts.last, 0);
+    });
   });
 }
 
@@ -51,6 +82,16 @@ NewMovieInboxItem _inboxItem(String slug) => NewMovieInboxItem(
   lang: 'Vietsub',
   year: 2026,
   detectedAt: DateTime(2026, 8, 11, 10),
+);
+
+CommentNotificationItem _commentItem(String id) => CommentNotificationItem(
+  id: id,
+  type: CommentNotificationType.reply,
+  movieSlug: 'movie-1',
+  commentId: 'comment-1',
+  actorName: 'Người trả lời',
+  bodyPreview: 'Nội dung trả lời',
+  createdAt: DateTime(2026, 8, 11, 10, 30),
 );
 
 class _FakeInboxStore implements NewMovieInboxStore {
@@ -97,4 +138,35 @@ class _FakeInboxStore implements NewMovieInboxStore {
 
   @override
   Future<void> prune() async {}
+}
+
+class _FakeCommentNotificationRepository
+    implements CommentNotificationRepository {
+  _FakeCommentNotificationRepository(this.items);
+
+  final List<CommentNotificationItem> items;
+  final StreamController<void> _changes = StreamController<void>.broadcast();
+  int markAllReadCalls = 0;
+
+  Future<void> close() => _changes.close();
+
+  @override
+  Future<List<CommentNotificationItem>> getItems() async => List.of(items);
+
+  @override
+  Future<void> markAllRead() async {
+    markAllReadCalls++;
+  }
+
+  @override
+  Stream<void> watch() => _changes.stream;
+}
+
+class _FakeBadgeUpdater implements ApplicationBadgeUpdater {
+  final List<int> counts = [];
+
+  @override
+  Future<void> setBadgeCount(int count) async {
+    counts.add(count);
+  }
 }

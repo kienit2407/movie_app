@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:ui';
 import 'package:go_router/go_router.dart';
 import 'package:movie_app/core/config/routes/app_router.dart';
@@ -24,6 +25,7 @@ import 'package:movie_app/core/config/utils/movie_player_args.dart';
 import 'package:movie_app/core/config/utils/show_detail_movie_dialog.dart';
 import 'package:movie_app/core/player_overlay_launcher.dart';
 import 'package:movie_app/core/player_overlay_controller.dart';
+import 'package:movie_app/core/movie_sharing/movie_share_service.dart';
 import 'package:movie_app/feature/detail_movie/data/model/detail_movie_model.dart';
 import 'package:movie_app/feature/detail_movie/domain/usecase/get_detail_movie_usecase.dart';
 import 'package:movie_app/feature/detail_movie/presentation/bloc/detail_movie_cubit.dart';
@@ -1018,6 +1020,7 @@ class _MovieDetailPageContentState extends State<_MovieDetailPageContent>
   YoutubePlayerController? _youtubeController;
   bool _moviePlayerIsActive = false;
   late final TabController _tabController;
+  late final Listenable _commentsComposerVisibilityListenable;
   bool _isPlayerError = false;
   bool _isPlayerReady = false;
   bool _isMuted = false;
@@ -1042,6 +1045,10 @@ class _MovieDetailPageContentState extends State<_MovieDetailPageContent>
     super.initState();
     _moviePlayerIsActive = PlayerOverlayController.instance.isVisible;
     PlayerOverlayController.instance.addListener(_syncTrailerWithMainPlayer);
+    _commentsComposerVisibilityListenable = Listenable.merge([
+      PlayerOverlayController.instance,
+      PlayerOverlayController.instance.progress,
+    ]);
     _scrollController.addListener(_onScroll);
     _tabController = TabController(length: 4, vsync: this);
     _tabController.addListener(() {
@@ -1141,6 +1148,11 @@ class _MovieDetailPageContentState extends State<_MovieDetailPageContent>
     try {
       if (controller.value.isPlaying) controller.pause();
     } catch (_) {}
+  }
+
+  bool _isDetailCommentsComposerVisible() {
+    final playerOverlay = PlayerOverlayController.instance;
+    return !playerOverlay.isVisible || playerOverlay.isMini;
   }
 
   Future<void> _scrollToTabBarPinned() async {
@@ -1261,7 +1273,12 @@ class _MovieDetailPageContentState extends State<_MovieDetailPageContent>
         return SliverToBoxAdapter(
           child: SizedBox(
             height: availableHeight.clamp(320.0, double.infinity),
-            child: CommentsTab(onComposerWillFocus: _scrollToTabBarPinned),
+            child: CommentsTab(
+              onComposerWillFocus: _scrollToTabBarPinned,
+              composerVisibilityListenable:
+                  _commentsComposerVisibilityListenable,
+              isComposerOverlayVisible: _isDetailCommentsComposerVisible,
+            ),
           ),
         );
       default:
@@ -1442,8 +1459,19 @@ class _MovieDetailPageContentState extends State<_MovieDetailPageContent>
                             style: IconButton.styleFrom(
                               padding: EdgeInsets.zero,
                             ),
-                            onPressed: () {},
-                            icon: Icon(Iconsax.share),
+                            onPressed: () => unawaited(
+                              MovieShareService.shareMovie(
+                                context: context,
+                                slug: movie.slug,
+                                movieName: movie.name,
+                              ),
+                            ),
+                            icon: Image.asset(
+                              'assets/icons/share.png',
+                              width: 20,
+                              height: 20,
+                              color: Colors.white.withValues(alpha: .4),
+                            ),
                           ),
                         ],
                       ),

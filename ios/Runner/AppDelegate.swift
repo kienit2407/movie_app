@@ -12,6 +12,9 @@ import AVKit
     private var pictureInPictureBridge: IosPictureInPictureBridge?
     private var airPlayRoutePicker: AVRoutePickerView?
     private var castingChannel: FlutterMethodChannel?
+    private var appBadgeChannel: FlutterMethodChannel?
+    private var deviceOrientationChannel: FlutterEventChannel?
+    private var deviceOrientationStreamHandler: DeviceOrientationStreamHandler?
     private var lastAirPlayActive: Bool?
 
     override func application(
@@ -43,6 +46,58 @@ import AVKit
         guard let controller = window?.rootViewController as? FlutterViewController else {
             print("[Storyboard iOS] rootViewController is not FlutterViewController")
             return super.application(application, didFinishLaunchingWithOptions: launchOptions)
+        }
+
+        let deviceOrientationStreamHandler = DeviceOrientationStreamHandler()
+        let deviceOrientationChannel = FlutterEventChannel(
+            name: "com.kinit.movieapp/device_orientation",
+            binaryMessenger: controller.binaryMessenger
+        )
+        deviceOrientationChannel.setStreamHandler(deviceOrientationStreamHandler)
+        self.deviceOrientationStreamHandler = deviceOrientationStreamHandler
+        self.deviceOrientationChannel = deviceOrientationChannel
+
+        let appBadgeChannel = FlutterMethodChannel(
+            name: "com.kinit.movieapp/app_badge",
+            binaryMessenger: controller.binaryMessenger
+        )
+        self.appBadgeChannel = appBadgeChannel
+        appBadgeChannel.setMethodCallHandler { call, result in
+            guard call.method == "setBadgeCount" else {
+                result(FlutterMethodNotImplemented)
+                return
+            }
+            guard
+                let arguments = call.arguments as? [String: Any],
+                let count = arguments["count"] as? Int
+            else {
+                result(FlutterError(
+                    code: "bad_args",
+                    message: "Badge count is missing.",
+                    details: nil
+                ))
+                return
+            }
+
+            let normalizedCount = max(0, count)
+            if #available(iOS 16.0, *) {
+                UNUserNotificationCenter.current().setBadgeCount(normalizedCount) { error in
+                    DispatchQueue.main.async {
+                        if let error {
+                            result(FlutterError(
+                                code: "badge_failed",
+                                message: error.localizedDescription,
+                                details: nil
+                            ))
+                        } else {
+                            result(nil)
+                        }
+                    }
+                }
+            } else {
+                UIApplication.shared.applicationIconBadgeNumber = normalizedCount
+                result(nil)
+            }
         }
 
         let channel = FlutterMethodChannel(
@@ -177,5 +232,55 @@ import AVKit
                 "type": "airPlay",
             ]
         )
+    }
+}
+
+private final class DeviceOrientationStreamHandler: NSObject, FlutterStreamHandler {
+    private var eventSink: FlutterEventSink?
+    private var orientationObserver: NSObjectProtocol?
+
+    func onListen(
+        withArguments arguments: Any?,
+        eventSink events: @escaping FlutterEventSink
+    ) -> FlutterError? {
+        eventSink = events
+        UIDevice.current.beginGeneratingDeviceOrientationNotifications()
+        orientationObserver = NotificationCenter.default.addObserver(
+            forName: UIDevice.orientationDidChangeNotification,
+            object: UIDevice.current,
+            queue: .main
+        ) { [weak self] _ in
+            self?.publishCurrentOrientation()
+        }
+        publishCurrentOrientation()
+        return nil
+    }
+
+    func onCancel(withArguments arguments: Any?) -> FlutterError? {
+        if let orientationObserver {
+            NotificationCenter.default.removeObserver(orientationObserver)
+        }
+        orientationObserver = nil
+        eventSink = nil
+        UIDevice.current.endGeneratingDeviceOrientationNotifications()
+        return nil
+    }
+
+    private func publishCurrentOrientation() {
+        let value: String?
+        switch UIDevice.current.orientation {
+        case .portrait:
+            value = "portraitUp"
+        case .landscapeLeft:
+            value = "landscapeLeft"
+        case .landscapeRight:
+            value = "landscapeRight"
+        default:
+            value = nil
+        }
+
+        if let value {
+            eventSink?(value)
+        }
     }
 }
