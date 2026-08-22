@@ -4,6 +4,6 @@ import 'package:movie_app/core/player_overlay_controller.dart';
 
 extension PlayerOverlayLauncher on BuildContext {
   void openMoviePlayer(MoviePlayerArgs args) {
-    PlayerOverlayController.instance.open(args);
+    PlayerOverlayController.instance.open(args, minimizeEnabled: false);
   }
 }

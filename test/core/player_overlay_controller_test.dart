@@ -40,6 +40,28 @@ void main() {
     controller.dispose();
   });
 
+  test('minimize stays locked until initial playback becomes ready', () {
+    final controller = PlayerOverlayController();
+
+    controller.open(_args('movie-a'), minimizeEnabled: false);
+    controller.beginDrag();
+    controller.updateDragDelta(240, 600);
+    controller.endDrag(velocityY: 900);
+    controller.minimize();
+
+    expect(controller.target, PlayerOverlayTarget.expanded);
+    expect(controller.progress.value, 0);
+    expect(controller.isDragging, isFalse);
+
+    controller.setMinimizeEnabled(true);
+    controller.beginDrag();
+    controller.updateDragDelta(240, 600);
+    controller.endDrag(velocityY: 0);
+
+    expect(controller.target, PlayerOverlayTarget.mini);
+    controller.dispose();
+  });
+
   test('root back minimizes expanded player then closes mini player', () async {
     final controller = PlayerOverlayController();
     final dispatcher = PlayerOverlayBackButtonDispatcher(controller);

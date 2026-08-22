@@ -32,6 +32,7 @@ import 'package:movie_app/feature/detail_movie/presentation/bloc/detail_movie_cu
 import 'package:movie_app/feature/detail_movie/presentation/bloc/detail_movie_state.dart';
 import 'package:movie_app/common/helpers/watch_progress_storage.dart';
 import 'package:movie_app/feature/detail_movie/presentation/widgets/view_count_section.dart';
+import 'package:movie_app/feature/detail_movie/presentation/widgets/movie_trailer_player.dart';
 import 'package:movie_app/feature/home/domain/entities/fillterType.dart';
 import 'package:movie_app/feature/home/domain/entities/fillter_genre_movie_req.dart';
 import 'package:movie_app/feature/home/domain/entities/new_movie_entity.dart';
@@ -1581,10 +1582,8 @@ class _MovieDetailPageContentState extends State<_MovieDetailPageContent>
                 ),
 
               if (showPlayer)
-                YoutubePlayer(
+                MovieTrailerPlayer(
                   controller: _youtubeController!,
-                  showVideoProgressIndicator: true,
-                  progressIndicatorColor: Colors.red,
                   onReady: () {
                     if (mounted) {
                       if (_moviePlayerIsActive) {
@@ -1595,11 +1594,6 @@ class _MovieDetailPageContentState extends State<_MovieDetailPageContent>
                       setState(() => _isPlayerReady = true);
                     }
                   },
-                  bottomActions: [
-                    CurrentPosition(),
-                    ProgressBar(isExpanded: true),
-                    RemainingDuration(),
-                  ],
                 ),
 
               if (showSkeleton)

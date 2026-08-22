@@ -238,7 +238,6 @@ class _CommentsTabState extends State<CommentsTab> with WidgetsBindingObserver {
         _CommentsHeader(
           count: state.totalCount,
           sort: state.sort,
-          onSortPressed: () => _showSortPicker(state.sort),
           onSortChanged: context.read<CommentsCubit>().changeSort,
         ),
         const Divider(height: 1, color: Colors.white12),
@@ -1279,13 +1278,11 @@ class _CommentsHeader extends StatelessWidget {
   const _CommentsHeader({
     required this.count,
     required this.sort,
-    required this.onSortPressed,
     required this.onSortChanged,
   });
 
   final int count;
   final CommentSort sort;
-  final VoidCallback onSortPressed;
   final ValueChanged<CommentSort> onSortChanged;
 
   @override
@@ -1340,7 +1337,7 @@ class _CommentsHeader extends StatelessWidget {
               ],
             )
           else
-            _SortTrigger(sort: sort, onTap: onSortPressed),
+            _AndroidSortMenu(sort: sort, onSortChanged: onSortChanged),
         ],
       ),
     );
@@ -1375,36 +1372,43 @@ class _CommentsHeader extends StatelessWidget {
 }
 
 class _SortTrigger extends StatelessWidget {
-  const _SortTrigger({required this.sort, required this.onTap});
+  const _SortTrigger({required this.sort, this.onTap});
 
   final CommentSort sort;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
+    final content = Padding(
+      padding: const EdgeInsets.all(8),
+      child: Row(
+        children: [
+          const Icon(Icons.tune_rounded, color: Colors.white70, size: 20),
+
+          const SizedBox(width: 6),
+
+          Text(
+            sort == CommentSort.popular ? 'Phổ biến' : 'Mới nhất',
+            style: const TextStyle(color: Colors.white70, fontSize: 12),
+          ),
+        ],
+      ),
+    );
+
     return Semantics(
       button: true,
       label: 'Sắp xếp bình luận',
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(14),
-          child: Padding(
-            padding: const EdgeInsets.all(8),
-            child: Row(
-              children: [
-                const Icon(Icons.tune_rounded, color: Colors.white70, size: 20),
-                const SizedBox(width: 6),
-                Text(
-                  sort == CommentSort.popular ? 'Phổ biến' : 'Mới nhất',
-                  style: const TextStyle(color: Colors.white70, fontSize: 12),
-                ),
-              ],
+
+      child: onTap == null
+          ? content
+          : Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: onTap,
+                borderRadius: BorderRadius.circular(14),
+                child: content,
+              ),
             ),
-          ),
-        ),
-      ),
     );
   }
 }
@@ -1581,6 +1585,127 @@ class _CommentCopyOverlay extends StatelessWidget {
                 ),
               ),
             ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _AndroidSortMenu extends StatelessWidget {
+  const _AndroidSortMenu({required this.sort, required this.onSortChanged});
+
+  final CommentSort sort;
+  final ValueChanged<CommentSort> onSortChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return PopupMenuButton<CommentSort>(
+      // initialValue: sort,
+
+      tooltip: 'Sắp xếp bình luận',
+
+      // Hiện menu phía dưới nút
+      position: PopupMenuPosition.under,
+      offset: const Offset(-45, 4),
+
+      // Background
+      color: const Color(0xff272832),
+      surfaceTintColor: Colors.transparent,
+
+      elevation: 14,
+      shadowColor: Colors.black.withValues(alpha: 0.45),
+
+      constraints: const BoxConstraints(minWidth: 175, maxWidth: 190),
+
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(18),
+        side: BorderSide(color: Colors.white.withValues(alpha: 0.08)),
+      ),
+
+      menuPadding: const EdgeInsets.all(8),
+
+      // Flutter của bạn nếu hỗ trợ property này
+      // thì animation sẽ mềm hơn nữa.
+      popUpAnimationStyle: const AnimationStyle(
+        duration: Duration(milliseconds: 220),
+        reverseDuration: Duration(milliseconds: 160),
+        curve: Curves.easeOutCubic,
+        reverseCurve: Curves.easeInCubic,
+      ),
+
+      onSelected: onSortChanged,
+
+      itemBuilder: (_) => [
+        _buildItem(
+          value: CommentSort.popular,
+          current: sort,
+          label: 'Phổ biến',
+          icon: Icons.local_fire_department_outlined,
+        ),
+        _buildItem(
+          value: CommentSort.newest,
+          current: sort,
+          label: 'Mới nhất',
+          icon: Icons.schedule_rounded,
+        ),
+      ],
+
+      // Không truyền onTap.
+      // PopupMenuButton tự nhận tap và mở menu.
+      child: _SortTrigger(sort: sort),
+    );
+  }
+
+  PopupMenuItem<CommentSort> _buildItem({
+    required CommentSort value,
+    required CommentSort current,
+    required String label,
+    required IconData icon,
+  }) {
+    final selected = value == current;
+
+    return PopupMenuItem<CommentSort>(
+      value: value,
+      height: 54,
+      padding: EdgeInsets.zero,
+
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          color: selected
+              ? AppColor.secondColor.withValues(alpha: 0.14)
+              : Colors.transparent,
+          borderRadius: BorderRadius.circular(13),
+        ),
+        child: Row(
+          children: [
+            Icon(
+              icon,
+              size: 20,
+              color: selected ? AppColor.secondColor : Colors.white70,
+            ),
+
+            const SizedBox(width: 12),
+
+            Expanded(
+              child: Text(
+                label,
+                style: TextStyle(
+                  color: selected ? AppColor.secondColor : Colors.white,
+                  fontSize: 14,
+                  fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                ),
+              ),
+            ),
+
+            if (selected)
+              const Icon(
+                Icons.check_rounded,
+                size: 20,
+                color: AppColor.secondColor,
+              ),
           ],
         ),
       ),
@@ -2501,10 +2626,9 @@ String _relativeTime(DateTime dateTime) {
   }
   return '${(difference.inDays / 365).floor()} năm trước';
 }
+
 class _EmojiComposerController extends TextEditingController {
-  _EmojiComposerController({
-    this.emojiFontSize = 19,
-  });
+  _EmojiComposerController({this.emojiFontSize = 19});
 
   final double emojiFontSize;
 
@@ -2530,51 +2654,32 @@ class _EmojiComposerController extends TextEditingController {
     if (!hasValidComposing) {
       return TextSpan(
         style: baseStyle,
-        children: _commentBodySpans(
-          currentText,
-          emojiFontSize: emojiFontSize,
-        ),
+        children: _commentBodySpans(currentText, emojiFontSize: emojiFontSize),
       );
     }
 
     // Giữ composing region để bàn phím,
     // đặc biệt bàn phím tiếng Việt, hoạt động bình thường.
-    final before = currentText.substring(
-      0,
-      composing.start,
-    );
+    final before = currentText.substring(0, composing.start);
 
-    final composingText = currentText.substring(
-      composing.start,
-      composing.end,
-    );
+    final composingText = currentText.substring(composing.start, composing.end);
 
-    final after = currentText.substring(
-      composing.end,
-    );
+    final after = currentText.substring(composing.end);
 
     return TextSpan(
       style: baseStyle,
       children: [
-        ..._commentBodySpans(
-          before,
-          emojiFontSize: emojiFontSize,
-        ),
+        ..._commentBodySpans(before, emojiFontSize: emojiFontSize),
 
         TextSpan(
-          style: baseStyle.copyWith(
-            decoration: TextDecoration.underline,
-          ),
+          style: baseStyle.copyWith(decoration: TextDecoration.underline),
           children: _commentBodySpans(
             composingText,
             emojiFontSize: emojiFontSize,
           ),
         ),
 
-        ..._commentBodySpans(
-          after,
-          emojiFontSize: emojiFontSize,
-        ),
+        ..._commentBodySpans(after, emojiFontSize: emojiFontSize),
       ],
     );
   }

@@ -1,4 +1,7 @@
 import 'dart:async';
+import 'package:cupertino_native_better/components/liquid_glass_container.dart';
+import 'package:cupertino_native_better/style/glass_effect.dart';
+import 'package:cupertino_native_better/utils/version_detector.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
@@ -14,6 +17,7 @@ import 'package:movie_app/feature/search/presentation/widgets/search_history_vie
 import 'package:movie_app/feature/search/presentation/widgets/search_result_view.dart';
 import 'package:movie_app/feature/search/presentation/widgets/search_shimmer_loading.dart';
 import 'package:movie_app/feature/hub/presentation/pages/hub_page.dart';
+import 'package:flutter/foundation.dart' show defaultTargetPlatform, kIsWeb;
 
 class SearchPage extends StatelessWidget {
   const SearchPage({super.key, this.showBackButton = true});
@@ -43,7 +47,10 @@ class _SearchPageViewState extends State<_SearchPageView> {
   final ScrollController _scrollCtrl = ScrollController();
   final FocusNode _focusNode = FocusNode();
   Timer? _debounce;
-
+  bool get _useNativeGlass =>
+      !kIsWeb &&
+      defaultTargetPlatform == TargetPlatform.iOS &&
+      PlatformVersion.shouldUseNativeGlass;
   bool _hideClear = false;
   SearchFilterParams _filters = SearchFilterParams.defaults;
 
@@ -180,86 +187,8 @@ class _SearchPageViewState extends State<_SearchPageView> {
                               color: Colors.white,
                             ),
                           ),
-                        Expanded(
-                          child: TextField(
-                            controller: _searchCtrl,
-                            focusNode: _focusNode,
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 13,
-                            ),
-                            decoration: InputDecoration(
-                              hintText: 'Tìm kiếm phim, diễn viên...',
-                              hintStyle: TextStyle(
-                                color: Colors.white.withValues(alpha: 0.5),
-                              ),
-                              prefixIcon: const Icon(
-                                Iconsax.search_normal_1_copy,
-                                color: Colors.white,
-                              ),
-                              filled: true,
-                              fillColor: Colors.white.withValues(alpha: 0.1),
-                              enabledBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
-                                borderSide: BorderSide(
-                                  color: Colors.white.withValues(alpha: 0.3),
-                                ),
-                              ),
-                              focusedBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
-                                borderSide: const BorderSide(
-                                  color: AppColor.firstColor,
-                                ),
-                              ),
-                              contentPadding: const EdgeInsets.symmetric(
-                                horizontal: 16,
-                              ),
-                              isDense: true,
-                              suffixIcon: AnimatedSwitcher(
-                                duration: const Duration(milliseconds: 250),
-                                switchInCurve: Curves.easeOutBack,
-                                transitionBuilder: (child, animation) =>
-                                    ScaleTransition(
-                                      scale: animation,
-                                      child: child,
-                                    ),
-                                child: _hideClear
-                                    ? IconButton(
-                                        key: const ValueKey('clear'),
-                                        color: Colors.white,
-                                        onPressed: () {
-                                          setState(() {
-                                            _searchCtrl.clear();
-                                            _hideClear = false;
-                                          });
-                                          context
-                                              .read<SearchCubit>()
-                                              .clearSearch();
-                                        },
-                                        icon: const Icon(
-                                          Iconsax.tag_cross_copy,
-                                        ),
-                                      )
-                                    : const SizedBox.shrink(
-                                        key: ValueKey('empty'),
-                                      ),
-                              ),
-                            ),
-                            onChanged: (val) {
-                              setState(() => _hideClear = val.isNotEmpty);
-                              _onSearchChanged(val);
-                            },
-                            onSubmitted: (val) {
-                              final q = val.trim();
-                              if (q.isNotEmpty) {
-                                context.read<SearchCubit>().search(
-                                  q,
-                                  filters: _filters,
-                                );
-                              }
-                            },
-                          ),
-                        ),
+
+                        Expanded(child: _buildSearchField()),
                         const SizedBox(width: 8),
                         _buildFilterButton(),
                       ],
@@ -312,6 +241,170 @@ class _SearchPageViewState extends State<_SearchPageView> {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildSearchField() {
+    if (_useNativeGlass) {
+      return _buildGlassSearchField();
+    }
+
+    return _buildNormalSearchField();
+  }
+
+  Widget _buildGlassSearchField() {
+    return SizedBox(
+      height: 46,
+      child: LiquidGlassContainer(
+        config: const LiquidGlassConfig(
+          effect: CNGlassEffect.regular,
+          shape: CNGlassEffectShape.rect,
+          cornerRadius: 30,
+          interactive: true,
+        ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 14),
+          child: Row(
+            children: [
+              const Icon(
+                Iconsax.search_normal_1_copy,
+                color: Colors.white,
+                size: 21,
+              ),
+
+              const SizedBox(width: 10),
+
+              Expanded(
+                child: TextField(
+                  controller: _searchCtrl,
+                  focusNode: _focusNode,
+
+                  style: const TextStyle(color: Colors.white, fontSize: 13),
+
+                  textAlignVertical: TextAlignVertical.center,
+
+                  decoration: InputDecoration(
+                    hintText: 'Tìm kiếm phim, diễn viên...',
+                    hintStyle: TextStyle(
+                      color: Colors.white.withValues(alpha: 0.5),
+                    ),
+
+                    border: InputBorder.none,
+                    enabledBorder: InputBorder.none,
+                    focusedBorder: InputBorder.none,
+
+                    filled: false,
+
+                    isCollapsed: true,
+                    contentPadding: EdgeInsets.zero,
+                  ),
+
+                  onChanged: (val) {
+                    setState(() => _hideClear = val.isNotEmpty);
+                    _onSearchChanged(val);
+                  },
+
+                  onSubmitted: (val) {
+                    final q = val.trim();
+
+                    if (q.isNotEmpty) {
+                      context.read<SearchCubit>().search(q, filters: _filters);
+                    }
+                  },
+                ),
+              ),
+
+              AnimatedSwitcher(
+                duration: const Duration(milliseconds: 250),
+                switchInCurve: Curves.easeOutBack,
+                transitionBuilder: (child, animation) {
+                  return ScaleTransition(scale: animation, child: child);
+                },
+                child: _hideClear
+                    ? GestureDetector(
+                        key: const ValueKey('clear'),
+                        behavior: HitTestBehavior.opaque,
+                        onTap: () {
+                          setState(() {
+                            _searchCtrl.clear();
+                            _hideClear = false;
+                          });
+
+                          context.read<SearchCubit>().clearSearch();
+                        },
+                        child: const Padding(
+                          padding: EdgeInsets.all(8),
+                          child: Icon(
+                            Iconsax.tag_cross_copy,
+                            color: Colors.white,
+                            size: 20,
+                          ),
+                        ),
+                      )
+                    : const SizedBox(key: ValueKey('empty'), width: 36),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNormalSearchField() {
+    return TextField(
+      controller: _searchCtrl,
+      focusNode: _focusNode,
+      style: const TextStyle(color: Colors.white, fontSize: 13),
+      decoration: InputDecoration(
+        hintText: 'Tìm kiếm phim, diễn viên...',
+        hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.5)),
+        prefixIcon: const Icon(
+          Iconsax.search_normal_1_copy,
+          color: Colors.white,
+        ),
+        filled: true,
+        fillColor: Colors.white.withValues(alpha: 0.1),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.3)),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: AppColor.firstColor),
+        ),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+        isDense: true,
+        suffixIcon: AnimatedSwitcher(
+          duration: const Duration(milliseconds: 250),
+          switchInCurve: Curves.easeOutBack,
+          transitionBuilder: (child, animation) =>
+              ScaleTransition(scale: animation, child: child),
+          child: _hideClear
+              ? IconButton(
+                  key: const ValueKey('clear'),
+                  color: Colors.white,
+                  onPressed: () {
+                    setState(() {
+                      _searchCtrl.clear();
+                      _hideClear = false;
+                    });
+                    context.read<SearchCubit>().clearSearch();
+                  },
+                  icon: const Icon(Iconsax.tag_cross_copy),
+                )
+              : const SizedBox.shrink(key: ValueKey('empty')),
+        ),
+      ),
+      onChanged: (val) {
+        setState(() => _hideClear = val.isNotEmpty);
+        _onSearchChanged(val);
+      },
+      onSubmitted: (val) {
+        final q = val.trim();
+        if (q.isNotEmpty) {
+          context.read<SearchCubit>().search(q, filters: _filters);
+        }
+      },
     );
   }
 

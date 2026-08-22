@@ -18,6 +18,7 @@ import 'package:movie_app/feature/detail_movie/domain/usecase/get_detail_movie_u
 import 'package:movie_app/feature/detail_movie/presentation/bloc/detail_movie_cubit.dart';
 import 'package:movie_app/feature/detail_movie/presentation/bloc/detail_movie_state.dart';
 import 'package:movie_app/feature/detail_movie/presentation/pages/movie_detail_page.dart';
+import 'package:movie_app/feature/detail_movie/presentation/widgets/movie_trailer_player.dart';
 import 'package:skeletonizer/skeletonizer.dart';
 import 'package:youtube_player_flutter/youtube_player_flutter.dart';
 
@@ -435,10 +436,8 @@ class _DialogContentState extends State<_DialogContent> {
                     cacheHeight: 720,
                   ),
                 if (showPlayer)
-                  YoutubePlayer(
+                  MovieTrailerPlayer(
                     controller: _youtubeController!,
-                    showVideoProgressIndicator: true,
-                    progressIndicatorColor: Colors.red,
                     onReady: () {
                       if (mounted) {
                         setState(() {
@@ -446,12 +445,6 @@ class _DialogContentState extends State<_DialogContent> {
                         });
                       }
                     },
-                    bottomActions: [
-                      CurrentPosition(),
-                      ProgressBar(isExpanded: true),
-                      RemainingDuration(),
-                      PlaybackSpeedButton(),
-                    ],
                   ),
                 if (showSkeleton)
                   Skeletonizer(

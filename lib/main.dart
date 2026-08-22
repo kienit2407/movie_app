@@ -44,6 +44,7 @@ import 'package:movie_app/feature/home/presentation/bloc/carousel_display_cubit.
 import 'package:movie_app/feature/home/presentation/bloc/country_movie_cubit.dart';
 import 'package:movie_app/feature/home/presentation/bloc/genre_cubit.dart';
 import 'package:movie_app/feature/intro/presentation/splash/bloc/splash_cubit.dart';
+import 'package:movie_app/feature/intro/presentation/splash/pages/splash.dart';
 import 'package:movie_app/feature/library/data/user_library_repository.dart';
 import 'package:movie_app/feature/library/presentation/cubit/user_library_cubit.dart';
 import 'package:movie_app/feature/movie_pagination/presentation/bloc/fetch_fillter_cubit.dart';
@@ -201,10 +202,25 @@ class MovieApp extends StatelessWidget {
               return Overlay(
                 initialEntries: [
                   OverlayEntry(
-                    builder: (_) => PlayerOverlayHost(
-                      router: router,
-                      child: child ?? const SizedBox.shrink(),
-                    ),
+                    builder: (_) {
+                      return Stack(
+                        fit: StackFit.expand,
+                        children: [
+                          // ==========================
+                          // APP THẬT
+                          // ==========================
+                          PlayerOverlayHost(
+                            router: router,
+                            child: child ?? const SizedBox.shrink(),
+                          ),
+
+                          // ==========================
+                          // SPLASH PHỦ LÊN APP
+                          // ==========================
+                          const Positioned.fill(child: StartupSplashOverlay()),
+                        ],
+                      );
+                    },
                   ),
                 ],
               );

@@ -328,7 +328,7 @@ class _CommentNotificationTile extends StatelessWidget {
                     bottom: -3,
                     child: DecoratedBox(
                       decoration: const BoxDecoration(
-                        color: AppColor.firstColor,
+                        color: AppColor.secondColor,
                         shape: BoxShape.circle,
                       ),
                       child: Padding(
@@ -383,7 +383,7 @@ class _CommentNotificationTile extends StatelessWidget {
                     Text(
                       DateFormat('HH:mm').format(item.createdAt),
                       style: const TextStyle(
-                        color: AppColor.firstColor,
+                        color: AppColor.secondColor,
                         fontSize: 12,
                       ),
                     ),

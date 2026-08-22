@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:iconsax_flutter/iconsax_flutter.dart';
 import 'package:movie_app/feature/search/presentation/bloc/search_cubit.dart';
 
 class SearchHistoryView extends StatelessWidget {
@@ -46,7 +47,7 @@ class SearchHistoryView extends StatelessWidget {
               final keyword = history[index];
               return ListTile(
                 leading: const Icon(
-                  Icons.history,
+                  Iconsax.clock_copy,
                   color: Colors.white54,
                   size: 20,
                 ),

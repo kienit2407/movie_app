@@ -25,7 +25,7 @@ class _PlayerOverlayRouteBridgeState extends State<PlayerOverlayRouteBridge> {
         return;
       }
 
-      PlayerOverlayController.instance.open(args);
+      PlayerOverlayController.instance.open(args, minimizeEnabled: false);
       context.go('/movie/${Uri.encodeComponent(args.slug)}');
     });
   }

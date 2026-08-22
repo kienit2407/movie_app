@@ -151,25 +151,11 @@ class _SignInContent extends StatelessWidget {
                     Container(
                       width: 112,
                       height: 112,
-                      padding: EdgeInsets.all(10),
                       decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.08),
                         borderRadius: BorderRadius.circular(30),
-                        border: Border.all(
-                          color: Colors.white.withValues(alpha: 0.12),
+                        image: DecorationImage(
+                          image: AssetImage(AppImage.splashIcon),
                         ),
-                        boxShadow: const [
-                          BoxShadow(
-                            color: Color(0x557C4DFF),
-                            blurRadius: 42,
-                            spreadRadius: 2,
-                          ),
-                        ],
-                      ),
-                      child: Image.asset(
-                        AppImage.splashIcon,
-                        width: 20,
-                        height: 20,
                       ),
                     ),
                     const SizedBox(height: 26),

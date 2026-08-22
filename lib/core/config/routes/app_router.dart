@@ -40,14 +40,9 @@ class AppRoutes {
 
 final goRouter = GoRouter(
   navigatorKey: AppRoutes.navigatorKey, // <<< thêm dòng này
-  initialLocation: AppRoutes.splash,
+  initialLocation: AppRoutes.home,
   observers: [CNTabBarRouteObserver()],
   routes: [
-    GoRoute(
-      path: AppRoutes.splash,
-      name: 'splash',
-      builder: (context, state) => const SplashPage(),
-    ),
     StatefulShellRoute.indexedStack(
       builder: (context, state, navigationShell) =>
           HubPage(navigationShell: navigationShell),

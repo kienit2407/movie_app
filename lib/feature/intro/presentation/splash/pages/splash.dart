@@ -2,78 +2,104 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
+
 import 'package:movie_app/core/config/assets/app_image.dart';
 import 'package:movie_app/core/config/constants/const_globals.dart';
 import 'package:movie_app/core/config/routes/app_router.dart';
 import 'package:movie_app/core/config/themes/app_color.dart';
+
 import 'package:movie_app/feature/home/notification/new_movie_notification_navigation.dart';
+
 import 'package:movie_app/feature/intro/presentation/splash/bloc/splash_cubit.dart';
 import 'package:movie_app/feature/intro/presentation/splash/bloc/splash_state.dart';
 
-class SplashPage extends StatefulWidget {
-  const SplashPage({super.key});
+class StartupSplashOverlay extends StatefulWidget {
+  const StartupSplashOverlay({super.key});
 
   @override
-  State<SplashPage> createState() => _SplashPageState();
+  State<StartupSplashOverlay> createState() => _StartupSplashOverlayState();
 }
 
-class _SplashPageState extends State<SplashPage> {
-  bool _animateOut = false;
+class _StartupSplashOverlayState extends State<StartupSplashOverlay> {
+  static const _fadeDuration = Duration(milliseconds: 600);
 
-  void _startExitAnimationAndNavigate() async {
-    if (_animateOut) return;
-    setState(() => _animateOut = true);
+  bool _isExiting = false;
+  bool _isRemoved = false;
+  bool _handled = false;
 
-    await Future.delayed(const Duration(milliseconds: 450));
+  Future<void> _finishSplash() async {
+    if (_handled) return;
+
+    _handled = true;
+
+    // Nếu app được mở từ notification thì
+    // chuẩn bị route phía dưới Splash trước.
+    final route = NewMovieNotificationNavigation.takeRouteAfterSplash();
+
+    if (route != AppRoutes.home) {
+      context.push(route);
+    }
+
     if (!mounted) return;
 
-    final route = NewMovieNotificationNavigation.takeRouteAfterSplash();
-    context.go(AppRoutes.home);
-    if (route != AppRoutes.home) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        goRouter.push(route);
-      });
-    }
+    // Bắt đầu fade toàn bộ splash.
+    setState(() {
+      _isExiting = true;
+    });
+
+    await Future.delayed(_fadeDuration);
+
+    if (!mounted) return;
+
+    // Xóa Splash hoàn toàn khỏi widget tree.
+    setState(() {
+      _isRemoved = true;
+    });
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: BlocListener<SplashCubit, SplashState>(
-        listener: (context, state) {
-          if (state is UnAuthenticated) {
-            _startExitAnimationAndNavigate();
-          }
-        },
-        child: Stack(
-          alignment: Alignment.center,
-          children: [
-            Container(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [AppColor.bgApp, AppColor.buttonColor.withOpacity(1)],
-                  begin: Alignment.bottomCenter,
-                  end: Alignment.topCenter,
-                ),
+    if (_isRemoved) {
+      return const SizedBox.shrink();
+    }
+
+    return BlocListener<SplashCubit, SplashState>(
+      listener: (context, state) {
+        if (state is UnAuthenticated) {
+          _finishSplash();
+        }
+
+        // Nếu SplashCubit của bạn còn state
+        // authenticated/ready khác thì gọi
+        // _finishSplash() ở đó luôn.
+      },
+      child: AnimatedOpacity(
+        opacity: _isExiting ? 0 : 1,
+        duration: _fadeDuration,
+        curve: Curves.easeInOutCubic,
+
+        // Trong thời gian Splash còn tồn tại,
+        // không cho user bấm xuống Home phía dưới.
+        child: AbsorbPointer(
+          absorbing: true,
+          child: Container(
+            width: double.infinity,
+            height: double.infinity,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [AppColor.bgApp, AppColor.buttonColor],
+                begin: Alignment.bottomCenter,
+                end: Alignment.topCenter,
               ),
             ),
-            TweenAnimationBuilder<double>(
-              tween: Tween<double>(begin: 0.0, end: _animateOut ? 1.0 : 0.0),
-              duration: const Duration(milliseconds: 450),
+            child: AnimatedScale(
+              scale: _isExiting ? 1.08 : 1,
+              duration: _fadeDuration,
               curve: Curves.easeInOutCubic,
-              builder: (context, t, child) {
-                final scale = 1.0 + (0.4 * t);
-                final opacity = 1.0 - t;
-                return Opacity(
-                  opacity: opacity,
-                  child: Transform.scale(scale: scale, child: child),
-                );
-              },
               child: Padding(
-                padding: EdgeInsetsGeometry.only(top: 300.h),
+                padding: EdgeInsets.only(top: 300.h),
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.start,
-                  spacing: 16,
                   children: [
                     Container(
                       width: 112,
@@ -85,19 +111,23 @@ class _SplashPageState extends State<SplashPage> {
                         ),
                       ),
                     ),
+
+                    SizedBox(height: 16.h),
+
                     Text(
                       Global.instance.appName,
                       style: const TextStyle(
                         fontSize: 24,
                         fontWeight: FontWeight.bold,
                         color: AppColor.secondColor,
+                        decoration: TextDecoration.none,
                       ),
                     ),
                   ],
                 ),
               ),
             ),
-          ],
+          ),
         ),
       ),
     );

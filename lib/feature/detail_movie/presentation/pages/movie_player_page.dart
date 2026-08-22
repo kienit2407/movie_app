@@ -277,6 +277,7 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
   bool _isVideoLoading = false;
   bool _isCommentsEmptyHovered = false;
   bool _isPlaybackBuffering = false;
+  bool _hasInitialPlaybackStarted = false;
   String? _playerLoadError;
   DateTime? _lastNowPlayingUpdate;
   bool? _lastNowPlayingIsPlaying;
@@ -1057,6 +1058,9 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
     final wasConnected = _isGoogleCasting;
     if (!mounted) return;
     setState(() => _castSession = event);
+    if (event.state == CastingState.playing) {
+      _enableMiniPlayerAfterInitialPlayback();
+    }
 
     final controller = _videoPlayerController;
     if (event.type == CastingType.airPlay) {
@@ -1557,6 +1561,7 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
       _isVideoLoading = false;
       _playerLoadError = null;
     });
+    _maybeEnableMiniPlayer(initializedVideoController.value);
   }
 
   Future<void> _disposeAndInitializePlayer(
@@ -1711,6 +1716,7 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
       _isVideoLoading = false;
       _playerLoadError = null;
     });
+    _maybeEnableMiniPlayer(initializedVideoController.value);
   }
 
   void _showAutoPlayToast(bool enabled) {
@@ -1874,6 +1880,7 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
       if (!mounted) return;
 
       final value = vp.value;
+      _maybeEnableMiniPlayer(value);
       final isBuffering = value.isBuffering && !value.hasError;
 
       if (_isPlaybackBuffering != isBuffering) {
@@ -1930,7 +1937,23 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
       }
     };
     vp.addListener(_vpEndListener!);
+    _maybeEnableMiniPlayer(vp.value);
     _syncPlaybackSideEffects(force: true);
+  }
+
+  void _maybeEnableMiniPlayer(VideoPlayerValue value) {
+    if (_isVideoLoading || _isPlaybackBuffering || _playerLoadError != null) {
+      return;
+    }
+    if (!value.isInitialized || value.isBuffering) return;
+    if (!value.isPlaying && value.position <= Duration.zero) return;
+    _enableMiniPlayerAfterInitialPlayback();
+  }
+
+  void _enableMiniPlayerAfterInitialPlayback() {
+    if (_hasInitialPlaybackStarted) return;
+    _hasInitialPlaybackStarted = true;
+    widget.overlayController?.setMinimizeEnabled(true);
   }
 
   bool get _hasNextEpisode {
@@ -2876,6 +2899,11 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
   Future<void> _enterMiniPlayer() async {
     if (_chewieController == null) return;
 
+    final overlayController = widget.overlayController;
+    if (overlayController != null && !overlayController.minimizeEnabled) {
+      return;
+    }
+
     unawaited(_saveWatchProgress());
     _isFullscreen = false;
     _resetLandscapeZoom();
@@ -2883,7 +2911,6 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
     await SupportRotateScreen.onlyPotrait();
     if (!mounted) return;
 
-    final overlayController = widget.overlayController;
     if (overlayController != null) {
       overlayController.minimize();
       return;
@@ -3127,6 +3154,20 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
     } else {
       // Vùng giữa không làm gì - play/pause chỉ từ nút
     }
+  }
+
+  Duration _displayPosition(VideoPlayerValue value) {
+    if (!_isScrubbing) {
+      return value.position;
+    }
+
+    final durationMs = value.duration.inMilliseconds;
+
+    if (durationMs <= 0) {
+      return value.position;
+    }
+
+    return Duration(milliseconds: (_scrubProgress.value * durationMs).round());
   }
 
   String _formatDuration(Duration duration) {
@@ -3601,8 +3642,11 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
         }
 
         // mini mode (kéo xuống)
-        _miniDragDy += d.delta.dy;
         final overlayController = widget.overlayController;
+        if (overlayController != null && !overlayController.minimizeEnabled) {
+          return;
+        }
+        _miniDragDy += d.delta.dy;
         if (overlayController != null) {
           overlayController.beginDrag();
           overlayController.updateDragDelta(
@@ -3623,6 +3667,10 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
 
         // mini mode
         final overlayController = widget.overlayController;
+        if (overlayController != null && !overlayController.minimizeEnabled) {
+          overlayController.cancelDrag();
+          return;
+        }
         if (overlayController != null) {
           overlayController.endDrag(velocityY: v);
           return;
@@ -4702,7 +4750,7 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
             ],
           ),
           // 1) Info row + fullscreen (only show when _showControls)
-          if (_controlsVisible) ...[
+          if (_controlsVisible || _isScrubbing) ...[
             Positioned(
               top:
                   _videoHeight -
@@ -5612,7 +5660,7 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
           return Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              if (_controlsVisible)
+              if (_controlsVisible || _isScrubbing)
                 Padding(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 10,
@@ -5636,7 +5684,7 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               Text(
-                                _formatDuration(value.position),
+                                _formatDuration(_displayPosition(value)),
                                 style: const TextStyle(
                                   color: Colors.white,
                                   fontSize: 11,
@@ -5780,11 +5828,14 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
   Widget _buildBottomInfoRow() {
     final chewie = _chewieController;
     if (chewie == null) return const SizedBox.shrink();
+
     final vp = chewie.videoPlayerController;
 
-    return ValueListenableBuilder<VideoPlayerValue>(
-      valueListenable: vp,
-      builder: (context, value, _) {
+    return ListenableBuilder(
+      listenable: Listenable.merge([vp, _scrubProgress]),
+      builder: (context, _) {
+        final value = vp.value;
+
         return Padding(
           padding: const EdgeInsets.symmetric(horizontal: 10),
           child: Row(
@@ -5804,7 +5855,7 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(
-                        _formatDuration(value.position),
+                        _formatDuration(_displayPosition(value)),
                         style: const TextStyle(
                           color: Colors.white,
                           fontSize: 11,
@@ -5831,7 +5882,9 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
                   ),
                 ),
               ),
+
               const Spacer(),
+              // fullscreen button giữ nguyên
               Container(
                 width: 34,
                 height: 34,

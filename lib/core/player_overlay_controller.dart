@@ -21,6 +21,7 @@ class PlayerOverlayController extends ChangeNotifier {
   MoviePlayerArgs? _args;
   PlayerOverlayTarget _target = PlayerOverlayTarget.expanded;
   bool _isDragging = false;
+  bool _minimizeEnabled = true;
   int _sessionId = 0;
   Object? _playbackOwner;
   Object? _transientOverlayOwner;
@@ -29,6 +30,7 @@ class PlayerOverlayController extends ChangeNotifier {
   MoviePlayerArgs? get args => _args;
   PlayerOverlayTarget get target => _target;
   bool get isDragging => _isDragging;
+  bool get minimizeEnabled => _minimizeEnabled;
   bool get isVisible => _args != null;
   int get sessionId => _sessionId;
   bool get isMini =>
@@ -37,7 +39,7 @@ class PlayerOverlayController extends ChangeNotifier {
       _target == PlayerOverlayTarget.mini &&
       progress.value >= 0.999;
 
-  void open(MoviePlayerArgs args) {
+  void open(MoviePlayerArgs args, {bool minimizeEnabled = true}) {
     final current = _args;
     final sameSession = current != null && _samePlayback(current, args);
 
@@ -47,6 +49,7 @@ class PlayerOverlayController extends ChangeNotifier {
       _transientOverlayOwner = null;
       _dismissTransientOverlay = null;
       _args = args;
+      _minimizeEnabled = minimizeEnabled;
       _sessionId++;
       progress.value = 0;
     }
@@ -57,18 +60,24 @@ class PlayerOverlayController extends ChangeNotifier {
   }
 
   void beginDrag() {
-    if (!isVisible || _isDragging) return;
+    if (!isVisible || !minimizeEnabled || _isDragging) return;
     _isDragging = true;
     notifyListeners();
   }
 
   void updateDragDelta(double deltaY, double travelExtent) {
-    if (!isVisible || !_isDragging || travelExtent <= 0) return;
+    if (!isVisible || !minimizeEnabled || !_isDragging || travelExtent <= 0) {
+      return;
+    }
     progress.value = (progress.value + deltaY / travelExtent).clamp(0.0, 1.0);
   }
 
   void endDrag({required double velocityY}) {
     if (!isVisible) return;
+    if (!minimizeEnabled) {
+      cancelDrag();
+      return;
+    }
 
     final shouldMinimize =
         velocityY >= minimizeVelocity ||
@@ -88,7 +97,7 @@ class PlayerOverlayController extends ChangeNotifier {
   }
 
   void minimize() {
-    if (!isVisible) return;
+    if (!isVisible || !minimizeEnabled) return;
     _isDragging = false;
     _target = PlayerOverlayTarget.mini;
     notifyListeners();
@@ -101,10 +110,22 @@ class PlayerOverlayController extends ChangeNotifier {
     notifyListeners();
   }
 
+  void setMinimizeEnabled(bool enabled) {
+    if (_minimizeEnabled == enabled) return;
+    _minimizeEnabled = enabled;
+    if (!enabled && (_isDragging || progress.value > 0)) {
+      _isDragging = false;
+      _target = PlayerOverlayTarget.expanded;
+      progress.value = 0;
+    }
+    notifyListeners();
+  }
+
   void close() {
     if (!isVisible) return;
     _args = null;
     _isDragging = false;
+    _minimizeEnabled = true;
     _target = PlayerOverlayTarget.expanded;
     _playbackOwner = null;
     playbackController.value = null;
