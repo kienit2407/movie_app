@@ -9,7 +9,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:hive_ce/hive.dart';
 import 'package:hydrated_bloc/hydrated_bloc.dart';
 import 'package:movie_app/core/config/di/service_locator.dart';
+import 'package:movie_app/core/config/utils/movie_player_args.dart';
 import 'package:movie_app/core/device_orientation_service.dart';
+import 'package:movie_app/core/player_overlay_controller.dart';
 import 'package:movie_app/feature/auth/presentation/session/auth_session_cubit.dart';
 import 'package:movie_app/feature/comments/domain/entities/comment.dart';
 import 'package:movie_app/feature/comments/domain/repositories/comment_repository.dart';
@@ -365,6 +367,45 @@ void main() {
     await tester.pump(const Duration(milliseconds: 600));
   });
 
+  testWidgets(
+    'unrelated overlay updates do not replay stale portrait orientation',
+    (tester) async {
+      await _setPortraitSurface(tester, topPadding: 47);
+      final overlayController = PlayerOverlayController();
+      addTearDown(overlayController.dispose);
+      await _pumpPlayer(
+        tester,
+        episodeCurrent: 'Full',
+        episodeCount: 1,
+        overlayController: overlayController,
+      );
+
+      final dynamic playerState = tester.state(find.byType(MoviePlayerPage));
+      await playerState.handleDeviceOrientationForTest(
+        DevicePhysicalOrientation.portraitUp,
+      );
+
+      final Future<void> enterFullscreen =
+          playerState.toggleFullscreenForTest() as Future<void>;
+      await tester.pump();
+      tester.view.physicalSize = const Size(1000, 430);
+      await tester.pump();
+      await enterFullscreen;
+      await tester.pump();
+      expect(playerState.isFullscreenForTest, isTrue);
+
+      // Buffering/seek can change minimize availability and notify the
+      // app-level overlay. That notification must not apply the stale portrait
+      // sensor value captured before fullscreen was entered.
+      overlayController.setMinimizeEnabled(true);
+      await tester.pump();
+      expect(playerState.isFullscreenForTest, isTrue);
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump(const Duration(milliseconds: 600));
+    },
+  );
+
   testWidgets('comments open from an app-level player overlay', (tester) async {
     await _setPortraitSurface(tester);
     await _pumpPlayer(
@@ -408,6 +449,43 @@ void main() {
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pump(const Duration(milliseconds: 600));
   });
+
+  testWidgets('status polling pauses while the app-level player is mini', (
+    tester,
+  ) async {
+    await _setPortraitSurface(tester);
+    final overlayController = PlayerOverlayController();
+    addTearDown(overlayController.dispose);
+
+    await _pumpPlayer(
+      tester,
+      episodeCurrent: 'Full',
+      episodeCount: 1,
+      overlayController: overlayController,
+    );
+
+    final dynamic playerState = tester.state(find.byType(MoviePlayerPage));
+    expect(playerState.statusHeaderTrackingForTest, isTrue);
+
+    overlayController.minimize();
+    await tester.pump();
+    expect(playerState.statusHeaderTrackingForTest, isFalse);
+
+    overlayController.expand();
+    await tester.pump();
+    expect(playerState.statusHeaderTrackingForTest, isTrue);
+
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
+    await tester.pump();
+    expect(playerState.statusHeaderTrackingForTest, isFalse);
+
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+    await tester.pump();
+    expect(playerState.statusHeaderTrackingForTest, isTrue);
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump(const Duration(milliseconds: 600));
+  });
 }
 
 Future<void> _setPortraitSurface(
@@ -432,6 +510,7 @@ Future<void> _pumpPlayer(
   required String episodeCurrent,
   int episodeCount = 80,
   bool appLevelOverlay = false,
+  PlayerOverlayController? overlayController,
 }) async {
   final movie = MovieModel.fromMap({
     'slug': 'series-scroll-test',
@@ -449,6 +528,19 @@ Future<void> _pumpPlayer(
     _server('Vietsub', episodeCount),
     _server('Lồng Tiếng', episodeCount),
   ];
+  overlayController?.open(
+    MoviePlayerArgs(
+      movie.slug,
+      null,
+      null,
+      0,
+      episodes.first.server_name,
+      movie.name,
+      episodes,
+      movie,
+      initialServerIndex: 0,
+    ),
+  );
   final player = MoviePlayerPage(
     slug: movie.slug,
     movieName: movie.name,
@@ -457,6 +549,7 @@ Future<void> _pumpPlayer(
     initialEpisodeIndex: 0,
     initialServer: episodes.first.server_name,
     initialServerIndex: 0,
+    overlayController: overlayController,
   );
 
   await tester.pumpWidget(

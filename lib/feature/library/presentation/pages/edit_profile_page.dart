@@ -7,10 +7,10 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
 import 'package:image_cropper/image_cropper.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:movie_app/common/components/app_toast.dart';
 import 'package:movie_app/core/config/themes/app_color.dart';
 import 'package:movie_app/feature/auth/presentation/session/auth_session_cubit.dart';
 import 'package:movie_app/feature/library/presentation/cubit/user_library_cubit.dart';
-import 'package:supabase_flutter/supabase_flutter.dart' show User;
 
 enum _AvatarAction { camera, gallery, preview }
 
@@ -27,8 +27,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
 
   Future<void> _showAvatarActions() async {
     HapticFeedback.lightImpact();
-    final user = context.read<UserLibraryCubit>().state.user;
-    final avatarUrl = _avatarUrl(user?.userMetadata);
+    final avatarUrl = context.read<UserLibraryCubit>().state.avatarUrl;
     final action = await showModalBottomSheet<_AvatarAction>(
       context: context,
       useRootNavigator: true,
@@ -94,8 +93,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
 
       try {
         final cubit = context.read<UserLibraryCubit>();
-        final user = cubit.state.user;
-        final displayName = _displayName(user);
+        final displayName = cubit.state.displayName;
         final extension = _fileExtension(cropped.path);
         final avatarUrl = await cubit.uploadAvatar(
           await cropped.readAsBytes(),
@@ -125,7 +123,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
 
   Future<void> _openNameEditor() async {
     final cubit = context.read<UserLibraryCubit>();
-    final currentName = _displayName(cubit.state.user);
+    final currentName = cubit.state.displayName;
     final nextName = await Navigator.of(context).push<String>(
       MaterialPageRoute(
         builder: (_) => _DisplayNameEditorPage(initialName: currentName),
@@ -161,16 +159,15 @@ class _EditProfilePageState extends State<EditProfilePage> {
   }
 
   void _showMessage(String message) {
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(SnackBar(content: Text(message)));
+    AppToast.show(context, message);
   }
 
   @override
   Widget build(BuildContext context) {
-    final user = context.watch<UserLibraryCubit>().state.user;
-    final displayName = _displayName(user);
-    final avatarUrl = _avatarUrl(user?.userMetadata);
+    final state = context.watch<UserLibraryCubit>().state;
+    final user = state.user;
+    final displayName = state.displayName;
+    final avatarUrl = state.avatarUrl;
 
     return PopScope(
       canPop: !_isUpdating,
@@ -808,31 +805,9 @@ class _UpdatingProfileOverlay extends StatelessWidget {
   }
 }
 
-String _displayName(User? user) {
-  final metadata = user?.userMetadata ?? const <String, dynamic>{};
-  return _firstNonEmpty([
-    metadata['full_name'],
-    metadata['name'],
-    metadata['user_name'],
-    user?.email?.split('@').first,
-  ], fallback: 'Người dùng');
-}
-
-String _avatarUrl(Map<String, dynamic>? metadata) {
-  return _firstNonEmpty([metadata?['avatar_url'], metadata?['picture']]);
-}
-
 String _fileExtension(String path) {
   final extension = path.split('.').last.toLowerCase();
   return extension == 'jpg' || extension == 'jpeg' || extension == 'png'
       ? extension
       : 'jpg';
-}
-
-String _firstNonEmpty(List<Object?> values, {String fallback = ''}) {
-  for (final value in values) {
-    final text = value?.toString().trim() ?? '';
-    if (text.isNotEmpty) return text;
-  }
-  return fallback;
 }

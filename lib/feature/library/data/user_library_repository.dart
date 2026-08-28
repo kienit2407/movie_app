@@ -180,9 +180,44 @@ class UserWatchHistory {
   };
 }
 
+class UserProfile {
+  const UserProfile({required this.displayName, required this.avatarUrl});
+
+  final String displayName;
+  final String avatarUrl;
+
+  factory UserProfile.fromMap(
+    Map<String, dynamic> map, {
+    required User fallbackUser,
+  }) => UserProfile(
+    displayName: _firstNonEmpty([
+      map['display_name'],
+      UserProfile.fromUser(fallbackUser).displayName,
+    ], fallback: 'Người dùng'),
+    avatarUrl: _firstNonEmpty([
+      map['avatar_url'],
+      UserProfile.fromUser(fallbackUser).avatarUrl,
+    ]),
+  );
+
+  factory UserProfile.fromUser(User? user) {
+    final metadata = user?.userMetadata ?? const <String, dynamic>{};
+    return UserProfile(
+      displayName: _firstNonEmpty([
+        metadata['full_name'],
+        metadata['name'],
+        metadata['user_name'],
+        user?.email?.split('@').first,
+      ], fallback: 'Người dùng'),
+      avatarUrl: _firstNonEmpty([metadata['avatar_url'], metadata['picture']]),
+    );
+  }
+}
+
 abstract interface class UserLibraryRepository {
   User? get currentUser;
 
+  Future<UserProfile> getProfile();
   Future<List<UserFavorite>> getFavorites();
   Future<List<UserWatchHistory>> getWatchHistory();
   Future<void> addFavorite(UserFavorite favorite);
@@ -192,7 +227,10 @@ abstract interface class UserLibraryRepository {
   Future<void> removeWatchHistory(String slug);
   Future<void> removeWatchHistoryItems(Iterable<String> slugs);
   Future<String> uploadAvatar(Uint8List bytes, {required String extension});
-  Future<User> updateProfile({required String displayName, String? avatarUrl});
+  Future<UserProfile> updateProfile({
+    required String displayName,
+    String? avatarUrl,
+  });
 }
 
 class SupabaseUserLibraryRepository implements UserLibraryRepository {
@@ -208,6 +246,19 @@ class SupabaseUserLibraryRepository implements UserLibraryRepository {
     final id = currentUser?.id;
     if (id == null) throw const AuthException('Bạn cần đăng nhập.');
     return id;
+  }
+
+  @override
+  Future<UserProfile> getProfile() async {
+    final user = currentUser;
+    if (user == null) throw const AuthException('Bạn cần đăng nhập.');
+    final response = await _client
+        .from('profiles')
+        .select('display_name, avatar_url')
+        .eq('id', user.id)
+        .maybeSingle();
+    if (response == null) return UserProfile.fromUser(user);
+    return UserProfile.fromMap(response, fallbackUser: user);
   }
 
   @override
@@ -308,23 +359,25 @@ class SupabaseUserLibraryRepository implements UserLibraryRepository {
   }
 
   @override
-  Future<User> updateProfile({
+  Future<UserProfile> updateProfile({
     required String displayName,
     String? avatarUrl,
   }) async {
     final name = displayName.trim();
     if (name.isEmpty) throw const FormatException('Tên không được để trống.');
+    final existingProfile = await getProfile();
+    final nextAvatarUrl = avatarUrl?.trim().isNotEmpty == true
+        ? avatarUrl!.trim()
+        : existingProfile.avatarUrl;
     final currentMetadata = Map<String, dynamic>.from(
       currentUser?.userMetadata ?? const <String, dynamic>{},
     );
-    final previousAvatarPath = _avatarObjectPath(
-      currentMetadata['avatar_url']?.toString(),
-    );
+    final previousAvatarPath = _avatarObjectPath(existingProfile.avatarUrl);
     currentMetadata['full_name'] = name;
     currentMetadata['name'] = name;
-    if (avatarUrl != null && avatarUrl.trim().isNotEmpty) {
-      currentMetadata['avatar_url'] = avatarUrl.trim();
-      currentMetadata['picture'] = avatarUrl.trim();
+    if (nextAvatarUrl.isNotEmpty) {
+      currentMetadata['avatar_url'] = nextAvatarUrl;
+      currentMetadata['picture'] = nextAvatarUrl;
     }
     final response = await _client.auth.updateUser(
       UserAttributes(data: currentMetadata),
@@ -333,7 +386,13 @@ class SupabaseUserLibraryRepository implements UserLibraryRepository {
     if (updatedUser == null) {
       throw const AuthException('Không thể đọc hồ sơ vừa cập nhật.');
     }
-    final nextAvatarPath = _avatarObjectPath(avatarUrl);
+    await _client.from('profiles').upsert({
+      'id': _userId,
+      'display_name': name,
+      'avatar_url': nextAvatarUrl.isEmpty ? null : nextAvatarUrl,
+      'updated_at': DateTime.now().toUtc().toIso8601String(),
+    }, onConflict: 'id');
+    final nextAvatarPath = _avatarObjectPath(nextAvatarUrl);
     if (previousAvatarPath != null &&
         nextAvatarPath != null &&
         previousAvatarPath != nextAvatarPath) {
@@ -343,7 +402,7 @@ class SupabaseUserLibraryRepository implements UserLibraryRepository {
         // Profile was already updated; stale avatar cleanup can be retried later.
       }
     }
-    return updatedUser;
+    return UserProfile(displayName: name, avatarUrl: nextAvatarUrl);
   }
 
   String? _avatarObjectPath(String? url) {
@@ -355,4 +414,12 @@ class SupabaseUserLibraryRepository implements UserLibraryRepository {
     if (markerIndex < 0) return null;
     return Uri.decodeComponent(uri.path.substring(markerIndex + marker.length));
   }
+}
+
+String _firstNonEmpty(List<Object?> values, {String fallback = ''}) {
+  for (final value in values) {
+    final text = value?.toString().trim() ?? '';
+    if (text.isNotEmpty) return text;
+  }
+  return fallback;
 }

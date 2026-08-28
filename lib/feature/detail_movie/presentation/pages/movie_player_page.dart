@@ -31,11 +31,11 @@ import 'package:iconsax_flutter/iconsax_flutter.dart';
 import 'package:intl/intl.dart' show DateFormat;
 import 'package:lottie/lottie.dart';
 import 'package:movie_app/common/components/alert_dialog/app_alert_dialog.dart';
+import 'package:movie_app/common/components/app_toast.dart';
 import 'package:movie_app/core/config/utils/animated_dialog.dart';
 import 'package:movie_app/core/config/utils/cover_map.dart';
 import 'package:movie_app/feature/detail_movie/presentation/widgets/view_count_section.dart';
 import 'package:shimmer/shimmer.dart';
-import 'package:toastification/toastification.dart';
 import 'package:video_player/video_player.dart';
 import 'package:movie_app/core/config/themes/app_color.dart';
 import 'package:movie_app/core/casting/casting_service.dart';
@@ -150,6 +150,7 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
 
   bool get _isCharging => _batteryState == BatteryState.charging;
   Timer? _wifiQualityTimer;
+  bool _statusHeaderTrackingActive = false;
 
   int _estimatedWifiLevel = 2;
 
@@ -247,9 +248,7 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
   Orientation? _lastViewportOrientation;
   StreamSubscription<DevicePhysicalOrientation>? _deviceOrientationSubscription;
   DevicePhysicalOrientation? _lastDeviceOrientation;
-  Timer? _autoToastTimer;
-  bool _showAutoToast = false;
-  String _autoToastText = '';
+  PlayerOverlayTarget? _lastOverlayTarget;
   VoidCallback? _vpEndListener;
   static const double _landscapeZoomMin = 1.0;
   static const double _landscapeZoomMax = 2.0;
@@ -320,6 +319,33 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
         value.isBuffering;
   }
 
+  bool get _playbackCanEnterMiniPlayer {
+    if (_isPlayerLoading || _playerLoadError != null) return false;
+
+    final value = _videoPlayerController?.value;
+    if (value == null ||
+        !value.isInitialized ||
+        value.isBuffering ||
+        value.hasError) {
+      return false;
+    }
+
+    return _hasInitialPlaybackStarted &&
+        (value.isPlaying || value.position > Duration.zero);
+  }
+
+  void _syncMiniPlayerAvailability() {
+    final overlayController = widget.overlayController;
+    if (overlayController == null || !overlayController.isVisible) return;
+
+    // Buffering may start while the mini-player is already visible. Keep that
+    // session mini and let its own loading chrome handle the temporary pause.
+    // The lock is only needed while the full player is on screen.
+    if (overlayController.target == PlayerOverlayTarget.mini) return;
+
+    overlayController.setMinimizeEnabled(_playbackCanEnterMiniPlayer);
+  }
+
   @override
   void initState() {
     super.initState();
@@ -340,7 +366,7 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
         _selectedServerIndex,
       );
     });
-    _startStatusHeaderTicker();
+    _syncStatusHeaderTracking();
 
     _arrowCtrl = AnimationController(
       vsync: this,
@@ -376,6 +402,7 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
             debugPrint('Không thể đọc hướng thiết bị: $error');
           },
         );
+    _lastOverlayTarget = widget.overlayController?.target;
     widget.overlayController?.addListener(_handleOverlayPresentationChanged);
     widget.overlayController?.attachTransientOverlayDismissHandler(
       owner: this,
@@ -431,8 +458,7 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
     _orientationChangeFallbackTimer?.cancel();
     _episodeKeyboardMetricsDebounce?.cancel();
     _removeVpListeners();
-    _autoToastTimer?.cancel();
-    _statusHeaderTimer?.cancel();
+    _stopStatusHeaderTicker();
     _viewQualificationTimer?.cancel();
 
     unawaited(SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge));
@@ -469,11 +495,7 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
     _scrubProgress.dispose();
 
     unawaited(SupportRotateScreen.onlyPotrait());
-    _batteryStateSubscription?.cancel();
-    _connectivitySubscription?.cancel();
     _connectivityConfirmTimer?.cancel();
-    _connectivitySubscription?.cancel();
-    _wifiQualityTimer?.cancel();
     _castEventsSubscription?.cancel();
     _deviceOrientationSubscription?.cancel();
     super.dispose();
@@ -656,8 +678,10 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
   }
 
   void _startStatusHeaderTicker() {
+    if (_statusHeaderTrackingActive) return;
+    _statusHeaderTrackingActive = true;
+
     unawaited(_refreshStatusHeader());
-    _wifiQualityTimer?.cancel();
 
     _wifiQualityTimer = Timer.periodic(const Duration(seconds: 1), (_) {
       _refreshEstimatedWifiLevel();
@@ -687,6 +711,46 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
       unawaited(_refreshStatusHeader());
     });
   }
+
+  void _stopStatusHeaderTicker() {
+    _statusHeaderTrackingActive = false;
+    _wifiQualityTimer?.cancel();
+    _wifiQualityTimer = null;
+    _statusHeaderTimer?.cancel();
+    _statusHeaderTimer = null;
+
+    final connectivitySubscription = _connectivitySubscription;
+    _connectivitySubscription = null;
+    if (connectivitySubscription != null) {
+      unawaited(connectivitySubscription.cancel());
+    }
+
+    final batteryStateSubscription = _batteryStateSubscription;
+    _batteryStateSubscription = null;
+    if (batteryStateSubscription != null) {
+      unawaited(batteryStateSubscription.cancel());
+    }
+  }
+
+  void _syncStatusHeaderTracking() {
+    final lifecycleState = WidgetsBinding.instance.lifecycleState;
+    final appIsActive =
+        lifecycleState == null || lifecycleState == AppLifecycleState.resumed;
+    final overlayController = widget.overlayController;
+    final playerIsExpanded =
+        overlayController == null ||
+        (overlayController.isVisible &&
+            overlayController.target == PlayerOverlayTarget.expanded);
+
+    if (appIsActive && playerIsExpanded) {
+      _startStatusHeaderTicker();
+    } else {
+      _stopStatusHeaderTicker();
+    }
+  }
+
+  @visibleForTesting
+  bool get statusHeaderTrackingForTest => _statusHeaderTrackingActive;
 
   void _refreshEstimatedWifiLevel() {
     if (!mounted) return;
@@ -839,8 +903,7 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
   void didChangeAppLifecycleState(AppLifecycleState state) {
     super.didChangeAppLifecycleState(state);
     if (state == AppLifecycleState.resumed) {
-      unawaited(_refreshConnectivity());
-      unawaited(_refreshStatusHeader());
+      _syncStatusHeaderTracking();
 
       unawaited(IosPictureInPictureService.stop());
       _syncPlaybackSideEffects(force: true);
@@ -852,6 +915,7 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
       unawaited(_saveWatchProgress(flushRemote: true));
       unawaited(_startPictureInPictureIfNeeded());
     }
+    _stopStatusHeaderTicker();
   }
 
   @override
@@ -1460,6 +1524,7 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
         _playerLoadError = null;
         _showControls = true;
       });
+      _syncMiniPlayerAvailability();
     }
 
     if (sourceUrl.isEmpty) {
@@ -1607,6 +1672,7 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
       _scrubProgress.value = 0.0;
       _scrubSessionId++;
       _scrubPauseFuture = null;
+      _syncMiniPlayerAvailability();
     } else {
       _chewieController = null;
       _videoPlayerController = null;
@@ -1719,18 +1785,12 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
     _maybeEnableMiniPlayer(initializedVideoController.value);
   }
 
-  void _showAutoPlayToast(bool enabled) {
-    _autoToastTimer?.cancel();
-
-    setState(() {
-      _autoToastText = enabled ? 'Đã bật tự động phát' : 'Đã tắt tự động phát';
-      _showAutoToast = true;
-    });
-
-    _autoToastTimer = Timer(const Duration(milliseconds: 1200), () {
-      if (!mounted) return;
-      setState(() => _showAutoToast = false);
-    });
+  void _showAutoPlayMessage(bool enabled) {
+    AppToast.show(
+      context,
+      enabled ? 'Đã bật tự động phát' : 'Đã tắt tự động phát',
+      duration: const Duration(milliseconds: 1200),
+    );
   }
 
   void _playEpisode(int index, EpisodesModel episode) {
@@ -1880,7 +1940,6 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
       if (!mounted) return;
 
       final value = vp.value;
-      _maybeEnableMiniPlayer(value);
       final isBuffering = value.isBuffering && !value.hasError;
 
       if (_isPlaybackBuffering != isBuffering) {
@@ -1897,12 +1956,15 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
             _showSeekOverlay = false;
           }
         });
+        _syncMiniPlayerAvailability();
 
         // Mạng ổn trở lại thì bắt đầu đếm 3 giây để ẩn controls.
         if (!isBuffering) {
           _resetHideControlsTimer();
         }
       }
+
+      _maybeEnableMiniPlayer(value);
 
       _syncPlaybackSideEffects();
       final isCompleted =
@@ -1951,7 +2013,6 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
   }
 
   void _enableMiniPlayerAfterInitialPlayback() {
-    if (_hasInitialPlaybackStarted) return;
     _hasInitialPlaybackStarted = true;
     widget.overlayController?.setMinimizeEnabled(true);
   }
@@ -1987,37 +2048,12 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
         _currentEpisodeIndex,
         _selectedServerIndex,
       );
-
-      // if (mounted) {
-      //   toastification.show(
-
-      //     context: context, // optional if you use ToastificationWrapper
-      //     title: Text(
-      //       'Đang chuyển sang tập \ ${_currentEpisodeIndex + 1}',
-      //       style: const TextStyle(color: Colors.black),
-      //     ),
-      //     autoCloseDuration: const Duration(seconds: 2),
-      //   );
-      //   // ScaffoldMessenger.of(context).showSnackBar(
-      //   //   SnackBar(
-      //   //     content: Text(
-      //   //       'Đang chuyển sang tập \ $_currentEpisodeIndex + 1}',
-      //   //       style: const TextStyle(color: Colors.black),
-      //   //     ),
-      //   //     backgroundColor: const Color(0xFFC77DFF),
-      //   //     duration: const Duration(seconds: 2),
-      //   //   ),
-      //   // );
-      // }
     } else {
       if (mounted) {
-        toastification.show(
-          context: context, // optional if you use ToastificationWrapper
-          title: Text(
-            'Đã hết tập phim',
-            style: const TextStyle(color: Colors.black),
-          ),
-          autoCloseDuration: const Duration(seconds: 5),
+        AppToast.show(
+          context,
+          'Đã hết tập phim',
+          duration: const Duration(seconds: 5),
         );
       }
     }
@@ -2025,7 +2061,6 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
 
   void _playPreviousEpisode() {
     final currentServer = widget.episodes[_selectedServerIndex];
-    final serverData = currentServer.server_data;
 
     if (_currentEpisodeIndex > 0) {
       _playEpisode(_currentEpisodeIndex - 1, currentServer);
@@ -2036,13 +2071,10 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
         _selectedServerIndex,
       );
     } else {
-      toastification.show(
-        context: context,
-        title: const Text(
-          'Đây là tập đầu tiên',
-          style: TextStyle(color: Colors.black),
-        ),
-        autoCloseDuration: const Duration(seconds: 2),
+      AppToast.show(
+        context,
+        'Đây là tập đầu tiên',
+        duration: const Duration(seconds: 2),
       );
     }
   }
@@ -2408,13 +2440,22 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
 
   void _handleOverlayPresentationChanged() {
     final overlayController = widget.overlayController;
+    final previousTarget = _lastOverlayTarget;
+    final currentTarget = overlayController?.target;
+    _lastOverlayTarget = currentTarget;
+    _syncStatusHeaderTracking();
+    _syncMiniPlayerAvailability();
     if (overlayController == null ||
         !overlayController.isVisible ||
         overlayController.isDragging ||
-        overlayController.target != PlayerOverlayTarget.expanded) {
+        currentTarget != PlayerOverlayTarget.expanded ||
+        previousTarget != PlayerOverlayTarget.mini) {
       return;
     }
 
+    // Chỉ đọc lại hướng cảm biến khi người dùng vừa mở rộng mini-player.
+    // Các notify khác (buffering sau khi seek, khóa minimize, playback state)
+    // không được phép dùng một giá trị portrait cũ để thoát fullscreen.
     final orientation = _lastDeviceOrientation;
     if (orientation != null) {
       unawaited(_applyDeviceOrientation(orientation));
@@ -2474,6 +2515,9 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
 
   @visibleForTesting
   Future<void> toggleFullscreenForTest() => _toggleFullscreen();
+
+  @visibleForTesting
+  bool get isFullscreenForTest => _isFullscreen;
 
   @visibleForTesting
   double get portraitVideoHeightForTest => _videoHeight;
@@ -2899,6 +2943,11 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
   Future<void> _enterMiniPlayer() async {
     if (_chewieController == null) return;
 
+    if (!_playbackCanEnterMiniPlayer) {
+      widget.overlayController?.cancelDrag();
+      return;
+    }
+
     final overlayController = widget.overlayController;
     if (overlayController != null && !overlayController.minimizeEnabled) {
       return;
@@ -3260,7 +3309,7 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
                 HapticFeedback.lightImpact();
                 final newValue = !autoPlay;
                 _playerCubit.setAutoPlayNextEpisode(newValue);
-                _showAutoPlayToast(newValue);
+                _showAutoPlayMessage(newValue);
               },
 
               // màu track
@@ -3643,7 +3692,9 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
 
         // mini mode (kéo xuống)
         final overlayController = widget.overlayController;
-        if (overlayController != null && !overlayController.minimizeEnabled) {
+        if (!_playbackCanEnterMiniPlayer ||
+            (overlayController != null && !overlayController.minimizeEnabled)) {
+          overlayController?.cancelDrag();
           return;
         }
         _miniDragDy += d.delta.dy;
@@ -3667,8 +3718,9 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
 
         // mini mode
         final overlayController = widget.overlayController;
-        if (overlayController != null && !overlayController.minimizeEnabled) {
-          overlayController.cancelDrag();
+        if (!_playbackCanEnterMiniPlayer ||
+            (overlayController != null && !overlayController.minimizeEnabled)) {
+          overlayController?.cancelDrag();
           return;
         }
         if (overlayController != null) {
@@ -3724,9 +3776,12 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
             else
               _buildPlayerPlaceholder(),
             _buildCastingPosterOverlay(),
-            _buildPlayPauseOverlay(),
-            _buildPlaybackStatusOverlay(),
-            if (_showSeekOverlay && _seekDir != null) _buildSeekOverlay(50),
+            _buildOverlayFadingVideoChrome(child: _buildPlayPauseOverlay()),
+            _buildOverlayFadingVideoChrome(
+              child: _buildPlaybackStatusOverlay(),
+            ),
+            if (_showSeekOverlay && _seekDir != null)
+              _buildOverlayFadingVideoChrome(child: _buildSeekOverlay(50)),
             // ✅ THÊM scrim cho appbar ở đây (nằm dưới appbar row)
             _buildTopAppbarScrim(isExpanded: isExpanded),
             Positioned(
@@ -3777,37 +3832,6 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
             isExpanded
                 ? _buildTitleOverlay(isExpanded: isExpanded)
                 : SizedBox.shrink(),
-            Positioned(
-              top: 50,
-              child: IgnorePointer(
-                child: Center(
-                  child: AnimatedOpacity(
-                    opacity: _showAutoToast ? 1 : 0,
-                    duration: const Duration(milliseconds: 250),
-                    child: AnimatedScale(
-                      scale: _showAutoToast ? 1.0 : 0.95,
-                      duration: const Duration(milliseconds: 250),
-                      child: Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: Colors.black26,
-                          borderRadius: BorderRadius.circular(30),
-                        ),
-                        child: Text(
-                          _autoToastText,
-                          textAlign: TextAlign.center,
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                            fontSize: 12,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
           ],
         ),
       ),
@@ -4129,6 +4153,34 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
           );
         },
       ),
+    );
+  }
+
+  Widget _buildOverlayFadingVideoChrome({required Widget child}) {
+    final progress = widget.overlayProgress;
+    if (progress == null) return child;
+
+    return ValueListenableBuilder<double>(
+      valueListenable: progress,
+      child: RepaintBoundary(child: child),
+      builder: (context, value, chrome) {
+        final fadeProgress = Curves.easeOutCubic.transform(
+          (value / 0.35).clamp(0.0, 1.0),
+        );
+        final opacity = 1 - fadeProgress;
+
+        if (opacity <= 0.001) return const SizedBox.shrink();
+
+        return IgnorePointer(
+          ignoring: value > 0.01,
+          child: ExcludeSemantics(
+            excluding: opacity < 0.05,
+            child: opacity >= 0.999
+                ? chrome
+                : Opacity(opacity: opacity, child: chrome),
+          ),
+        );
+      },
     );
   }
 
@@ -4567,8 +4619,12 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
                                                                           firstComment.authorAvatarUrl !=
                                                                                   null &&
                                                                               firstComment.authorAvatarUrl!.trim().isNotEmpty
-                                                                          ? NetworkImage(
-                                                                              firstComment.authorAvatarUrl!,
+                                                                          ? ResizeImage.resizeIfNeeded(
+                                                                              144,
+                                                                              null,
+                                                                              NetworkImage(
+                                                                                firstComment.authorAvatarUrl!,
+                                                                              ),
                                                                             )
                                                                           : null,
                                                                       child:
@@ -4760,7 +4816,9 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
                   (isExpanded ? 30 : 0),
               left: (isExpanded ? 5 : 0),
               right: (isExpanded ? 5 : 0),
-              child: _buildBottomInfoRow(),
+              child: _buildOverlayFadingVideoChrome(
+                child: _buildBottomInfoRow(),
+              ),
             ),
           ],
           if (showSeekbar)
@@ -4772,9 +4830,11 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
                   (isExpanded ? 30 : collapsedSeekbarOffset),
               left: (isExpanded ? 20 : 0),
               right: (isExpanded ? 20 : 0),
-              child: Material(
-                color: Colors.transparent,
-                child: _buildPinnedSeekbarOnly(),
+              child: _buildOverlayFadingVideoChrome(
+                child: Material(
+                  color: Colors.transparent,
+                  child: _buildPinnedSeekbarOnly(),
+                ),
               ),
             ),
         ],
@@ -6407,37 +6467,6 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
                   ),
                 ),
                 Positioned(
-                  top: 50,
-                  child: IgnorePointer(
-                    child: Center(
-                      child: AnimatedOpacity(
-                        opacity: _showAutoToast ? 1 : 0,
-                        duration: const Duration(milliseconds: 250),
-                        child: AnimatedScale(
-                          scale: _showAutoToast ? 1.0 : 0.95,
-                          duration: const Duration(milliseconds: 250),
-                          child: Container(
-                            padding: const EdgeInsets.all(8),
-                            decoration: BoxDecoration(
-                              color: Colors.black26,
-                              borderRadius: BorderRadius.circular(30),
-                            ),
-                            child: Text(
-                              _autoToastText,
-                              textAlign: TextAlign.center,
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
-                                fontSize: 12,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-                Positioned(
                   left: 0,
                   right: 0,
                   bottom: 50,
@@ -6607,7 +6636,9 @@ class _ComposerAvatar extends StatelessWidget {
     return CircleAvatar(
       radius: 17,
       backgroundColor: Colors.white10,
-      backgroundImage: validUrl ? NetworkImage(avatarUrl!) : null,
+      backgroundImage: validUrl
+          ? ResizeImage.resizeIfNeeded(144, null, NetworkImage(avatarUrl!))
+          : null,
       child: validUrl
           ? null
           : const Icon(Icons.person_rounded, color: Colors.white54, size: 20),

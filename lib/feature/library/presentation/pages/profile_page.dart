@@ -5,6 +5,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
+import 'package:movie_app/common/components/app_toast.dart';
 import 'package:movie_app/core/config/routes/app_router.dart';
 import 'package:movie_app/core/config/themes/app_color.dart';
 import 'package:movie_app/core/config/di/service_locator.dart';
@@ -136,9 +137,7 @@ class _ProfilePageState extends State<ProfilePage>
       if (!mounted) return;
       Navigator.of(context, rootNavigator: true).pop();
       result.fold(
-        (_) => ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Không thể mở lại phim lúc này.')),
-        ),
+        (_) => AppToast.show(context, 'Không thể mở lại phim lúc này.'),
         (detail) {
           if (detail.episodes.isEmpty) return;
           var serverIndex = history.lastServerIndex ?? 0;
@@ -178,9 +177,7 @@ class _ProfilePageState extends State<ProfilePage>
     } catch (_) {
       if (!mounted) return;
       Navigator.of(context, rootNavigator: true).pop();
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Không thể mở lại phim lúc này.')),
-      );
+      AppToast.show(context, 'Không thể mở lại phim lúc này.');
     }
   }
 
@@ -226,18 +223,8 @@ class _ProfilePageState extends State<ProfilePage>
                           context.read<UserLibraryCubit>().refresh(),
                     );
                   }
-                  final metadata =
-                      user.userMetadata ?? const <String, dynamic>{};
-                  final displayName = _firstNonEmpty([
-                    metadata['full_name'],
-                    metadata['name'],
-                    metadata['user_name'],
-                    user.email?.split('@').first,
-                  ], fallback: 'Người dùng');
-                  final avatarUrl = _firstNonEmpty([
-                    metadata['avatar_url'],
-                    metadata['picture'],
-                  ]);
+                  final displayName = state.displayName;
+                  final avatarUrl = state.avatarUrl;
 
                   return RefreshIndicator.adaptive(
                     onRefresh: context.read<UserLibraryCubit>().refresh,
@@ -512,12 +499,4 @@ class _Avatar extends StatelessWidget {
       ),
     );
   }
-}
-
-String _firstNonEmpty(List<Object?> values, {String fallback = ''}) {
-  for (final value in values) {
-    final text = value?.toString().trim() ?? '';
-    if (text.isNotEmpty) return text;
-  }
-  return fallback;
 }

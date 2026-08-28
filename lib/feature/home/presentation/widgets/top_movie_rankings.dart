@@ -483,7 +483,7 @@ class _LikedMovieCard extends StatelessWidget {
                         else
                           FastCachedImage(
                             url: backdropUrl,
-                            fit: BoxFit.contain,
+                            fit: BoxFit.cover,
                             cacheWidth: backdropCacheWidth,
                             cacheHeight: backdropCacheHeight,
                             fadeInDuration: const Duration(milliseconds: 120),

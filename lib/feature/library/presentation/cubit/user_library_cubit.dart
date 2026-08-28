@@ -9,6 +9,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 class UserLibraryState {
   const UserLibraryState({
     this.user,
+    this.profile,
     this.favorites = const <UserFavorite>[],
     this.history = const <UserWatchHistory>[],
     this.isLoading = false,
@@ -17,6 +18,7 @@ class UserLibraryState {
   });
 
   final User? user;
+  final UserProfile? profile;
   final List<UserFavorite> favorites;
   final List<UserWatchHistory> history;
   final bool isLoading;
@@ -24,11 +26,15 @@ class UserLibraryState {
   final Set<String> syncingFavoriteSlugs;
 
   bool get isAuthenticated => user != null;
+  String get displayName => (profile ?? UserProfile.fromUser(user)).displayName;
+  String get avatarUrl => (profile ?? UserProfile.fromUser(user)).avatarUrl;
   bool isFavorite(String slug) => favorites.any((item) => item.slug == slug);
 
   UserLibraryState copyWith({
     User? user,
     bool clearUser = false,
+    UserProfile? profile,
+    bool clearProfile = false,
     List<UserFavorite>? favorites,
     List<UserWatchHistory>? history,
     bool? isLoading,
@@ -37,6 +43,7 @@ class UserLibraryState {
     Set<String>? syncingFavoriteSlugs,
   }) => UserLibraryState(
     user: clearUser ? null : user ?? this.user,
+    profile: clearProfile ? null : profile ?? this.profile,
     favorites: favorites ?? this.favorites,
     history: history ?? this.history,
     isLoading: isLoading ?? this.isLoading,
@@ -52,7 +59,14 @@ class UserLibraryCubit extends Cubit<UserLibraryState> {
     Stream<AuthState>? authChanges,
   }) : _repository = repository,
        _client = client ?? Supabase.instance.client,
-       super(UserLibraryState(user: repository.currentUser)) {
+       super(
+         UserLibraryState(
+           user: repository.currentUser,
+           profile: repository.currentUser == null
+               ? null
+               : UserProfile.fromUser(repository.currentUser),
+         ),
+       ) {
     _authSubscription = (authChanges ?? _client.auth.onAuthStateChange).listen((
       event,
     ) {
@@ -74,7 +88,13 @@ class UserLibraryCubit extends Cubit<UserLibraryState> {
       emit(const UserLibraryState());
       return;
     }
-    emit(UserLibraryState(user: user, isLoading: true));
+    emit(
+      UserLibraryState(
+        user: user,
+        profile: UserProfile.fromUser(user),
+        isLoading: true,
+      ),
+    );
     await refresh();
   }
 
@@ -87,14 +107,16 @@ class UserLibraryCubit extends Cubit<UserLibraryState> {
     emit(state.copyWith(user: user, isLoading: true, clearError: true));
     try {
       final values = await Future.wait([
+        _repository.getProfile(),
         _repository.getFavorites(),
         _repository.getWatchHistory(),
       ]);
       emit(
         state.copyWith(
           user: _repository.currentUser,
-          favorites: values[0] as List<UserFavorite>,
-          history: values[1] as List<UserWatchHistory>,
+          profile: values[0] as UserProfile,
+          favorites: values[1] as List<UserFavorite>,
+          history: values[2] as List<UserWatchHistory>,
           isLoading: false,
           clearError: true,
         ),
@@ -257,11 +279,17 @@ class UserLibraryCubit extends Cubit<UserLibraryState> {
     required String displayName,
     String? avatarUrl,
   }) async {
-    final updatedUser = await _repository.updateProfile(
+    final updatedProfile = await _repository.updateProfile(
       displayName: displayName,
       avatarUrl: avatarUrl,
     );
-    emit(state.copyWith(user: updatedUser, clearError: true));
+    emit(
+      state.copyWith(
+        user: _repository.currentUser,
+        profile: updatedProfile,
+        clearError: true,
+      ),
+    );
   }
 
   Future<String> uploadAvatar(List<int> bytes, {required String extension}) {

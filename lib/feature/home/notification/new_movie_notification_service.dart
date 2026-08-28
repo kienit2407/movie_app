@@ -54,7 +54,7 @@ class NewMovieNotificationService
     required bool readLaunchPayload,
   }) async {
     const settings = InitializationSettings(
-      android: AndroidInitializationSettings('ic_stat_liquid'),
+      android: AndroidInitializationSettings('ic_stat_notification'),
       iOS: DarwinInitializationSettings(
         requestAlertPermission: false,
         requestBadgePermission: false,
@@ -161,7 +161,7 @@ class NewMovieNotificationService
         NewMovieNotificationConstants.channelId,
         NewMovieNotificationConstants.channelName,
         channelDescription: NewMovieNotificationConstants.channelDescription,
-        icon: 'ic_stat_liquid',
+        icon: 'ic_stat_notification',
         importance: Importance.high,
         priority: Priority.high,
         channelShowBadge: true,

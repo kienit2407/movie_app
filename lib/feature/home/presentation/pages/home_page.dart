@@ -14,6 +14,7 @@ import 'package:iconsax_flutter/iconsax_flutter.dart';
 import 'package:loading_animation_widget/loading_animation_widget.dart';
 import 'package:movie_app/common/components/app_auto_scroll_text.dart';
 import 'package:movie_app/common/components/alert_dialog/app_alert_dialog.dart';
+import 'package:movie_app/common/components/app_toast.dart';
 import 'package:movie_app/common/components/lost_network.dart';
 import 'package:movie_app/common/helpers/navigation/app_navigation.dart';
 import 'package:movie_app/core/config/constants/const_globals.dart';
@@ -153,12 +154,6 @@ class _HomePageState extends State<HomePage>
     indexCarouselController = CarouselSliderController();
     super.initState();
     HubTabReselectNotifier.instance.addListener(_onHubTabReselected);
-
-    // Theo dõi vị trí cuộn để điều khiển chip buttons
-    _scrollController.addListener(() {
-      final offset = _scrollController.offset;
-      _homeUiCubit.updateScrollEffects(offset);
-    });
   }
 
   @override
@@ -313,13 +308,10 @@ class _HomePageState extends State<HomePage>
         final permissionGranted = await coordinator.enableNotifications();
         if (!mounted || permissionGranted) return;
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              'Quyền thông báo chưa được bật. Bạn có thể bật lại trong '
-              'Cài đặt của điện thoại.',
-            ),
-          ),
+        AppToast.show(
+          context,
+          'Quyền thông báo chưa được bật. Bạn có thể bật lại trong '
+          'Cài đặt của điện thoại.',
         );
       } else {
         await coordinator.declineNotifications();
@@ -546,45 +538,56 @@ class _HomePageState extends State<HomePage>
                   ),
                 ],
               ),
-              AnimatedBuilder(
-                animation: _scrollController,
-                builder: (context, child) {
-                  final uiState = context.read<HomeUiCubit>().state;
-                  return AnimatedOpacity(
-                    duration: Duration(milliseconds: 200),
-                    curve: Curves.easeInOut,
-                    opacity: uiState.chipOpacity,
-                    child: Transform.translate(
-                      offset: Offset(0, -uiState.chipOffset),
-                      child: Row(
-                        spacing: 10.w,
-                        mainAxisAlignment: MainAxisAlignment.start,
-                        children: [
-                          _buildChipButton('Đề Xuất', isSelected: true),
-                          _buildChipButton(
-                            'Thể loại',
-                            icon: Iconsax.arrow_down_1_copy,
-                            showIcon: true,
-                            onPressed: () {
-                              GenreBottomSheet.show(context);
-                            },
-                            isSelected: uiState.isSelectedGenre,
-                          ),
-                          _buildChipButton(
-                            onPressed: () => CountryBottomSheet.show(context),
-                            'Quốc gia',
-                            icon: Iconsax.arrow_down_1_copy,
-                            showIcon: true,
-                          ),
-                          _buildChipButton(
-                            onPressed: () => YearBottomSheet.show(context),
-                            'Năm',
-                            icon: Iconsax.arrow_down_1_copy,
-                            showIcon: true,
-                          ),
-                        ],
-                      ),
+              BlocSelector<HomeUiCubit, HomeUiState, bool>(
+                selector: (state) => state.isSelectedGenre,
+                builder: (context, isSelectedGenre) {
+                  return AnimatedBuilder(
+                    animation: _scrollController,
+                    child: Row(
+                      spacing: 10.w,
+                      mainAxisAlignment: MainAxisAlignment.start,
+                      children: [
+                        _buildChipButton('Đề Xuất', isSelected: true),
+                        _buildChipButton(
+                          'Thể loại',
+                          icon: Iconsax.arrow_down_1_copy,
+                          showIcon: true,
+                          onPressed: () {
+                            GenreBottomSheet.show(context);
+                          },
+                          isSelected: isSelectedGenre,
+                        ),
+                        _buildChipButton(
+                          onPressed: () => CountryBottomSheet.show(context),
+                          'Quốc gia',
+                          icon: Iconsax.arrow_down_1_copy,
+                          showIcon: true,
+                        ),
+                        _buildChipButton(
+                          onPressed: () => YearBottomSheet.show(context),
+                          'Năm',
+                          icon: Iconsax.arrow_down_1_copy,
+                          showIcon: true,
+                        ),
+                      ],
                     ),
+                    builder: (context, child) {
+                      final offset = _scrollController.hasClients
+                          ? _scrollController.offset
+                          : 0.0;
+                      final chipOpacity = (1 - offset / 40).clamp(0.0, 1.0);
+                      final chipOffset = offset.clamp(0.0, 30.0);
+
+                      return AnimatedOpacity(
+                        duration: const Duration(milliseconds: 200),
+                        curve: Curves.easeInOut,
+                        opacity: chipOpacity,
+                        child: Transform.translate(
+                          offset: Offset(0, -chipOffset),
+                          child: child,
+                        ),
+                      );
+                    },
                   );
                 },
               ),

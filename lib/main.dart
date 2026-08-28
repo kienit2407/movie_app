@@ -71,19 +71,14 @@ Future<void> main() async {
   debugPrint('=== [3/8] Dotenv loaded ===');
   final dir = await getApplicationDocumentsDirectory();
   HydratedBloc.storage = await HydratedStorage.build(storageDirectory: dir);
+  debugPrint('=== [4/8] HydratedBloc storage initialized ===');
 
   await Hive.initFlutter();
 
   Hive.registerAdapter(FavoriteMovieEntryAdapter());
   Hive.registerAdapter(WatchProgressModelAdapter());
   Hive.registerAdapter(WatchHistoryEntryAdapter());
-  debugPrint('=== [4/8] Hive initialized ===');
-
-  final storage = await HydratedStorage.build(
-    storageDirectory: await getApplicationDocumentsDirectory(),
-  );
-  HydratedBloc.storage = storage;
-  debugPrint('=== [5/8] HydratedBloc storage initialized ===');
+  debugPrint('=== [5/8] Hive initialized ===');
   await FastCachedImageConfig.init(clearCacheAfter: const Duration(days: 1));
 
   debugPrint('=== [6/8] FastCachedImage initialized ===');

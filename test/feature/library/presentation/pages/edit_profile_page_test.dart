@@ -95,6 +95,9 @@ class _EditProfileRepository implements UserLibraryRepository {
   User get currentUser => _user;
 
   @override
+  Future<UserProfile> getProfile() async => UserProfile.fromUser(_user);
+
+  @override
   Future<void> addFavorite(UserFavorite favorite) async {}
 
   @override
@@ -116,10 +119,10 @@ class _EditProfileRepository implements UserLibraryRepository {
   Future<void> removeWatchHistoryItems(Iterable<String> slugs) async {}
 
   @override
-  Future<User> updateProfile({
+  Future<UserProfile> updateProfile({
     required String displayName,
     String? avatarUrl,
-  }) async => _user;
+  }) async => UserProfile(displayName: displayName, avatarUrl: avatarUrl ?? '');
 
   @override
   Future<String> uploadAvatar(

@@ -15,14 +15,13 @@ class HubPage extends StatelessWidget {
   final StatefulNavigationShell navigationShell;
 
   void _selectTab(int index) {
-    if (index == navigationShell.currentIndex) {
+    final isCurrentTab = index == navigationShell.currentIndex;
+
+    if (isCurrentTab) {
       HubTabReselectNotifier.instance.notifyTab(index);
     }
 
-    navigationShell.goBranch(
-      index,
-      initialLocation: index == navigationShell.currentIndex,
-    );
+    navigationShell.goBranch(index, initialLocation: isCurrentTab);
   }
 
   @override
@@ -81,20 +80,14 @@ class HubBottomBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return BlocBuilder<UserLibraryCubit, UserLibraryState>(
-      buildWhen: (previous, current) => previous.user != current.user,
+      buildWhen: (previous, current) =>
+          previous.user != current.user ||
+          previous.avatarUrl != current.avatarUrl,
       builder: (context, libraryState) {
-        final metadata =
-            libraryState.user?.userMetadata ?? const <String, dynamic>{};
-
-        final avatarUrl = _firstNonEmpty([
-          metadata['avatar_url'],
-          metadata['picture'],
-        ]);
-
         return _FloatingBlurHubBar(
           selectedIndex: selectedIndex,
           onSelected: onSelected,
-          avatarUrl: avatarUrl,
+          avatarUrl: libraryState.avatarUrl,
         );
       },
     );
@@ -192,15 +185,15 @@ class _FloatingBlurHubBar extends StatelessWidget {
                               selected: selectedIndex == 0,
                               icon: Image.asset(
                                 'assets/images/home.png',
-                                width: 24,
-                                height: 24,
+                                width: 20,
+                                height: 20,
                                 fit: BoxFit.contain,
                                 filterQuality: FilterQuality.high,
                               ),
                               activeIcon: Image.asset(
                                 'assets/images/home_filled.png',
-                                width: 26,
-                                height: 26,
+                                width: 22,
+                                height: 22,
                                 fit: BoxFit.contain,
                                 filterQuality: FilterQuality.high,
                               ),
@@ -212,9 +205,7 @@ class _FloatingBlurHubBar extends StatelessWidget {
                             /// SEARCH
                             _HubTabButton(
                               selected: selectedIndex == 1,
-                              icon: const Icon(
-                                Iconsax.search_normal_1_copy,
-                              ),
+                              icon: const Icon(Iconsax.search_normal_1_copy),
                               activeIcon: const Icon(
                                 Iconsax.search_normal_1_copy,
                                 weight: 8,
@@ -396,16 +387,4 @@ class _HubAvatarIcon extends StatelessWidget {
       ),
     );
   }
-}
-
-String _firstNonEmpty(List<Object?> values) {
-  for (final value in values) {
-    final text = value?.toString().trim() ?? '';
-
-    if (text.isNotEmpty) {
-      return text;
-    }
-  }
-
-  return '';
 }

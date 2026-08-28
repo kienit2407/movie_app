@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
 import 'package:movie_app/common/components/alert_dialog/app_alert_dialog.dart';
+import 'package:movie_app/common/components/app_toast.dart';
 import 'package:movie_app/common/helpers/static_data.dart';
 import 'package:movie_app/core/config/themes/app_color.dart';
 import 'package:movie_app/core/config/utils/animated_dialog.dart';
@@ -149,9 +150,7 @@ class _FavoritesPageState extends State<FavoritesPage>
                   previous.errorMessage != current.errorMessage &&
                   current.errorMessage != null,
               listener: (context, state) {
-                ScaffoldMessenger.of(
-                  context,
-                ).showSnackBar(SnackBar(content: Text(state.errorMessage!)));
+                AppToast.show(context, state.errorMessage!);
               },
               builder: (context, state) => RefreshIndicator.adaptive(
                 color: Colors.white,

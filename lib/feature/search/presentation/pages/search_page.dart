@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:cupertino_native_better/components/liquid_glass_container.dart';
 import 'package:cupertino_native_better/style/glass_effect.dart';
 import 'package:cupertino_native_better/utils/version_detector.dart';
+import 'package:flutter/foundation.dart' show defaultTargetPlatform, kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
@@ -17,7 +18,6 @@ import 'package:movie_app/feature/search/presentation/widgets/search_history_vie
 import 'package:movie_app/feature/search/presentation/widgets/search_result_view.dart';
 import 'package:movie_app/feature/search/presentation/widgets/search_shimmer_loading.dart';
 import 'package:movie_app/feature/hub/presentation/pages/hub_page.dart';
-import 'package:flutter/foundation.dart' show defaultTargetPlatform, kIsWeb;
 
 class SearchPage extends StatelessWidget {
   const SearchPage({super.key, this.showBackButton = true});

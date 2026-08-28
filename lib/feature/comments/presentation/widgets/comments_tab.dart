@@ -7,13 +7,13 @@ import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
 import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
+import 'package:movie_app/common/components/app_toast.dart';
 import 'package:movie_app/core/config/themes/app_color.dart';
 import 'package:movie_app/feature/auth/presentation/session/auth_session_cubit.dart';
 import 'package:movie_app/feature/auth/presentation/sign_in/pages/sign_in.dart';
 import 'package:movie_app/feature/comments/domain/entities/comment.dart';
 import 'package:movie_app/feature/comments/presentation/bloc/comments_cubit.dart';
 import 'package:movie_app/feature/comments/presentation/bloc/comments_state.dart';
-import 'package:toastification/toastification.dart';
 import 'package:visibility_detector/visibility_detector.dart';
 
 class CommentsTab extends StatefulWidget {
@@ -168,16 +168,20 @@ class _CommentsTabState extends State<CommentsTab> with WidgetsBindingObserver {
       listenWhen: (previous, current) =>
           previous.errorMessage != current.errorMessage &&
           current.errorMessage != null,
+      buildWhen: (previous, current) =>
+          previous.status != current.status ||
+          !identical(previous.comments, current.comments) ||
+          !identical(previous.replies, current.replies) ||
+          previous.sort != current.sort ||
+          previous.totalCount != current.totalCount ||
+          previous.hasMoreComments != current.hasMoreComments ||
+          previous.hasMoreReplies != current.hasMoreReplies ||
+          previous.threadRoot != current.threadRoot ||
+          previous.isLoadingMore != current.isLoadingMore ||
+          !identical(previous.pendingCommentIds, current.pendingCommentIds) ||
+          previous.draftAfterFailure != current.draftAfterFailure,
       listener: (context, state) {
-        ScaffoldMessenger.of(context)
-          ..hideCurrentSnackBar()
-          ..showSnackBar(
-            SnackBar(
-              content: Text(state.errorMessage!),
-              behavior: SnackBarBehavior.floating,
-              backgroundColor: const Color(0xff3B3248),
-            ),
-          );
+        AppToast.show(context, state.errorMessage!);
       },
       builder: (context, state) {
         return VisibilityDetector(
@@ -697,7 +701,7 @@ class _CommentsTabState extends State<CommentsTab> with WidgetsBindingObserver {
     }
     if (state.comments.isEmpty) {
       return const _CenteredMessage(
-        icon: Icons.mode_comment_outlined,
+        icon: Iconsax.message_copy,
         title: 'Chưa có bình luận',
         subtitle: 'Hãy là người đầu tiên chia sẻ cảm nhận.',
       );
@@ -1105,10 +1109,10 @@ class _CommentsTabState extends State<CommentsTab> with WidgetsBindingObserver {
 
     if (!mounted) return;
 
-    toastification.show(
-      context: context,
-      title: const Text('Đã sao chép bình luận'),
-      autoCloseDuration: const Duration(seconds: 2),
+    AppToast.show(
+      context,
+      'Đã sao chép bình luận',
+      duration: const Duration(seconds: 2),
     );
   }
 
@@ -1177,12 +1181,7 @@ class _CommentsTabState extends State<CommentsTab> with WidgetsBindingObserver {
     );
     final sent = await context.read<CommentsCubit>().report(comment, reason);
     if (sent && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Đã gửi báo cáo. Cảm ơn bạn.'),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+      AppToast.show(context, 'Đã gửi báo cáo. Cảm ơn bạn.');
     }
   }
 
@@ -1250,8 +1249,6 @@ class _CommentsTabState extends State<CommentsTab> with WidgetsBindingObserver {
                 style: action.destructive
                     ? GlassActionSheetStyle.destructive
                     : GlassActionSheetStyle.defaultStyle,
-                // GlassActionSheet tự đóng sau callback. Chỉ lưu kết quả tại
-                // đây để tránh pop thêm MovieDetailPage bên dưới action sheet.
                 onPressed: () => selectedAction = action.value,
               ),
             )
@@ -1354,7 +1351,6 @@ class _CommentsHeader extends StatelessWidget {
       title: label,
       height: 58,
       onTap: () => onSortChanged(sort),
-
       trailing: selected
           ? const Icon(
               Icons.check_rounded,
@@ -1398,7 +1394,6 @@ class _SortTrigger extends StatelessWidget {
     return Semantics(
       button: true,
       label: 'Sắp xếp bình luận',
-
       child: onTap == null
           ? content
           : Material(
@@ -1602,7 +1597,6 @@ class _AndroidSortMenu extends StatelessWidget {
   Widget build(BuildContext context) {
     return PopupMenuButton<CommentSort>(
       // initialValue: sort,
-
       tooltip: 'Sắp xếp bình luận',
 
       // Hiện menu phía dưới nút
@@ -2356,7 +2350,9 @@ class _Avatar extends StatelessWidget {
     return CircleAvatar(
       radius: 19,
       backgroundColor: const Color(0xff6155A6),
-      backgroundImage: validUrl ? NetworkImage(avatarUrl!) : null,
+      backgroundImage: validUrl
+          ? ResizeImage.resizeIfNeeded(144, null, NetworkImage(avatarUrl!))
+          : null,
       child: validUrl
           ? null
           : Text(
@@ -2381,7 +2377,9 @@ class _ComposerAvatar extends StatelessWidget {
     return CircleAvatar(
       radius: 17,
       backgroundColor: Colors.white10,
-      backgroundImage: validUrl ? NetworkImage(avatarUrl!) : null,
+      backgroundImage: validUrl
+          ? ResizeImage.resizeIfNeeded(144, null, NetworkImage(avatarUrl!))
+          : null,
       child: validUrl
           ? null
           : const Icon(Icons.person_rounded, color: Colors.white54, size: 20),

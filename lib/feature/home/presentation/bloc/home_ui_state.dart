@@ -2,8 +2,6 @@ import 'package:equatable/equatable.dart';
 
 class HomeUiState extends Equatable {
   final int currentIndex;
-  final double chipOpacity;
-  final double chipOffset;
   final bool isSelectedGenre;
   final int carouselKeyCounter;
   final String appName;
@@ -13,8 +11,6 @@ class HomeUiState extends Equatable {
 
   const HomeUiState({
     this.currentIndex = 0,
-    this.chipOpacity = 1.0,
-    this.chipOffset = 0.0,
     this.isSelectedGenre = false,
     this.carouselKeyCounter = 0,
     this.appName = '',
@@ -25,8 +21,6 @@ class HomeUiState extends Equatable {
 
   HomeUiState copyWith({
     int? currentIndex,
-    double? chipOpacity,
-    double? chipOffset,
     bool? isSelectedGenre,
     int? carouselKeyCounter,
     String? appName,
@@ -36,8 +30,6 @@ class HomeUiState extends Equatable {
   }) {
     return HomeUiState(
       currentIndex: currentIndex ?? this.currentIndex,
-      chipOpacity: chipOpacity ?? this.chipOpacity,
-      chipOffset: chipOffset ?? this.chipOffset,
       isSelectedGenre: isSelectedGenre ?? this.isSelectedGenre,
       carouselKeyCounter: carouselKeyCounter ?? this.carouselKeyCounter,
       appName: appName ?? this.appName,
@@ -50,8 +42,6 @@ class HomeUiState extends Equatable {
   @override
   List<Object?> get props => [
     currentIndex,
-    chipOpacity,
-    chipOffset,
     isSelectedGenre,
     carouselKeyCounter,
     appName,

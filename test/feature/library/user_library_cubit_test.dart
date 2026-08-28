@@ -73,10 +73,10 @@ void main() {
     await cubit.close();
   });
 
-  test('publishes the exact user returned after a profile update', () async {
+  test('publishes the durable profile returned after an update', () async {
     final repository = _FakeLibraryRepository(
       user: _user,
-      profileUpdateResult: _updatedUser,
+      profileUpdateResult: _updatedProfile,
     );
     final cubit = UserLibraryCubit(
       repository: repository,
@@ -88,11 +88,27 @@ void main() {
       avatarUrl: 'https://example.com/new-avatar.jpg',
     );
 
-    expect(cubit.state.user, same(_updatedUser));
-    expect(
-      cubit.state.user?.userMetadata?['avatar_url'],
-      'https://example.com/new-avatar.jpg',
+    expect(cubit.state.profile, same(_updatedProfile));
+    expect(cubit.state.displayName, 'Liquid User mới');
+    expect(cubit.state.avatarUrl, 'https://example.com/new-avatar.jpg');
+    await cubit.close();
+  });
+
+  test('loads the stored profile instead of provider metadata', () async {
+    final repository = _FakeLibraryRepository(
+      user: _user,
+      profile: _updatedProfile,
     );
+    final cubit = UserLibraryCubit(
+      repository: repository,
+      client: SupabaseClient('https://example.supabase.co', 'anon-key'),
+      authChanges: const Stream<AuthState>.empty(),
+    );
+
+    await cubit.refresh();
+
+    expect(cubit.state.displayName, 'Liquid User mới');
+    expect(cubit.state.avatarUrl, 'https://example.com/new-avatar.jpg');
     await cubit.close();
   });
 }
@@ -106,16 +122,9 @@ final _user = User(
   createdAt: '2026-08-02T00:00:00Z',
 );
 
-final _updatedUser = User(
-  id: 'user-1',
-  appMetadata: const {},
-  userMetadata: const {
-    'full_name': 'Liquid User mới',
-    'avatar_url': 'https://example.com/new-avatar.jpg',
-  },
-  aud: 'authenticated',
-  email: 'user@example.com',
-  createdAt: '2026-08-02T00:00:00Z',
+const _updatedProfile = UserProfile(
+  displayName: 'Liquid User mới',
+  avatarUrl: 'https://example.com/new-avatar.jpg',
 );
 
 UserWatchHistory _history(int index) => UserWatchHistory(
@@ -171,18 +180,24 @@ class _FakeLibraryRepository implements UserLibraryRepository {
   _FakeLibraryRepository({
     this.user,
     this.failFavorite = false,
+    this.profile,
     this.profileUpdateResult,
   });
 
   User? user;
   final bool failFavorite;
-  final User? profileUpdateResult;
+  final UserProfile? profile;
+  final UserProfile? profileUpdateResult;
   final List<UserFavorite> favorites = [];
   final List<UserWatchHistory> history = [];
   final List<UserWatchHistory> writtenHistory = [];
 
   @override
   User? get currentUser => user;
+
+  @override
+  Future<UserProfile> getProfile() async =>
+      profile ?? UserProfile.fromUser(user);
 
   @override
   Future<void> addFavorite(UserFavorite favorite) async {
@@ -219,10 +234,15 @@ class _FakeLibraryRepository implements UserLibraryRepository {
   }
 
   @override
-  Future<User> updateProfile({
+  Future<UserProfile> updateProfile({
     required String displayName,
     String? avatarUrl,
-  }) async => profileUpdateResult ?? user!;
+  }) async =>
+      profileUpdateResult ??
+      UserProfile(
+        displayName: displayName,
+        avatarUrl: avatarUrl ?? profile?.avatarUrl ?? '',
+      );
 
   @override
   Future<String> uploadAvatar(

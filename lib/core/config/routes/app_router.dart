@@ -7,7 +7,6 @@ import 'package:movie_app/feature/search/presentation/pages/search_page.dart';
 import 'package:movie_app/core/config/utils/movie_player_args.dart';
 import 'package:movie_app/core/player_overlay_route_bridge.dart';
 import 'package:movie_app/feature/auth/presentation/sign_in/pages/sign_in.dart';
-import 'package:cupertino_native_better/cupertino_native_better.dart';
 import 'package:movie_app/feature/hub/presentation/pages/hub_page.dart';
 import 'package:movie_app/feature/home/presentation/pages/notifications_page.dart';
 import 'package:movie_app/feature/library/presentation/pages/edit_profile_page.dart';
@@ -41,7 +40,6 @@ class AppRoutes {
 final goRouter = GoRouter(
   navigatorKey: AppRoutes.navigatorKey, // <<< thêm dòng này
   initialLocation: AppRoutes.home,
-  observers: [CNTabBarRouteObserver()],
   routes: [
     StatefulShellRoute.indexedStack(
       builder: (context, state, navigationShell) =>
@@ -49,7 +47,6 @@ final goRouter = GoRouter(
       branches: [
         StatefulShellBranch(
           navigatorKey: AppRoutes.homeNavigatorKey,
-          observers: [CNTabBarRouteObserver()],
           routes: [
             GoRoute(
               path: AppRoutes.home,
@@ -60,7 +57,6 @@ final goRouter = GoRouter(
         ),
         StatefulShellBranch(
           navigatorKey: AppRoutes.searchNavigatorKey,
-          observers: [CNTabBarRouteObserver()],
           routes: [
             GoRoute(
               path: AppRoutes.search,
@@ -72,7 +68,6 @@ final goRouter = GoRouter(
         ),
         StatefulShellBranch(
           navigatorKey: AppRoutes.favoritesNavigatorKey,
-          observers: [CNTabBarRouteObserver()],
           routes: [
             GoRoute(
               path: AppRoutes.favorites,
@@ -83,7 +78,6 @@ final goRouter = GoRouter(
         ),
         StatefulShellBranch(
           navigatorKey: AppRoutes.profileNavigatorKey,
-          observers: [CNTabBarRouteObserver()],
           routes: [
             GoRoute(
               path: AppRoutes.profile,

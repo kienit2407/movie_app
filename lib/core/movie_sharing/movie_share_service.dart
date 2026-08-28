@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:movie_app/common/components/app_toast.dart';
 import 'package:share_plus/share_plus.dart';
 
 class MovieShareService {
@@ -41,8 +42,6 @@ class MovieShareService {
     }
 
     if (!context.mounted) return;
-    ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-      const SnackBar(content: Text('Không thể mở bảng chia sẻ.')),
-    );
+    AppToast.show(context, 'Không thể mở bảng chia sẻ.');
   }
 }
