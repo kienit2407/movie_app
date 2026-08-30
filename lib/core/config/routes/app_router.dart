@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:movie_app/feature/home/presentation/pages/home_page.dart';
-import 'package:movie_app/feature/intro/presentation/splash/pages/splash.dart';
 import 'package:movie_app/feature/detail_movie/presentation/pages/movie_detail_page.dart';
 import 'package:movie_app/feature/search/presentation/pages/search_page.dart';
 import 'package:movie_app/core/config/utils/movie_player_args.dart';
 import 'package:movie_app/core/player_overlay_route_bridge.dart';
+import 'package:movie_app/core/observability/app_observability.dart';
 import 'package:movie_app/feature/auth/presentation/sign_in/pages/sign_in.dart';
 import 'package:movie_app/feature/hub/presentation/pages/hub_page.dart';
 import 'package:movie_app/feature/home/presentation/pages/notifications_page.dart';
@@ -40,6 +40,7 @@ class AppRoutes {
 final goRouter = GoRouter(
   navigatorKey: AppRoutes.navigatorKey, // <<< thêm dòng này
   initialLocation: AppRoutes.home,
+  observers: [AppObservability.navigatorObserver()],
   routes: [
     StatefulShellRoute.indexedStack(
       builder: (context, state, navigationShell) =>
@@ -47,6 +48,7 @@ final goRouter = GoRouter(
       branches: [
         StatefulShellBranch(
           navigatorKey: AppRoutes.homeNavigatorKey,
+          observers: [AppObservability.navigatorObserver()],
           routes: [
             GoRoute(
               path: AppRoutes.home,
@@ -57,6 +59,7 @@ final goRouter = GoRouter(
         ),
         StatefulShellBranch(
           navigatorKey: AppRoutes.searchNavigatorKey,
+          observers: [AppObservability.navigatorObserver()],
           routes: [
             GoRoute(
               path: AppRoutes.search,
@@ -68,6 +71,7 @@ final goRouter = GoRouter(
         ),
         StatefulShellBranch(
           navigatorKey: AppRoutes.favoritesNavigatorKey,
+          observers: [AppObservability.navigatorObserver()],
           routes: [
             GoRoute(
               path: AppRoutes.favorites,
@@ -78,6 +82,7 @@ final goRouter = GoRouter(
         ),
         StatefulShellBranch(
           navigatorKey: AppRoutes.profileNavigatorKey,
+          observers: [AppObservability.navigatorObserver()],
           routes: [
             GoRoute(
               path: AppRoutes.profile,

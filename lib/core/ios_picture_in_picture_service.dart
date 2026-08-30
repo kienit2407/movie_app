@@ -27,7 +27,13 @@ class IosPictureInPictureService {
 
   static Future<void> stop() async {
     if (!isSupportedPlatform) return;
-    await _channel.invokeMethod<void>('stop');
+    await _channel.invokeMethod<void>('stop', {'pausePlayback': false});
+  }
+
+  static Future<List<int>> sampleAmbientColors() async {
+    if (!isSupportedPlatform) return const [];
+    final colors = await _channel.invokeListMethod<int>('ambientColors');
+    return colors ?? const [];
   }
 
   static Future<void> detach() async {

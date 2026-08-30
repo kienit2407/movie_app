@@ -10,6 +10,9 @@ final class IosPictureInPictureBridge: NSObject, AVPictureInPictureControllerDel
     private weak var preparedTexturePlayerLayer: AVPlayerLayer?
     private var preparedTexturePlayerLayerFrame: CGRect?
     private var preparedTexturePlayerLayerOpacity: Float?
+    private var ambientVideoOutput: AVPlayerItemVideoOutput?
+    private weak var ambientPlayerItem: AVPlayerItem?
+    private var pausePlayerWhenPictureInPictureStops = true
     private let rootViewProvider: () -> UIView?
     private var remoteCommandsConfigured = false
     private let readinessRetryDelay: TimeInterval = 0.1
@@ -41,8 +44,14 @@ final class IosPictureInPictureBridge: NSObject, AVPictureInPictureControllerDel
             case "start":
                 self.startWithRetry(result: result)
             case "stop":
+                if let args = call.arguments as? [String: Any],
+                   let pausePlayback = args["pausePlayback"] as? Bool {
+                    self.pausePlayerWhenPictureInPictureStops = pausePlayback
+                }
                 self.stop()
                 result(nil)
+            case "ambientColors":
+                result(self.sampleAmbientColors() ?? [])
             case "configureMediaSession":
                 self.configureMediaSession()
                 result(nil)
@@ -299,6 +308,7 @@ final class IosPictureInPictureBridge: NSObject, AVPictureInPictureControllerDel
             return false
         }
 
+        pausePlayerWhenPictureInPictureStops = true
         controller.startPictureInPicture()
         return true
     }
@@ -319,6 +329,89 @@ final class IosPictureInPictureBridge: NSObject, AVPictureInPictureControllerDel
         pictureInPictureController = nil
         attachedPlayerLayer = nil
         restorePreparedTexturePlayerLayer()
+    }
+
+    func handleDeviceLocked() {
+        pausePlayerWhenPictureInPictureStops = true
+        currentPlayer()?.pause()
+        stop()
+    }
+
+    private func sampleAmbientColors() -> [Int]? {
+        guard let player = currentPlayer(), let item = player.currentItem else {
+            return nil
+        }
+
+        let output: AVPlayerItemVideoOutput
+        if ambientPlayerItem !== item || ambientVideoOutput == nil {
+            if let oldItem = ambientPlayerItem, let oldOutput = ambientVideoOutput {
+                oldItem.remove(oldOutput)
+            }
+            output = AVPlayerItemVideoOutput(pixelBufferAttributes: [
+                kCVPixelBufferPixelFormatTypeKey as String:
+                    kCVPixelFormatType_32BGRA,
+            ])
+            output.suppressesPlayerRendering = false
+            item.add(output)
+            ambientPlayerItem = item
+            ambientVideoOutput = output
+        } else {
+            output = ambientVideoOutput!
+        }
+
+        let itemTime = output.itemTime(forHostTime: CACurrentMediaTime())
+        guard output.hasNewPixelBuffer(forItemTime: itemTime),
+              let pixelBuffer = output.copyPixelBuffer(
+                forItemTime: itemTime,
+                itemTimeForDisplay: nil
+              )
+        else {
+            return nil
+        }
+
+        CVPixelBufferLockBaseAddress(pixelBuffer, .readOnly)
+        defer { CVPixelBufferUnlockBaseAddress(pixelBuffer, .readOnly) }
+
+        guard let baseAddress = CVPixelBufferGetBaseAddress(pixelBuffer) else {
+            return nil
+        }
+        let width = CVPixelBufferGetWidth(pixelBuffer)
+        let height = CVPixelBufferGetHeight(pixelBuffer)
+        let bytesPerRow = CVPixelBufferGetBytesPerRow(pixelBuffer)
+        guard width > 1, height > 1 else { return nil }
+
+        let bytes = baseAddress.assumingMemoryBound(to: UInt8.self)
+        let xStep = max(1, width / 24)
+        let yStep = max(1, height / 14)
+
+        func averageColor(xRange: Range<Int>) -> Int {
+            var redTotal = 0
+            var greenTotal = 0
+            var blueTotal = 0
+            var count = 0
+
+            for y in stride(from: 0, to: height, by: yStep) {
+                for x in stride(from: xRange.lowerBound, to: xRange.upperBound, by: xStep) {
+                    let offset = y * bytesPerRow + x * 4
+                    blueTotal += Int(bytes[offset])
+                    greenTotal += Int(bytes[offset + 1])
+                    redTotal += Int(bytes[offset + 2])
+                    count += 1
+                }
+            }
+
+            guard count > 0 else { return 0xFF182436 }
+            let red = redTotal / count
+            let green = greenTotal / count
+            let blue = blueTotal / count
+            return (0xFF << 24) | (red << 16) | (green << 8) | blue
+        }
+
+        let middle = width / 2
+        return [
+            averageColor(xRange: 0..<middle),
+            averageColor(xRange: middle..<width),
+        ]
     }
 
     private func prepareTexturePlayerLayerIfNeeded(
@@ -408,6 +501,10 @@ final class IosPictureInPictureBridge: NSObject, AVPictureInPictureControllerDel
     func pictureInPictureControllerDidStopPictureInPicture(
         _ pictureInPictureController: AVPictureInPictureController
     ) {
+        if pausePlayerWhenPictureInPictureStops {
+            attachedPlayerLayer?.player?.pause()
+        }
+        pausePlayerWhenPictureInPictureStops = true
         print("[PiP] Picture in Picture stopped.")
     }
 }

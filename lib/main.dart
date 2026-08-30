@@ -11,6 +11,7 @@ import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 import 'package:movie_app/common/models/favorite_movie_entry.dart';
 import 'package:movie_app/common/models/watch_progress_model.dart';
 import 'package:movie_app/common/models/watch_history_entry.dart';
+import 'package:movie_app/common/components/internet_status_banner.dart';
 import 'package:movie_app/common/bloc/AuthWithSocial/auth_with_social_cubit.dart';
 import 'package:movie_app/core/config/routes/app_router.dart';
 import 'package:movie_app/core/config/di/service_locator.dart';
@@ -19,6 +20,7 @@ import 'package:movie_app/core/config/themes/app_theme.dart';
 import 'package:movie_app/core/player_overlay_host.dart';
 import 'package:movie_app/core/player_overlay_controller.dart';
 import 'package:movie_app/core/movie_sharing/movie_deep_link_service.dart';
+import 'package:movie_app/core/observability/app_observability.dart';
 import 'package:movie_app/feature/auth/domain/usecases/confirm_with_token.dart';
 import 'package:movie_app/feature/auth/domain/usecases/req_reset_password.dart';
 import 'package:movie_app/feature/auth/domain/usecases/sigin_with_facebook.dart';
@@ -54,6 +56,7 @@ import 'package:workmanager/workmanager.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await AppObservability.initialize();
   MovieDeepLinkService.instance.initialize();
   PaintingBinding.instance.imageCache.maximumSize = 500;
   PaintingBinding.instance.imageCache.maximumSizeBytes = 160 << 20;
@@ -208,6 +211,7 @@ class MovieApp extends StatelessWidget {
                             router: router,
                             child: child ?? const SizedBox.shrink(),
                           ),
+                          const InternetStatusBanner(),
 
                           // ==========================
                           // SPLASH PHỦ LÊN APP

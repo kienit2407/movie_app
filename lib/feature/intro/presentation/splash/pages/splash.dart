@@ -1,11 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:go_router/go_router.dart';
 
 import 'package:movie_app/core/config/assets/app_image.dart';
 import 'package:movie_app/core/config/constants/const_globals.dart';
-import 'package:movie_app/core/config/routes/app_router.dart';
 import 'package:movie_app/core/config/themes/app_color.dart';
 
 import 'package:movie_app/feature/home/notification/new_movie_notification_navigation.dart';
@@ -32,13 +30,9 @@ class _StartupSplashOverlayState extends State<StartupSplashOverlay> {
 
     _handled = true;
 
-    // Nếu app được mở từ notification thì
-    // chuẩn bị route phía dưới Splash trước.
-    final route = NewMovieNotificationNavigation.takeRouteAfterSplash();
-
-    if (route != AppRoutes.home) {
-      context.push(route);
-    }
+    // Cho bộ điều hướng xử lý payload bằng root GoRouter. Splash chỉ là lớp
+    // phủ nên không dùng BuildContext của overlay để push route.
+    NewMovieNotificationNavigation.markSplashFinished();
 
     if (!mounted) return;
 

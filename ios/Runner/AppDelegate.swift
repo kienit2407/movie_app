@@ -17,6 +17,13 @@ import AVKit
     private var deviceOrientationStreamHandler: DeviceOrientationStreamHandler?
     private var lastAirPlayActive: Bool?
 
+    override func applicationProtectedDataWillBecomeUnavailable(
+        _ application: UIApplication
+    ) {
+        pictureInPictureBridge?.handleDeviceLocked()
+        super.applicationProtectedDataWillBecomeUnavailable(application)
+    }
+
     override func application(
         _ application: UIApplication,
         didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?

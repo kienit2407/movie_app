@@ -49,6 +49,7 @@ class PlayerOverlayBackButtonDispatcher extends RootBackButtonDispatcher {
     if (!controller.isVisible) return super.invokeCallback(defaultValue);
 
     if (!controller.minimizeEnabled) {
+      controller.close();
       return SynchronousFuture<bool>(true);
     }
 

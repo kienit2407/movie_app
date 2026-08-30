@@ -90,6 +90,16 @@ void main() {
     controller.dispose();
   });
 
+  test('root back closes a player that cannot be minimized', () async {
+    final controller = PlayerOverlayController();
+    final dispatcher = PlayerOverlayBackButtonDispatcher(controller);
+    controller.open(_args('broken-movie'), minimizeEnabled: false);
+
+    expect(await dispatcher.invokeCallback(Future.value(false)), isTrue);
+    expect(controller.isVisible, isFalse);
+    controller.dispose();
+  });
+
   testWidgets(
     'host keeps the same mounted player from expanded to mini and back',
     (tester) async {

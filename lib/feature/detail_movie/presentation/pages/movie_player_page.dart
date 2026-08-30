@@ -1,19 +1,19 @@
 import 'dart:async';
 import 'dart:io' show Platform;
 import 'dart:math' as math;
-import 'dart:ui' show ImageFilter, lerpDouble;
+import 'dart:ui' show ImageByteFormat, lerpDouble;
 import 'package:battery_plus/battery_plus.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart'
     show Listenable, ValueListenable, ValueNotifier;
-import 'package:flutter/rendering.dart' show ScrollDirection;
+import 'package:flutter/rendering.dart'
+    show RenderRepaintBoundary, ScrollDirection;
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:movie_app/core/config/di/service_locator.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:movie_app/feature/auth/presentation/session/auth_session_cubit.dart';
 import 'package:movie_app/feature/comments/domain/repositories/comment_repository.dart';
 import 'package:movie_app/feature/comments/presentation/bloc/comments_cubit.dart';
 import 'package:movie_app/feature/comments/presentation/bloc/comments_state.dart';
@@ -55,6 +55,18 @@ import 'package:movie_app/feature/movie_engagement/domain/playback_view_tracker.
 enum SeekDirection { forward, backward }
 
 enum _VideoDragMode { resize, mini }
+
+class _AmbientPalette {
+  const _AmbientPalette({required this.left, required this.right});
+
+  static const fallback = _AmbientPalette(
+    left: Color(0xFF182436),
+    right: Color(0xFF2B1D35),
+  );
+
+  final Color left;
+  final Color right;
+}
 
 class MoviePlayerPage extends StatefulWidget {
   final String slug;
@@ -186,7 +198,8 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
   /// - video đang tải/buffering;
   /// - video gặp lỗi.
   bool get _controlsVisible =>
-      _showControls || _isPlayerLoading || _playerLoadError != null;
+      !_suppressControlsForSeek &&
+      (_showControls || _isPlayerLoading || _playerLoadError != null);
   static const double _thumbRadius = 6;
   final DraggableScrollableController _panelCtrl =
       DraggableScrollableController();
@@ -197,7 +210,6 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
   final List<GlobalKey> _episodeKeys = [];
   bool get _isExpandedPortrait => _expandT >= 0.97;
   bool _wasPlayingBeforeScrub = false;
-  Timer? _seekThrottle;
   Duration _previewPosition = Duration.zero;
   String? _previewThumbUrl; // nếu có storyboard từ server
   static const double _panelAmbientH = 26;
@@ -261,6 +273,11 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
   bool _landscapeAtOrAboveFill = false;
   bool _landscapeControlsVisibleBeforeZoom = false;
   bool _startingPictureInPicture = false;
+  final ValueNotifier<_AmbientPalette> _ambientPalette =
+      ValueNotifier<_AmbientPalette>(_AmbientPalette.fallback);
+  Timer? _ambientSampleTimer;
+  bool _ambientSampleInFlight = false;
+  bool _suppressControlsForSeek = false;
   late final PlayerCubit _playerCubit;
   late final UserLibraryCubit? _libraryCubit;
   late final MovieEngagementRepository _engagementRepository;
@@ -452,8 +469,8 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
     widget.overlayController?.removeListener(_handleOverlayPresentationChanged);
     _removeCommentsOverlayEntry();
     _hideControlsTimer?.cancel();
-    _seekThrottle?.cancel();
     _seekOverlayTimer?.cancel();
+    _ambientSampleTimer?.cancel();
     _landscapeZoomLabelTimer?.cancel();
     _orientationChangeFallbackTimer?.cancel();
     _episodeKeyboardMetricsDebounce?.cancel();
@@ -493,24 +510,13 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
     _episodeScrollController.dispose();
     _landscapeEpisodeScrollController.dispose();
     _scrubProgress.dispose();
+    _ambientPalette.dispose();
 
     unawaited(SupportRotateScreen.onlyPotrait());
     _connectivityConfirmTimer?.cancel();
     _castEventsSubscription?.cancel();
     _deviceOrientationSubscription?.cancel();
     super.dispose();
-  }
-
-  void _seekToThrottled(Duration target, {int ms = 80}) {
-    _seekThrottle?.cancel();
-    _seekThrottle = Timer(Duration(milliseconds: ms), () {
-      if (!mounted) return;
-      if (_isGoogleCasting) {
-        unawaited(_castingService.seekGoogleCast(target));
-        return;
-      }
-      _videoPlayerController?.seekTo(target);
-    });
   }
 
   VideoPlayerController _createVideoPlayerController(String videoUrl) {
@@ -881,11 +887,15 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
     _startingPictureInPicture = true;
     try {
       final attached = await _attachPictureInPictureController(controller);
-      if (!attached) return;
+      if (!attached) {
+        await controller.pause();
+        return;
+      }
 
       final started = await IosPictureInPictureService.start();
       if (!started) {
         debugPrint('[PiP] iOS chưa cho phép bắt đầu PiP.');
+        await controller.pause();
         return;
       }
       if (started && !controller.value.isPlaying) {
@@ -894,6 +904,7 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
     } catch (error, stackTrace) {
       debugPrint('[PiP] Không thể bắt đầu PiP: $error');
       debugPrintStack(stackTrace: stackTrace);
+      await controller.pause();
     } finally {
       _startingPictureInPicture = false;
     }
@@ -906,12 +917,14 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
       _syncStatusHeaderTracking();
 
       unawaited(IosPictureInPictureService.stop());
+      _startAmbientSampling();
       _syncPlaybackSideEffects(force: true);
       return;
     }
 
     if (state == AppLifecycleState.inactive ||
         state == AppLifecycleState.paused) {
+      _ambientSampleTimer?.cancel();
       unawaited(_saveWatchProgress(flushRemote: true));
       unawaited(_startPictureInPictureIfNeeded());
     }
@@ -1617,6 +1630,7 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
     // Setup video listeners after player is initialized
     _attachVpListeners();
     await _attachPictureInPicture();
+    _startAmbientSampling();
     _syncPlaybackSideEffects(force: true);
 
     if (!mounted || generation != _playerInitGeneration) return;
@@ -1646,9 +1660,9 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
     );
 
     _removeVpListeners();
+    _ambientSampleTimer?.cancel();
     _hideControlsTimer?.cancel();
     _seekOverlayTimer?.cancel();
-    _seekThrottle?.cancel();
     PlaybackWakelock.unawaitedSetEnabled(false);
 
     final oldChewieController = _chewieController;
@@ -1773,6 +1787,7 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
     // Setup video listeners after new episode is loaded
     _attachVpListeners();
     await _attachPictureInPicture();
+    _startAmbientSampling();
     _syncPlaybackSideEffects(force: true);
 
     if (!mounted || generation != _playerInitGeneration) return;
@@ -1950,7 +1965,7 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
         setState(() {
           _isPlaybackBuffering = isBuffering;
 
-          if (isBuffering) {
+          if (isBuffering && !_suppressControlsForSeek) {
             // Giữ header, back và control bar.
             _showControls = true;
             _showSeekOverlay = false;
@@ -1959,7 +1974,7 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
         _syncMiniPlayerAvailability();
 
         // Mạng ổn trở lại thì bắt đầu đếm 3 giây để ẩn controls.
-        if (!isBuffering) {
+        if (!isBuffering && !_suppressControlsForSeek) {
           _resetHideControlsTimer();
         }
       }
@@ -2541,6 +2556,157 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
     );
   }
 
+  void _startAmbientSampling() {
+    _ambientSampleTimer?.cancel();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) unawaited(_sampleAmbientFrame());
+    });
+    _ambientSampleTimer = Timer.periodic(
+      const Duration(milliseconds: 1200),
+      (_) => unawaited(_sampleAmbientFrame()),
+    );
+  }
+
+  Future<void> _sampleAmbientFrame() async {
+    final vp = _videoPlayerController;
+    if (!mounted ||
+        _ambientSampleInFlight ||
+        vp == null ||
+        !vp.value.isInitialized ||
+        vp.value.hasError ||
+        vp.value.isBuffering ||
+        _isExternalPlaybackActive ||
+        (widget.overlayController?.isMini ?? false)) {
+      return;
+    }
+
+    _ambientSampleInFlight = true;
+    try {
+      final palette = Platform.isIOS
+          ? await _sampleIosAmbientPalette()
+          : await _sampleFlutterTexturePalette();
+      if (!mounted || palette == null) return;
+      _ambientPalette.value = palette;
+    } catch (error) {
+      debugPrint('[Ambient] Không thể lấy màu frame: $error');
+    } finally {
+      _ambientSampleInFlight = false;
+    }
+  }
+
+  Future<_AmbientPalette?> _sampleIosAmbientPalette() async {
+    final colors = await IosPictureInPictureService.sampleAmbientColors();
+    if (colors.length < 2) return null;
+    return _AmbientPalette(
+      left: _normalizeAmbientColor(Color(colors[0].toUnsigned(32))),
+      right: _normalizeAmbientColor(Color(colors[1].toUnsigned(32))),
+    );
+  }
+
+  Future<_AmbientPalette?> _sampleFlutterTexturePalette() async {
+    final renderObject = _playerSurfaceKey.currentContext?.findRenderObject();
+    if (renderObject is! RenderRepaintBoundary || renderObject.size.isEmpty) {
+      return null;
+    }
+
+    final pixelRatio = (48 / renderObject.size.width).clamp(0.02, 1.0);
+    final image = await renderObject.toImage(pixelRatio: pixelRatio);
+    try {
+      final data = await image.toByteData(format: ImageByteFormat.rawRgba);
+      if (data == null) return null;
+      final bytes = data.buffer.asUint8List();
+      final middle = image.width ~/ 2;
+      if (middle == 0 || image.height == 0) return null;
+      return _AmbientPalette(
+        left: _averageAmbientRegion(
+          bytes,
+          width: image.width,
+          height: image.height,
+          startX: 0,
+          endX: middle,
+        ),
+        right: _averageAmbientRegion(
+          bytes,
+          width: image.width,
+          height: image.height,
+          startX: middle,
+          endX: image.width,
+        ),
+      );
+    } finally {
+      image.dispose();
+    }
+  }
+
+  Color _averageAmbientRegion(
+    Uint8List bytes, {
+    required int width,
+    required int height,
+    required int startX,
+    required int endX,
+  }) {
+    var red = 0;
+    var green = 0;
+    var blue = 0;
+    var count = 0;
+    for (var y = 0; y < height; y++) {
+      for (var x = startX; x < endX; x++) {
+        final offset = (y * width + x) * 4;
+        if (offset + 3 >= bytes.length || bytes[offset + 3] < 128) continue;
+        red += bytes[offset];
+        green += bytes[offset + 1];
+        blue += bytes[offset + 2];
+        count++;
+      }
+    }
+    if (count == 0) return _AmbientPalette.fallback.left;
+    return _normalizeAmbientColor(
+      Color.fromARGB(255, red ~/ count, green ~/ count, blue ~/ count),
+    );
+  }
+
+  Color _normalizeAmbientColor(Color color) {
+    final hsl = HSLColor.fromColor(color);
+    return hsl
+        .withSaturation(hsl.saturation.clamp(0.0, 0.72))
+        .withLightness((hsl.lightness * 0.72).clamp(0.08, 0.38))
+        .toColor();
+  }
+
+  Widget _buildDynamicAmbient({double strength = 1}) {
+    return ValueListenableBuilder<_AmbientPalette>(
+      valueListenable: _ambientPalette,
+      builder: (context, palette, _) {
+        final reducedMotion = MediaQuery.maybeOf(context)?.disableAnimations;
+        final duration = reducedMotion ?? false
+            ? Duration.zero
+            : const Duration(milliseconds: 1050);
+        return AnimatedContainer(
+          duration: duration,
+          curve: Curves.easeInOutCubic,
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.centerLeft,
+              end: Alignment.centerRight,
+              colors: [
+                palette.left.withValues(alpha: 0.88 * strength),
+                Color.lerp(
+                  palette.left,
+                  palette.right,
+                  0.5,
+                )!.withValues(alpha: 0.72 * strength),
+                palette.right.withValues(alpha: 0.88 * strength),
+              ],
+            ),
+          ),
+          child: ColoredBox(
+            color: Colors.black.withValues(alpha: 0.22 + 0.2 * (1 - strength)),
+          ),
+        );
+      },
+    );
+  }
+
   Future<void> _togglePlayPause() async {
     if (_isGoogleCasting) {
       if (_isGoogleCastPlaying) {
@@ -3002,16 +3168,20 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
     double localDx,
     double width, {
     required bool keepControlsVisible,
+    bool pausePlayback = true,
   }) {
     final vp = _videoPlayerController;
+
     if (vp == null || !vp.value.isInitialized) return;
 
     final fraction = _seekFractionFromLocal(localDx, width);
+
     if (fraction == null) return;
 
     _startSeekbarDragAtFraction(
       fraction,
       keepControlsVisible: keepControlsVisible,
+      pausePlayback: pausePlayback,
     );
   }
 
@@ -3019,7 +3189,6 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
     double fraction, {
     required bool keepControlsVisible,
     bool pausePlayback = false,
-    bool seekDuringDrag = true,
   }) {
     final vp = _videoPlayerController;
     if (vp == null || !vp.value.isInitialized) return;
@@ -3028,7 +3197,6 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
     final target = _seekTargetForFraction(vp.value, safeFraction);
 
     _hideControlsTimer?.cancel();
-    _seekThrottle?.cancel();
     _wasPlayingBeforeScrub = vp.value.isPlaying;
     _scrubSessionId++;
     _scrubPauseFuture = pausePlayback && _wasPlayingBeforeScrub
@@ -3042,10 +3210,6 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
       _previewPosition = target;
     });
     _scrubProgress.value = safeFraction;
-
-    if (seekDuringDrag) {
-      _seekToThrottled(target, ms: 45);
-    }
   }
 
   void _updateSeekbarDrag(double localDx, double width) {
@@ -3055,10 +3219,7 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
     _updateSeekbarDragAtFraction(fraction);
   }
 
-  void _updateSeekbarDragAtFraction(
-    double fraction, {
-    bool seekDuringDrag = true,
-  }) {
+  void _updateSeekbarDragAtFraction(double fraction) {
     final vp = _videoPlayerController;
     if (vp == null || !vp.value.isInitialized) return;
 
@@ -3070,19 +3231,18 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
     _scrubValue = safeFraction;
     _previewPosition = target;
     _scrubProgress.value = safeFraction;
-
-    if (seekDuringDrag) {
-      _seekToThrottled(target, ms: 70);
-    }
   }
 
   Future<void> _finishSeekbarDrag({required bool keepControlsVisible}) async {
     final vp = _videoPlayerController;
+
     if (vp == null || !vp.value.isInitialized) return;
 
-    _seekThrottle?.cancel();
     final scrubSessionId = _scrubSessionId;
-    final targetFraction = _scrubValue;
+
+    // Chính xác thời gian user đang nhìn thấy khi kéo.
+    final targetPosition = _previewPosition;
+
     final shouldResumePlayback = _wasPlayingBeforeScrub;
     final pauseFuture = _scrubPauseFuture;
 
@@ -3091,17 +3251,25 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
         await pauseFuture;
       } catch (_) {}
     }
+
     if (!mounted || scrubSessionId != _scrubSessionId) return;
 
-    await _seekTo(targetFraction);
+    if (_isGoogleCasting) {
+      await _castingService.seekGoogleCast(targetPosition);
+    } else {
+      await vp.seekTo(targetPosition);
+    }
+
     if (!mounted || scrubSessionId != _scrubSessionId) return;
 
-    if (shouldResumePlayback && !vp.value.isPlaying) {
+    if (shouldResumePlayback) {
       await vp.play();
     }
 
     if (!mounted || scrubSessionId != _scrubSessionId) return;
+
     _scrubPauseFuture = null;
+
     setState(() {
       _showControls = keepControlsVisible;
       _isScrubbing = false;
@@ -3147,6 +3315,7 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
     // Ẩn controls khi tua và chỉ hiện lại khi user tap video.
     _hideControlsTimer?.cancel();
     setState(() {
+      _suppressControlsForSeek = true;
       _showControls = false; // <- ẩn play/pause + top bar
       if (withinWindow && _seekDir == dir) {
         _seekCount += 1;
@@ -3181,7 +3350,10 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
       if (!mounted) return;
       _arrowCtrl.stop();
       _arrowCtrl.value = 0;
-      setState(() => _showSeekOverlay = false);
+      setState(() {
+        _showSeekOverlay = false;
+        _suppressControlsForSeek = false;
+      });
     });
 
     // _resetHideControlsTimer();
@@ -3745,26 +3917,14 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
           alignment: Alignment.center,
           fit: StackFit.expand,
           children: [
-            if (_videoPlayerController != null &&
-                _videoPlayerController!.value.isInitialized &&
-                !_supportsIosPlaybackIntegration)
-              Positioned.fill(
-                child: Opacity(
-                  opacity: 0.8,
-                  child: ImageFiltered(
-                    imageFilter: ImageFilter.blur(sigmaX: 50, sigmaY: 30),
-                    child: FittedBox(
-                      fit: BoxFit.cover,
-                      child: SizedBox(
-                        width: _videoPlayerController!.value.size.width,
-                        height: _videoPlayerController!.value.size.height,
-                        child: VideoPlayer(_videoPlayerController!),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            // chỉ build ambient/blur khi KHÔNG minify
+            if (isExpanded &&
+                _videoPlayerController != null &&
+                _videoPlayerController!.value.isInitialized)
+              Positioned.fill(child: _buildDynamicAmbient()),
+            // if (_videoPlayerController != null &&
+            //     _videoPlayerController!.value.isInitialized)
+            //   Positioned.fill(child: _buildDynamicAmbient()),
+            // // chỉ build ambient/blur khi KHÔNG minify
             _buildAmbientAroundVideo(),
             if (_chewieController != null)
               Center(
@@ -3980,9 +4140,7 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
   // Ambient blur "lụi" xuống đầu panel
   Widget _buildPanelAmbientTop() {
     final vp = _videoPlayerController;
-    if (vp == null ||
-        !vp.value.isInitialized ||
-        _supportsIosPlaybackIntegration) {
+    if (vp == null || !vp.value.isInitialized) {
       return const SizedBox.shrink();
     }
 
@@ -3992,22 +4150,7 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
         child: Stack(
           fit: StackFit.expand,
           children: [
-            // Lớp 1: Video (Chỉ lấy nửa dưới)
-            Opacity(
-              opacity: .45,
-              child: ImageFiltered(
-                imageFilter: ImageFilter.blur(sigmaX: 50, sigmaY: 50),
-                child: FittedBox(
-                  fit: BoxFit.cover,
-
-                  child: SizedBox(
-                    width: vp.value.size.width,
-                    height: vp.value.size.height,
-                    child: VideoPlayer(vp),
-                  ),
-                ),
-              ),
-            ),
+            _buildDynamicAmbient(strength: 0.72),
 
             // Lớp 2: Gradient
             Positioned.fill(
@@ -4036,9 +4179,7 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
 
   Widget _buildTopAmbientStrip(double h) {
     final vp = _videoPlayerController;
-    if (vp == null ||
-        !vp.value.isInitialized ||
-        _supportsIosPlaybackIntegration) {
+    if (vp == null || !vp.value.isInitialized) {
       return SizedBox(height: h);
     }
     return SizedBox(
@@ -4047,25 +4188,12 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
         child: Stack(
           fit: StackFit.expand,
           children: [
-            Opacity(
-              opacity: 0.80,
-              child: ImageFiltered(
-                imageFilter: ImageFilter.blur(sigmaX: 50, sigmaY: 50),
-                child: FittedBox(
-                  fit: BoxFit.cover,
-                  child: SizedBox(
-                    width: vp.value.size.width,
-                    height: vp.value.size.height,
-                    child: VideoPlayer(vp),
-                  ),
-                ),
-              ),
-            ),
+            _buildDynamicAmbient(strength: 0.78),
             DecoratedBox(
               decoration: BoxDecoration(
                 color: _showControls
                     ? Color(0xff191A24).withOpacity(1)
-                    : Color(0xff191A24).withOpacity(0.65),
+                    : Colors.transparent,
               ),
             ),
           ],
@@ -5995,7 +6123,7 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
             if (_activeSeekbarPointer != event.pointer) return;
             final fraction = fractionFor(event.localPosition);
             if (fraction == null) return;
-            _updateSeekbarDragAtFraction(fraction, seekDuringDrag: false);
+            _updateSeekbarDragAtFraction(fraction);
           }
 
           void finishPointer(PointerEvent event, {required bool update}) {
@@ -6054,8 +6182,7 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
                 _startSeekbarDragAtFraction(
                   fraction,
                   keepControlsVisible: false,
-                  pausePlayback: false,
-                  seekDuringDrag: false,
+                  pausePlayback: true,
                 );
               },
               onPointerMove: updatePointer,
@@ -6320,6 +6447,15 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
     _hideControlsTimer?.cancel();
 
     if (widget.overlayController != null) {
+      if (!_playbackCanEnterMiniPlayer || _playerLoadError != null) {
+        try {
+          await _videoPlayerController?.pause();
+        } catch (_) {}
+        await SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+        await SupportRotateScreen.onlyPotrait();
+        widget.overlayController?.close();
+        return;
+      }
       await _enterMiniPlayer();
       _isExitingPlayer = false;
       return;
@@ -6371,24 +6507,8 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
               children: [
                 if (showLandscapeBlur &&
                     _videoPlayerController != null &&
-                    _videoPlayerController!.value.isInitialized &&
-                    !_supportsIosPlaybackIntegration)
-                  Positioned.fill(
-                    child: Opacity(
-                      opacity: 0.35,
-                      child: ImageFiltered(
-                        imageFilter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
-                        child: FittedBox(
-                          fit: BoxFit.cover,
-                          child: SizedBox(
-                            width: _videoPlayerController!.value.size.width,
-                            height: _videoPlayerController!.value.size.height,
-                            child: VideoPlayer(_videoPlayerController!),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
+                    _videoPlayerController!.value.isInitialized)
+                  Positioned.fill(child: _buildDynamicAmbient(strength: 0.82)),
                 _buildLandscapeZoomableVideo(
                   fillScale: fillScale,
                   interactionWidth: viewport.width,
@@ -7162,5 +7282,58 @@ class _IosWifiStrengthPainter extends CustomPainter {
     return oldDelegate.level != level ||
         oldDelegate.activeColor != activeColor ||
         oldDelegate.inactiveColor != inactiveColor;
+  }
+}
+
+class PlayerRippleButton extends StatelessWidget {
+  const PlayerRippleButton({
+    super.key,
+    required this.onTap,
+    required this.child,
+    this.size = 56,
+    this.splashRadius,
+    this.backgroundColor = Colors.transparent,
+    this.splashColor = const Color(0x45FFFFFF),
+    this.highlightColor = const Color(0x18FFFFFF),
+  });
+
+  final VoidCallback? onTap;
+  final Widget child;
+
+  final double size;
+  final double? splashRadius;
+
+  final Color backgroundColor;
+  final Color splashColor;
+  final Color highlightColor;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: size,
+      height: size,
+      child: Material(
+        color: backgroundColor,
+        shape: const CircleBorder(),
+        child: InkResponse(
+          onTap: onTap,
+
+          // Ripple hình tròn
+          containedInkWell: false,
+          highlightShape: BoxShape.circle,
+
+          // Độ lớn sóng bung ra
+          radius: splashRadius ?? size * 0.7,
+
+          splashColor: splashColor,
+          highlightColor: highlightColor,
+
+          // cảm giác ripple mượt hơn Material mặc định
+          splashFactory: InkRipple.splashFactory,
+
+          child: Center(child: child),
+        ),
+      ),
+    );
   }
 }

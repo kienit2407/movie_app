@@ -386,12 +386,28 @@ class SupabaseUserLibraryRepository implements UserLibraryRepository {
     if (updatedUser == null) {
       throw const AuthException('Không thể đọc hồ sơ vừa cập nhật.');
     }
-    await _client.from('profiles').upsert({
-      'id': _userId,
-      'display_name': name,
-      'avatar_url': nextAvatarUrl.isEmpty ? null : nextAvatarUrl,
-      'updated_at': DateTime.now().toUtc().toIso8601String(),
-    }, onConflict: 'id');
+    try {
+      await _client.from('profiles').upsert({
+        'id': _userId,
+        'display_name': name,
+        'avatar_url': nextAvatarUrl.isEmpty ? null : nextAvatarUrl,
+        'updated_at': DateTime.now().toUtc().toIso8601String(),
+      }, onConflict: 'id');
+    } catch (_) {
+      // Các database cũ đồng bộ profiles bằng trigger auth.users nhưng chưa
+      // cấp quyền upsert trực tiếp. Xác nhận trigger đã lưu đúng dữ liệu trước
+      // khi coi lỗi quyền đó là thất bại của thao tác cập nhật.
+      final reflected = await _client
+          .from('profiles')
+          .select('display_name, avatar_url')
+          .eq('id', _userId)
+          .maybeSingle();
+      final reflectedName = reflected?['display_name']?.toString().trim() ?? '';
+      final reflectedAvatar = reflected?['avatar_url']?.toString().trim() ?? '';
+      if (reflectedName != name || reflectedAvatar != nextAvatarUrl) {
+        rethrow;
+      }
+    }
     final nextAvatarPath = _avatarObjectPath(nextAvatarUrl);
     if (previousAvatarPath != null &&
         nextAvatarPath != null &&

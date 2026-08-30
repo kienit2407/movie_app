@@ -45,11 +45,9 @@ class NewMovieNotificationNavigation {
     _flushIfReady();
   }
 
-  static String takeRouteAfterSplash() {
+  static void markSplashFinished() {
     _splashFinished = true;
-    final route = _pendingRoute ?? AppRoutes.home;
-    _pendingRoute = null;
-    return route;
+    _flushIfReady();
   }
 
   static void _flushIfReady() {
