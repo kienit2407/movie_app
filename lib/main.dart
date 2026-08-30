@@ -57,9 +57,10 @@ import 'package:workmanager/workmanager.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await AppObservability.initialize();
+  Bloc.observer = AppObservability.blocObserver();
   MovieDeepLinkService.instance.initialize();
-  PaintingBinding.instance.imageCache.maximumSize = 500;
-  PaintingBinding.instance.imageCache.maximumSizeBytes = 160 << 20;
+  PaintingBinding.instance.imageCache.maximumSize = 250;
+  PaintingBinding.instance.imageCache.maximumSizeBytes = 80 << 20;
   debugPrint('=== [1/8] WidgetsFlutterBinding initialized ===');
   // 1. Chỉ set orientation trên Mobile
 
@@ -82,7 +83,7 @@ Future<void> main() async {
   Hive.registerAdapter(WatchProgressModelAdapter());
   Hive.registerAdapter(WatchHistoryEntryAdapter());
   debugPrint('=== [5/8] Hive initialized ===');
-  await FastCachedImageConfig.init(clearCacheAfter: const Duration(days: 1));
+  await FastCachedImageConfig.init(clearCacheAfter: const Duration(days: 7));
 
   debugPrint('=== [6/8] FastCachedImage initialized ===');
   // ZerorateHlsSDK.initialize();

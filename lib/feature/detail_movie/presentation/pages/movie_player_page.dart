@@ -78,6 +78,7 @@ class MoviePlayerPage extends StatefulWidget {
   final int initialEpisodeIndex;
   final String initialServer;
   final int initialServerIndex;
+  final bool resumeFromHistory;
   final PlayerOverlayController? overlayController;
   final ValueListenable<double>? overlayProgress;
 
@@ -92,6 +93,7 @@ class MoviePlayerPage extends StatefulWidget {
     this.initialServer = 'Server 1',
     required this.movie,
     required this.initialServerIndex,
+    this.resumeFromHistory = true,
     this.overlayController,
     this.overlayProgress,
   }) : episodes = EpisodeHelper.normalizeEpisodes(episodes);
@@ -273,6 +275,8 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
   bool _landscapeAtOrAboveFill = false;
   bool _landscapeControlsVisibleBeforeZoom = false;
   bool _startingPictureInPicture = false;
+  bool _pictureInPictureRequestedForBackground = false;
+  bool _pictureInPictureActive = false;
   final ValueNotifier<_AmbientPalette> _ambientPalette =
       ValueNotifier<_AmbientPalette>(_AmbientPalette.fallback);
   Timer? _ambientSampleTimer;
@@ -298,6 +302,14 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
   DateTime? _lastNowPlayingUpdate;
   bool? _lastNowPlayingIsPlaying;
   bool get _supportsIosPlaybackIntegration => Platform.isIOS;
+  bool get _appIsActive {
+    final state = WidgetsBinding.instance.lifecycleState;
+    return state == null || state == AppLifecycleState.resumed;
+  }
+
+  bool get _canPlayInCurrentLifecycle =>
+      _appIsActive ||
+      (_supportsIosPlaybackIntegration && _pictureInPictureActive);
   bool get _isGoogleCasting =>
       _castSession.type == CastingType.googleCast && _castSession.isConnected;
   bool get _isAirPlayActive =>
@@ -689,7 +701,7 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
 
     unawaited(_refreshStatusHeader());
 
-    _wifiQualityTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+    _wifiQualityTimer = Timer.periodic(const Duration(seconds: 2), (_) {
       _refreshEstimatedWifiLevel();
     });
     // Đọc mạng ngay khi vào màn hình.
@@ -713,7 +725,7 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
       unawaited(_refreshStatusHeader());
     });
 
-    _statusHeaderTimer = Timer.periodic(const Duration(seconds: 10), (_) {
+    _statusHeaderTimer = Timer.periodic(const Duration(seconds: 30), (_) {
       unawaited(_refreshStatusHeader());
     });
   }
@@ -888,20 +900,24 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
     try {
       final attached = await _attachPictureInPictureController(controller);
       if (!attached) {
+        _pictureInPictureActive = false;
         await controller.pause();
         return;
       }
 
       final started = await IosPictureInPictureService.start();
       if (!started) {
+        _pictureInPictureActive = false;
         debugPrint('[PiP] iOS chưa cho phép bắt đầu PiP.');
         await controller.pause();
         return;
       }
+      _pictureInPictureActive = true;
       if (started && !controller.value.isPlaying) {
         await controller.play();
       }
     } catch (error, stackTrace) {
+      _pictureInPictureActive = false;
       debugPrint('[PiP] Không thể bắt đầu PiP: $error');
       debugPrintStack(stackTrace: stackTrace);
       await controller.pause();
@@ -910,23 +926,94 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
     }
   }
 
+  Future<void> _pauseLocalPlaybackInBackground() async {
+    final controller = _videoPlayerController;
+    if (controller == null || !controller.value.isPlaying) return;
+    await controller.pause();
+    _syncPlaybackSideEffects(force: true);
+  }
+
+  Future<void> _handleIosAppResumed() async {
+    Duration? lockedPosition;
+    try {
+      lockedPosition =
+          await IosPictureInPictureService.consumeDeviceLockPosition();
+    } catch (error, stackTrace) {
+      debugPrint('[PiP] Không đọc được vị trí lúc khóa máy: $error');
+      debugPrintStack(stackTrace: stackTrace);
+    }
+
+    try {
+      await IosPictureInPictureService.stop();
+    } catch (error, stackTrace) {
+      debugPrint('[PiP] Không thể đồng bộ trạng thái khi mở lại app: $error');
+      debugPrintStack(stackTrace: stackTrace);
+    }
+
+    if (!mounted || lockedPosition == null) {
+      _syncPlaybackSideEffects(force: true);
+      return;
+    }
+
+    final controller = _videoPlayerController;
+    if (controller == null || !controller.value.isInitialized) {
+      _syncPlaybackSideEffects(force: true);
+      return;
+    }
+
+    final duration = controller.value.duration;
+    final restoredPosition =
+        duration > Duration.zero && lockedPosition > duration
+        ? duration
+        : lockedPosition;
+
+    await controller.pause();
+    if ((controller.value.position - restoredPosition).abs() >
+        const Duration(milliseconds: 250)) {
+      await controller.seekTo(restoredPosition);
+    }
+
+    await _saveWatchProgress(
+      positionOverride: restoredPosition,
+      flushRemote: true,
+    );
+    _syncPlaybackSideEffects(force: true);
+  }
+
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     super.didChangeAppLifecycleState(state);
     if (state == AppLifecycleState.resumed) {
+      _pictureInPictureRequestedForBackground = false;
+      _pictureInPictureActive = false;
       _syncStatusHeaderTracking();
 
-      unawaited(IosPictureInPictureService.stop());
-      _startAmbientSampling();
+      unawaited(_handleIosAppResumed());
       _syncPlaybackSideEffects(force: true);
       return;
     }
 
     if (state == AppLifecycleState.inactive ||
-        state == AppLifecycleState.paused) {
+        state == AppLifecycleState.paused ||
+        state == AppLifecycleState.detached) {
       _ambientSampleTimer?.cancel();
+      _ambientSampleTimer = null;
       unawaited(_saveWatchProgress(flushRemote: true));
+    }
+
+    if (_supportsIosPlaybackIntegration &&
+        (state == AppLifecycleState.inactive ||
+            state == AppLifecycleState.paused) &&
+        !_pictureInPictureRequestedForBackground) {
+      _pictureInPictureRequestedForBackground = true;
       unawaited(_startPictureInPictureIfNeeded());
+    } else if (!_supportsIosPlaybackIntegration &&
+        state == AppLifecycleState.paused) {
+      // Android hiện chưa có system PiP cho Flutter texture. Không cho âm
+      // thanh tiếp tục chạy ẩn khi người dùng chuyển sang ứng dụng khác.
+      unawaited(_pauseLocalPlaybackInBackground());
+    } else if (state == AppLifecycleState.detached) {
+      unawaited(_pauseLocalPlaybackInBackground());
     }
     _stopStatusHeaderTicker();
   }
@@ -1045,12 +1132,14 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
   void _syncPlaybackSideEffects({bool force = false}) {
     final value = _videoPlayerController?.value;
     if (value == null) {
+      _syncAmbientSampling(isPlaying: false);
       _syncViewQualification();
       PlaybackWakelock.unawaitedSetEnabled(false);
       return;
     }
 
     final isPlaying = value.isInitialized && value.isPlaying;
+    _syncAmbientSampling(isPlaying: isPlaying);
     _syncViewQualification(value: value);
     PlaybackWakelock.unawaitedSetEnabled(isPlaying);
 
@@ -1428,15 +1517,17 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
     bool useCurrentPlaybackPosition = true,
     bool preserveExistingProgressWhenUnavailable = true,
     bool flushRemote = false,
+    Duration? positionOverride,
   }) {
     final videoValue = _videoPlayerController?.value;
     final hasPlaybackPosition =
-        useCurrentPlaybackPosition && (videoValue?.isInitialized ?? false);
-    final positionMs = hasPlaybackPosition
-        ? videoValue!.position.inMilliseconds
-        : 0;
+        positionOverride != null ||
+        (useCurrentPlaybackPosition && (videoValue?.isInitialized ?? false));
+    final positionMs =
+        positionOverride?.inMilliseconds ??
+        (hasPlaybackPosition ? videoValue!.position.inMilliseconds : 0);
     final durationMs = hasPlaybackPosition
-        ? videoValue!.duration.inMilliseconds
+        ? videoValue?.duration.inMilliseconds ?? 0
         : 0;
     final serverIndex = _selectedServerIndex;
     final episodeIndex = _currentEpisodeIndex;
@@ -1522,7 +1613,7 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
 
   void _startSaveProgressTimer() {
     _saveProgressTimer?.cancel();
-    _saveProgressTimer = Timer.periodic(const Duration(seconds: 10), (_) {
+    _saveProgressTimer = Timer.periodic(const Duration(seconds: 20), (_) {
       unawaited(_saveWatchProgress());
     });
   }
@@ -1582,12 +1673,13 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
 
     UserWatchHistory? savedProgress;
     final libraryState = _libraryCubit?.state;
-    if (libraryState?.isAuthenticated ?? false) {
+    if (widget.resumeFromHistory && (libraryState?.isAuthenticated ?? false)) {
       for (final history in libraryState!.history) {
         if (history.slug == widget.slug &&
             history.lastServerIndex == _selectedServerIndex &&
             history.lastEpisodeIndex == _currentEpisodeIndex &&
-            history.progress < .9) {
+            (history.durationMs <= 0 ||
+                history.durationMs - history.positionMs > 10000)) {
           savedProgress = history;
           break;
         }
@@ -1601,7 +1693,7 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
 
     final chewieController = ChewieController(
       videoPlayerController: initializedVideoController,
-      autoPlay: !_isGoogleCasting,
+      autoPlay: !_isGoogleCasting && _canPlayInCurrentLifecycle,
       looping: false,
       aspectRatio: _resolvedVideoAspectRatio(initializedVideoController),
       autoInitialize: true,
@@ -1770,14 +1862,18 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
         'RestorePosition: Seek completed, position after seek: $posAfterSeek',
       );
       await Future.delayed(const Duration(milliseconds: 200));
-      if (!_isGoogleCasting) await chewieController.play();
+      if (!_isGoogleCasting && _canPlayInCurrentLifecycle) {
+        await chewieController.play();
+      }
       final posAfterPlay = initializedVideoController.value.position;
       debugPrint('RestorePosition: After play, position: $posAfterPlay');
     } else {
       debugPrint(
         'RestorePosition: Not restoring, _lastPosition=$_lastPosition, restoreLastPosition=$restoreLastPosition',
       );
-      if (!_isGoogleCasting) await chewieController.play();
+      if (!_isGoogleCasting && _canPlayInCurrentLifecycle) {
+        await chewieController.play();
+      }
     }
 
     if (!mounted || generation != _playerInitGeneration) return;
@@ -2459,6 +2555,7 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
     final currentTarget = overlayController?.target;
     _lastOverlayTarget = currentTarget;
     _syncStatusHeaderTracking();
+    _syncAmbientSampling();
     _syncMiniPlayerAvailability();
     if (overlayController == null ||
         !overlayController.isVisible ||
@@ -2562,9 +2659,30 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
       if (mounted) unawaited(_sampleAmbientFrame());
     });
     _ambientSampleTimer = Timer.periodic(
-      const Duration(milliseconds: 1200),
+      const Duration(milliseconds: 2500),
       (_) => unawaited(_sampleAmbientFrame()),
     );
+  }
+
+  void _syncAmbientSampling({bool? isPlaying}) {
+    final vp = _videoPlayerController;
+    final appIsActive =
+        WidgetsBinding.instance.lifecycleState == null ||
+        WidgetsBinding.instance.lifecycleState == AppLifecycleState.resumed;
+    final shouldSample =
+        mounted &&
+        appIsActive &&
+        (isPlaying ?? vp?.value.isPlaying ?? false) &&
+        (vp?.value.isInitialized ?? false) &&
+        !(widget.overlayController?.isMini ?? false) &&
+        !_isExternalPlaybackActive;
+
+    if (!shouldSample) {
+      _ambientSampleTimer?.cancel();
+      _ambientSampleTimer = null;
+      return;
+    }
+    if (_ambientSampleTimer == null) _startAmbientSampling();
   }
 
   Future<void> _sampleAmbientFrame() async {
@@ -2573,6 +2691,7 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
         _ambientSampleInFlight ||
         vp == null ||
         !vp.value.isInitialized ||
+        !vp.value.isPlaying ||
         vp.value.hasError ||
         vp.value.isBuffering ||
         _isExternalPlaybackActive ||
@@ -4184,21 +4303,7 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
     }
     return SizedBox(
       height: h,
-      child: ClipRect(
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            _buildDynamicAmbient(strength: 0.78),
-            DecoratedBox(
-              decoration: BoxDecoration(
-                color: _showControls
-                    ? Color(0xff191A24).withOpacity(1)
-                    : Colors.transparent,
-              ),
-            ),
-          ],
-        ),
-      ),
+      child: ClipRect(child: _buildDynamicAmbient(strength: 0.78)),
     );
   }
 

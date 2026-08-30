@@ -10,6 +10,7 @@ class MoviePlayerArgs {
   final int initialEpisodeIndex;
   final String initialServer;
   final int initialServerIndex;
+  final bool resumeFromHistory;
 
   final int? initialEpisodeNo;
   final String? initialEpisodeSlug;
@@ -25,6 +26,7 @@ class MoviePlayerArgs {
     this.episodes,
     this.movie, {
     this.initialServerIndex = 0,
+    this.resumeFromHistory = true,
     this.initialEpisodeNo,
     this.initialEpisodeSlug,
     this.initialServerName,

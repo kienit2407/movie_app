@@ -111,6 +111,30 @@ void main() {
     expect(cubit.state.avatarUrl, 'https://example.com/new-avatar.jpg');
     await cubit.close();
   });
+
+  test('uses newer auth metadata while public profile sync is delayed', () {
+    final updatedUser = User(
+      id: 'user-1',
+      appMetadata: const {},
+      userMetadata: const {
+        'full_name': 'Tên vừa cập nhật',
+        'avatar_url': 'https://example.com/new.jpg',
+        'profile_updated_at': '2026-08-30T12:00:00.000Z',
+      },
+      aud: 'authenticated',
+      email: 'user@example.com',
+      createdAt: '2026-08-02T00:00:00Z',
+    );
+
+    final profile = UserProfile.fromMap({
+      'display_name': 'Tên cũ',
+      'avatar_url': 'https://example.com/old.jpg',
+      'updated_at': '2026-08-30T11:00:00.000Z',
+    }, fallbackUser: updatedUser);
+
+    expect(profile.displayName, 'Tên vừa cập nhật');
+    expect(profile.avatarUrl, 'https://example.com/new.jpg');
+  });
 }
 
 final _user = User(

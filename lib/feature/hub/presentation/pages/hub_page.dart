@@ -36,6 +36,7 @@ class HubPage extends StatelessWidget {
         }
       },
       child: Scaffold(
+        resizeToAvoidBottomInset: false,
         extendBody: true,
         backgroundColor: AppColor.bgApp,
         body: navigationShell,
@@ -189,6 +190,8 @@ class _FloatingBlurHubBar extends StatelessWidget {
                                 height: 20,
                                 fit: BoxFit.contain,
                                 filterQuality: FilterQuality.high,
+                                color: Colors.white54,
+                                colorBlendMode: BlendMode.srcIn,
                               ),
                               activeIcon: Image.asset(
                                 'assets/images/home_filled.png',

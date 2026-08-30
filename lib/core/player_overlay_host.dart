@@ -184,6 +184,7 @@ class _PlayerOverlayHostState extends State<PlayerOverlayHost>
                   initialEpisodeIndex: args.initialEpisodeIndex,
                   initialServer: args.initialServer,
                   initialServerIndex: args.initialServerIndex,
+                  resumeFromHistory: args.resumeFromHistory,
                   overlayController: _controller,
                   overlayProgress: _controller.progress,
                 ),

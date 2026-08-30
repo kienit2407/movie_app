@@ -1,5 +1,7 @@
+import 'dart:async';
 import 'dart:typed_data';
 
+import 'package:movie_app/core/observability/app_observability.dart';
 import 'package:movie_app/feature/detail_movie/data/model/detail_movie_model.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -189,16 +191,27 @@ class UserProfile {
   factory UserProfile.fromMap(
     Map<String, dynamic> map, {
     required User fallbackUser,
-  }) => UserProfile(
-    displayName: _firstNonEmpty([
-      map['display_name'],
-      UserProfile.fromUser(fallbackUser).displayName,
-    ], fallback: 'Người dùng'),
-    avatarUrl: _firstNonEmpty([
-      map['avatar_url'],
-      UserProfile.fromUser(fallbackUser).avatarUrl,
-    ]),
-  );
+  }) {
+    final authProfile = UserProfile.fromUser(fallbackUser);
+    final metadataUpdatedAt = DateTime.tryParse(
+      fallbackUser.userMetadata?['profile_updated_at']?.toString() ?? '',
+    );
+    final publicUpdatedAt = DateTime.tryParse(
+      map['updated_at']?.toString() ?? '',
+    );
+    final authIsNewer =
+        metadataUpdatedAt != null &&
+        (publicUpdatedAt == null || metadataUpdatedAt.isAfter(publicUpdatedAt));
+    if (authIsNewer) return authProfile;
+
+    return UserProfile(
+      displayName: _firstNonEmpty([
+        map['display_name'],
+        authProfile.displayName,
+      ], fallback: 'Người dùng'),
+      avatarUrl: _firstNonEmpty([map['avatar_url'], authProfile.avatarUrl]),
+    );
+  }
 
   factory UserProfile.fromUser(User? user) {
     final metadata = user?.userMetadata ?? const <String, dynamic>{};
@@ -254,7 +267,7 @@ class SupabaseUserLibraryRepository implements UserLibraryRepository {
     if (user == null) throw const AuthException('Bạn cần đăng nhập.');
     final response = await _client
         .from('profiles')
-        .select('display_name, avatar_url')
+        .select('display_name, avatar_url, updated_at')
         .eq('id', user.id)
         .maybeSingle();
     if (response == null) return UserProfile.fromUser(user);
@@ -375,6 +388,8 @@ class SupabaseUserLibraryRepository implements UserLibraryRepository {
     final previousAvatarPath = _avatarObjectPath(existingProfile.avatarUrl);
     currentMetadata['full_name'] = name;
     currentMetadata['name'] = name;
+    final profileUpdatedAt = DateTime.now().toUtc();
+    currentMetadata['profile_updated_at'] = profileUpdatedAt.toIso8601String();
     if (nextAvatarUrl.isNotEmpty) {
       currentMetadata['avatar_url'] = nextAvatarUrl;
       currentMetadata['picture'] = nextAvatarUrl;
@@ -387,25 +402,49 @@ class SupabaseUserLibraryRepository implements UserLibraryRepository {
       throw const AuthException('Không thể đọc hồ sơ vừa cập nhật.');
     }
     try {
-      await _client.from('profiles').upsert({
-        'id': _userId,
+      final values = {
         'display_name': name,
         'avatar_url': nextAvatarUrl.isEmpty ? null : nextAvatarUrl,
-        'updated_at': DateTime.now().toUtc().toIso8601String(),
-      }, onConflict: 'id');
-    } catch (_) {
-      // Các database cũ đồng bộ profiles bằng trigger auth.users nhưng chưa
-      // cấp quyền upsert trực tiếp. Xác nhận trigger đã lưu đúng dữ liệu trước
-      // khi coi lỗi quyền đó là thất bại của thao tác cập nhật.
-      final reflected = await _client
+        'updated_at': profileUpdatedAt.toIso8601String(),
+      };
+      final updatedRows = await _client
           .from('profiles')
-          .select('display_name, avatar_url')
+          .update(values)
           .eq('id', _userId)
-          .maybeSingle();
+          .select('id');
+      if (updatedRows.isEmpty) {
+        await _client.from('profiles').insert({'id': _userId, ...values});
+      }
+    } catch (error, stackTrace) {
+      // Các database cũ đồng bộ profiles bằng trigger auth.users nhưng chưa
+      // cấp quyền ghi trực tiếp. Auth metadata đã được lưu thành công nên vẫn
+      // trả kết quả mới cho UI; đồng thời kiểm tra trigger và báo lỗi sync nền.
+      Map<String, dynamic>? reflected;
+      try {
+        reflected = await _client
+            .from('profiles')
+            .select('display_name, avatar_url, updated_at')
+            .eq('id', _userId)
+            .maybeSingle();
+      } catch (reflectionError, reflectionStackTrace) {
+        unawaited(
+          AppObservability.recordError(
+            reflectionError,
+            reflectionStackTrace,
+            reason: 'Could not verify public profile after sync failure',
+          ),
+        );
+      }
       final reflectedName = reflected?['display_name']?.toString().trim() ?? '';
       final reflectedAvatar = reflected?['avatar_url']?.toString().trim() ?? '';
       if (reflectedName != name || reflectedAvatar != nextAvatarUrl) {
-        rethrow;
+        unawaited(
+          AppObservability.recordError(
+            error,
+            stackTrace,
+            reason: 'Auth profile updated but public profile sync failed',
+          ),
+        );
       }
     }
     final nextAvatarPath = _avatarObjectPath(nextAvatarUrl);

@@ -13,6 +13,7 @@ final class IosPictureInPictureBridge: NSObject, AVPictureInPictureControllerDel
     private var ambientVideoOutput: AVPlayerItemVideoOutput?
     private weak var ambientPlayerItem: AVPlayerItem?
     private var pausePlayerWhenPictureInPictureStops = true
+    private var deviceLockPositionMilliseconds: Int64?
     private let rootViewProvider: () -> UIView?
     private var remoteCommandsConfigured = false
     private let readinessRetryDelay: TimeInterval = 0.1
@@ -50,6 +51,10 @@ final class IosPictureInPictureBridge: NSObject, AVPictureInPictureControllerDel
                 }
                 self.stop()
                 result(nil)
+            case "consumeDeviceLockPosition":
+                let positionMilliseconds = self.deviceLockPositionMilliseconds
+                self.deviceLockPositionMilliseconds = nil
+                result(positionMilliseconds)
             case "ambientColors":
                 result(self.sampleAmbientColors() ?? [])
             case "configureMediaSession":
@@ -333,7 +338,17 @@ final class IosPictureInPictureBridge: NSObject, AVPictureInPictureControllerDel
 
     func handleDeviceLocked() {
         pausePlayerWhenPictureInPictureStops = true
-        currentPlayer()?.pause()
+        if let player = currentPlayer() {
+            let position = player.currentTime().seconds
+            if position.isFinite {
+                deviceLockPositionMilliseconds = Int64(
+                    (max(position, 0) * 1_000).rounded()
+                )
+                refreshNowPlayingPosition(position)
+            }
+            player.pause()
+            refreshNowPlayingRate(isPlaying: false)
+        }
         stop()
     }
 

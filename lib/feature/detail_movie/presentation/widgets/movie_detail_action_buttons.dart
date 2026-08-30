@@ -1,9 +1,15 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
+import 'package:movie_app/common/components/alert_dialog/app_alert_dialog.dart';
 import 'package:movie_app/core/config/utils/movie_player_args.dart';
 import 'package:movie_app/core/player_overlay_launcher.dart';
 import 'package:movie_app/feature/detail_movie/data/model/detail_movie_model.dart';
+import 'package:movie_app/feature/library/data/user_library_repository.dart';
+import 'package:movie_app/feature/library/presentation/cubit/user_library_cubit.dart';
 
 class MovieDetailActionButtons extends StatefulWidget {
   final MovieModel movie;
@@ -57,8 +63,9 @@ class _MovieDetailActionButtonsState extends State<MovieDetailActionButtons> {
   void _navigateToPlayer(
     int serverIndex,
     int episodeIndex,
-    String episodeLink,
-  ) {
+    String episodeLink, {
+    bool resumeFromHistory = true,
+  }) {
     if (widget.episodes.isEmpty) return;
     context.openMoviePlayer(
       MoviePlayerArgs(
@@ -71,11 +78,12 @@ class _MovieDetailActionButtonsState extends State<MovieDetailActionButtons> {
         widget.episodes,
         widget.movie,
         initialServerIndex: serverIndex,
+        resumeFromHistory: resumeFromHistory,
       ),
     );
   }
 
-  void _playFirstEpisode() {
+  void _playFirstEpisode({bool resumeFromHistory = true}) {
     if (widget.episodes.isEmpty) return;
     if (widget.episodes[0].server_data.isEmpty) return;
     int serverIndex = 0;
@@ -83,7 +91,92 @@ class _MovieDetailActionButtonsState extends State<MovieDetailActionButtons> {
     String episodeLink = widget.episodes[0].server_data[0].link_m3u8.isNotEmpty
         ? widget.episodes[0].server_data[0].link_m3u8
         : widget.episodes[0].server_data[0].link_embed;
-    _navigateToPlayer(serverIndex, episodeIndex, episodeLink);
+    _navigateToPlayer(
+      serverIndex,
+      episodeIndex,
+      episodeLink,
+      resumeFromHistory: resumeFromHistory,
+    );
+  }
+
+  Future<void> _playSeriesFromBeginningOrResume() async {
+    final library = context.read<UserLibraryCubit>();
+    UserWatchHistory? history;
+    for (final item in library.state.history) {
+      if (item.slug == widget.movie.slug && item.lastEpisodeIndex != null) {
+        history = item;
+        break;
+      }
+    }
+
+    final target = history == null ? null : _resolveHistoryTarget(history);
+    if (history == null || target == null || !mounted) {
+      _playFirstEpisode(resumeFromHistory: false);
+      return;
+    }
+
+    final continueWatching = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AppAlertDialog(
+        icon: const Icon(Iconsax.video_play, color: Colors.white, size: 30),
+        title: 'Tiếp tục xem?',
+        content:
+            'Bạn đang xem ${history!.lastEpisodeName ?? 'tập ${target.episodeIndex + 1}'}. '
+            'Bạn muốn xem tiếp tập này hay xem lại từ tập 1?',
+        cancelButtonTitle: 'Xem lại từ đầu',
+        buttonTitle: 'Xem tiếp',
+      ),
+    );
+    if (!mounted || continueWatching == null) return;
+
+    if (!continueWatching) {
+      _playFirstEpisode(resumeFromHistory: false);
+      return;
+    }
+
+    _navigateToPlayer(
+      target.serverIndex,
+      target.episodeIndex,
+      target.episodeLink,
+    );
+  }
+
+  _HistoryPlaybackTarget? _resolveHistoryTarget(UserWatchHistory history) {
+    if (widget.episodes.isEmpty) return null;
+
+    var serverIndex = history.lastServerIndex ?? 0;
+    final serverName = history.lastServerName?.trim() ?? '';
+    if (serverName.isNotEmpty) {
+      final namedIndex = widget.episodes.indexWhere(
+        (server) => server.server_name == serverName,
+      );
+      if (namedIndex >= 0) serverIndex = namedIndex;
+    }
+    serverIndex = serverIndex.clamp(0, widget.episodes.length - 1).toInt();
+
+    final serverData = widget.episodes[serverIndex].server_data;
+    if (serverData.isEmpty) return null;
+
+    var episodeIndex = history.lastEpisodeIndex ?? 0;
+    final episodeName = history.lastEpisodeName?.trim() ?? '';
+    if (episodeName.isNotEmpty) {
+      final namedIndex = serverData.indexWhere(
+        (episode) => episode.name.trim() == episodeName,
+      );
+      if (namedIndex >= 0) episodeIndex = namedIndex;
+    }
+    episodeIndex = episodeIndex.clamp(0, serverData.length - 1).toInt();
+
+    final episode = serverData[episodeIndex];
+    final link = episode.link_m3u8.isNotEmpty
+        ? episode.link_m3u8
+        : episode.link_embed;
+    if (link.isEmpty) return null;
+    return _HistoryPlaybackTarget(
+      serverIndex: serverIndex,
+      episodeIndex: episodeIndex,
+      episodeLink: link,
+    );
   }
 
   void _playLatestEpisode() {
@@ -231,7 +324,9 @@ class _MovieDetailActionButtonsState extends State<MovieDetailActionButtons> {
           ),
         _buildPlayButton(
           text: 'Xem phim',
-          onTap: () => _playFirstEpisode(),
+          onTap: isFullMovie
+              ? () => _playFirstEpisode()
+              : () => unawaited(_playSeriesFromBeginningOrResume()),
           flex: isFullMovie ? 2 : 1,
         ),
         if (isFullMovie) const SizedBox(width: 12),
@@ -271,4 +366,16 @@ class _MovieDetailActionButtonsState extends State<MovieDetailActionButtons> {
       ],
     );
   }
+}
+
+class _HistoryPlaybackTarget {
+  const _HistoryPlaybackTarget({
+    required this.serverIndex,
+    required this.episodeIndex,
+    required this.episodeLink,
+  });
+
+  final int serverIndex;
+  final int episodeIndex;
+  final String episodeLink;
 }

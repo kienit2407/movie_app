@@ -5,6 +5,8 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:movie_app/firebase_options.dart';
 
 class AppObservability {
   AppObservability._();
@@ -17,7 +19,9 @@ class AppObservability {
   static Future<void> initialize() async {
     _installGlobalErrorHandlers();
     try {
-      await Firebase.initializeApp();
+      await Firebase.initializeApp(
+        options: DefaultFirebaseOptions.currentPlatform,
+      );
       final collect = !kDebugMode;
       await FirebaseCrashlytics.instance.setCrashlyticsCollectionEnabled(
         collect,
@@ -33,6 +37,8 @@ class AppObservability {
       );
     }
   }
+
+  static BlocObserver blocObserver() => _CrashReportingBlocObserver();
 
   static NavigatorObserver navigatorObserver() => _AnalyticsNavigatorObserver();
 
@@ -90,6 +96,20 @@ class AppObservability {
       unawaited(recordError(error, stack, fatal: true));
       return previousPlatformHandler?.call(error, stack) ?? _initialized;
     };
+  }
+}
+
+class _CrashReportingBlocObserver extends BlocObserver {
+  @override
+  void onError(BlocBase<dynamic> bloc, Object error, StackTrace stackTrace) {
+    unawaited(
+      AppObservability.recordError(
+        error,
+        stackTrace,
+        reason: 'Bloc error: ${bloc.runtimeType}',
+      ),
+    );
+    super.onError(bloc, error, stackTrace);
   }
 }
 

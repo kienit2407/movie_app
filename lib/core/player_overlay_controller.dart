@@ -170,6 +170,7 @@ class PlayerOverlayController extends ChangeNotifier {
       current.episodes,
       current.movie,
       initialServerIndex: serverIndex,
+      resumeFromHistory: current.resumeFromHistory,
       initialEpisodeNo: current.initialEpisodeNo,
       initialEpisodeSlug: current.initialEpisodeSlug,
       initialServerName: current.initialServerName,
@@ -208,7 +209,8 @@ class PlayerOverlayController extends ChangeNotifier {
     return a.slug == b.slug &&
         a.initialEpisodeLink == b.initialEpisodeLink &&
         a.initialEpisodeIndex == b.initialEpisodeIndex &&
-        a.initialServerIndex == b.initialServerIndex;
+        a.initialServerIndex == b.initialServerIndex &&
+        a.resumeFromHistory == b.resumeFromHistory;
   }
 
   @override

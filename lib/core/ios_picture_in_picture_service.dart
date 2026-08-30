@@ -30,6 +30,17 @@ class IosPictureInPictureService {
     await _channel.invokeMethod<void>('stop', {'pausePlayback': false});
   }
 
+  /// Returns the native AVPlayer position captured immediately before iOS
+  /// stopped PiP because the device was locked. The value is consumed once.
+  static Future<Duration?> consumeDeviceLockPosition() async {
+    if (!isSupportedPlatform) return null;
+    final milliseconds = await _channel.invokeMethod<int>(
+      'consumeDeviceLockPosition',
+    );
+    if (milliseconds == null || milliseconds < 0) return null;
+    return Duration(milliseconds: milliseconds);
+  }
+
   static Future<List<int>> sampleAmbientColors() async {
     if (!isSupportedPlatform) return const [];
     final colors = await _channel.invokeListMethod<int>('ambientColors');

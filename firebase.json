@@ -47,5 +47,33 @@
         "destination": "/index.html"
       }
     ]
+  },
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "movieapp-c3847",
+          "appId": "1:188531575867:android:9f6cd21491b179a5f9a01e",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "ios": {
+        "default": {
+          "projectId": "movieapp-c3847",
+          "appId": "1:188531575867:ios:3e962777fde530b5f9a01e",
+          "uploadDebugSymbols": true,
+          "fileOutput": "ios/Runner/GoogleService-Info.plist"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "movieapp-c3847",
+          "configurations": {
+            "android": "1:188531575867:android:9f6cd21491b179a5f9a01e",
+            "ios": "1:188531575867:ios:3e962777fde530b5f9a01e"
+          }
+        }
+      }
+    }
   }
 }
