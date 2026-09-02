@@ -1,8 +1,9 @@
 import 'dart:async';
 import 'dart:io' show Platform;
 import 'dart:math' as math;
-import 'dart:ui' show ImageByteFormat, lerpDouble;
+import 'dart:ui' show ImageByteFormat, ImageFilter, lerpDouble;
 import 'package:battery_plus/battery_plus.dart';
+import 'package:bounce/bounce.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart'
@@ -4060,7 +4061,8 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
               child: _buildPlaybackStatusOverlay(),
             ),
             if (_showSeekOverlay && _seekDir != null)
-              _buildOverlayFadingVideoChrome(child: _buildSeekOverlay(50)),
+              if (_showSeekOverlay && _seekDir != null)
+                _buildOverlayFadingVideoChrome(child: _buildSeekOverlay(50)),
             // ✅ THÊM scrim cho appbar ở đây (nằm dưới appbar row)
             _buildTopAppbarScrim(isExpanded: isExpanded),
             Positioned(
@@ -4733,8 +4735,15 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
                                               child: Ink(
                                                 width: double.infinity,
                                                 decoration: BoxDecoration(
-                                                  color: const Color(
-                                                    0xff1A1A22,
+                                                  gradient: LinearGradient(
+                                                    colors: [
+                                                      const Color(0xff1A1A22),
+                                                      Colors.transparent,
+                                                      Colors.transparent,
+                                                    ],
+                                                    begin:
+                                                        Alignment.bottomCenter,
+                                                    end: Alignment.topCenter,
                                                   ),
                                                   borderRadius:
                                                       BorderRadius.circular(
@@ -5039,7 +5048,7 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
             ],
           ),
           // 1) Info row + fullscreen (only show when _showControls)
-          if (_controlsVisible || _isScrubbing) ...[
+          if (_controlsVisible || _isScrubbing || _showSeekOverlay) ...[
             Positioned(
               top:
                   _videoHeight -
@@ -5509,6 +5518,12 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
     // Chưa tạo xong controller:
     // vẫn hiện back + previous + spinner + next.
     if (vp == null) {
+      if (_playerLoadError != null) {
+        return const SizedBox.shrink(
+          key: ValueKey('playback-controls-hidden-for-error'),
+        );
+      }
+
       return buildOverlay(
         isLoading: _playerLoadError == null,
         isPlaying: false,
@@ -5519,6 +5534,12 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
     return ValueListenableBuilder<VideoPlayerValue>(
       valueListenable: vp,
       builder: (context, value, _) {
+        if (value.hasError) {
+          return const SizedBox.shrink(
+            key: ValueKey('playback-controls-hidden-for-error'),
+          );
+        }
+
         final isLoading =
             _isVideoLoading ||
             !value.isInitialized ||
@@ -5538,7 +5559,7 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
     required IconData icon,
     required VoidCallback onTap,
   }) {
-    return GestureDetector(
+    return Bounce(
       onTap: () {
         HapticFeedback.lightImpact();
         onTap();
@@ -5889,18 +5910,17 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
                 ),
               ),
               const Spacer(),
-              Container(
-                width: 34,
-                height: 34,
-                decoration: BoxDecoration(
-                  color: Colors.black.withValues(alpha: 0.2),
-                  shape: BoxShape.circle,
-                ),
-                child: IconButton(
-                  key: const ValueKey('player-fullscreen-button'),
-                  padding: const EdgeInsets.all(5),
-                  onPressed: _toggleFullscreen,
-                  icon: SvgPicture.asset(
+              Bounce(
+                onTap: _toggleFullscreen,
+                child: Container(
+                  padding: EdgeInsets.all(5),
+                  width: 34,
+                  height: 34,
+                  decoration: BoxDecoration(
+                    color: Colors.black.withValues(alpha: 0.2),
+                    shape: BoxShape.circle,
+                  ),
+                  child: SvgPicture.asset(
                     _isFullscreen
                         ? 'assets/icons/fullscreen_exit.svg'
                         : 'assets/icons/fullscreen.svg',
@@ -6007,30 +6027,32 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
                         ),
                       ),
                       const Spacer(),
-                      Container(
-                        width: 34,
-                        height: 34,
-                        decoration: BoxDecoration(
-                          color: Colors.black.withValues(alpha: 0.2),
-                          shape: BoxShape.circle,
-                        ),
-                        child: IconButton(
-                          key: const ValueKey('player-fullscreen-button'),
-                          padding: EdgeInsets.all(5),
-                          onPressed: _toggleFullscreen,
-                          icon: SvgPicture.asset(
-                            _isFullscreen
-                                ? 'assets/icons/fullscreen_exit.svg'
-                                : 'assets/icons/fullscreen.svg',
-                            width: 25,
-                            height: 25,
-                            colorFilter: const ColorFilter.mode(
-                              Colors.white,
-                              BlendMode.srcIn,
+                      if (!_showSeekOverlay) ...[
+                        Container(
+                          width: 34,
+                          height: 34,
+                          decoration: BoxDecoration(
+                            color: Colors.black.withValues(alpha: 0.2),
+                            shape: BoxShape.circle,
+                          ),
+                          child: IconButton(
+                            key: const ValueKey('player-fullscreen-button'),
+                            padding: EdgeInsets.all(5),
+                            onPressed: _toggleFullscreen,
+                            icon: SvgPicture.asset(
+                              _isFullscreen
+                                  ? 'assets/icons/fullscreen_exit.svg'
+                                  : 'assets/icons/fullscreen.svg',
+                              width: 25,
+                              height: 25,
+                              colorFilter: const ColorFilter.mode(
+                                Colors.white,
+                                BlendMode.srcIn,
+                              ),
                             ),
                           ),
                         ),
-                      ),
+                      ],
                     ],
                   ),
                 ),
@@ -6118,6 +6140,102 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
     );
   }
 
+  // Widget _buildBottomInfoRow() {
+  //   final chewie = _chewieController;
+  //   if (chewie == null) return const SizedBox.shrink();
+
+  //   final vp = chewie.videoPlayerController;
+
+  //   return ListenableBuilder(
+  //     listenable: Listenable.merge([vp, _scrubProgress]),
+  //     builder: (context, _) {
+  //       final value = vp.value;
+
+  //       return Padding(
+  //         padding: const EdgeInsets.symmetric(horizontal: 10),
+  //         child: SizedBox(
+  //           height: 34,
+  //           child: Row(
+  //             children: [
+  //               ClipRRect(
+  //                 borderRadius: BorderRadius.circular(20),
+  //                 child: Container(
+  //                   padding: const EdgeInsets.symmetric(
+  //                     horizontal: 10,
+  //                     vertical: 5,
+  //                   ),
+  //                   decoration: BoxDecoration(
+  //                     color: Colors.black.withValues(alpha: 0.3),
+  //                     borderRadius: BorderRadius.circular(20),
+  //                   ),
+  //                   child: Row(
+  //                     mainAxisSize: MainAxisSize.min,
+  //                     children: [
+  //                       Text(
+  //                         _formatDuration(_displayPosition(value)),
+  //                         style: const TextStyle(
+  //                           color: Colors.white,
+  //                           fontSize: 11,
+  //                           fontWeight: FontWeight.bold,
+  //                         ),
+  //                       ),
+  //                       const Text(
+  //                         ' / ',
+  //                         style: TextStyle(
+  //                           color: Colors.white,
+  //                           fontSize: 11,
+  //                           fontWeight: FontWeight.bold,
+  //                         ),
+  //                       ),
+  //                       Text(
+  //                         _formatDuration(value.duration),
+  //                         style: const TextStyle(
+  //                           color: Colors.white,
+  //                           fontSize: 11,
+  //                           fontWeight: FontWeight.bold,
+  //                         ),
+  //                       ),
+  //                     ],
+  //                   ),
+  //                 ),
+  //               ),
+
+  //               const Spacer(),
+  //               // fullscreen button giữ nguyên
+  //               if (!_showSeekOverlay) ...[
+  //                 Container(
+  //                   width: 34,
+  //                   height: 34,
+  //                   decoration: BoxDecoration(
+  //                     color: Colors.black.withValues(alpha: 0.2),
+  //                     shape: BoxShape.circle,
+  //                   ),
+  //                   child: IconButton(
+  //                     key: const ValueKey('player-fullscreen-button'),
+  //                     padding: const EdgeInsets.all(5),
+  //                     onPressed: _toggleFullscreen,
+  //                     icon: SvgPicture.asset(
+  //                       _isFullscreen
+  //                           ? 'assets/icons/fullscreen_exit.svg'
+  //                           : 'assets/icons/fullscreen.svg',
+  //                       width: 25,
+  //                       height: 25,
+  //                       colorFilter: const ColorFilter.mode(
+  //                         Colors.white,
+  //                         BlendMode.srcIn,
+  //                       ),
+  //                     ),
+  //                   ),
+  //                 ),
+  //               ],
+  //             ],
+  //           ),
+  //         ),
+  //       );
+  //     },
+  //   );
+  // }
+
   Widget _buildBottomInfoRow() {
     final chewie = _chewieController;
     if (chewie == null) return const SizedBox.shrink();
@@ -6129,80 +6247,108 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
       builder: (context, _) {
         final value = vp.value;
 
-        return Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 10),
-          child: Row(
-            children: [
-              ClipRRect(
+        final timer = ClipRRect(
+          clipBehavior: Clip.hardEdge,
+          borderRadius: BorderRadius.circular(20),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 3, sigmaY: 3),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+              decoration: BoxDecoration(
+                color: Colors.black.withValues(alpha: 0.5),
                 borderRadius: BorderRadius.circular(20),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 5,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.black.withValues(alpha: 0.3),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        _formatDuration(_displayPosition(value)),
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const Text(
-                        ' / ',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      Text(
-                        _formatDuration(value.duration),
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
               ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    _formatDuration(_displayPosition(value)),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const Text(
+                    ' / ',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  Text(
+                    _formatDuration(value.duration),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
 
-              const Spacer(),
-              // fullscreen button giữ nguyên
-              Container(
-                width: 34,
-                height: 34,
-                decoration: BoxDecoration(
-                  color: Colors.black.withValues(alpha: 0.2),
-                  shape: BoxShape.circle,
+        return SizedBox(
+          height: 34,
+          child: Padding(
+            padding: EdgeInsetsGeometry.symmetric(horizontal: 10),
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                // TIMER
+                AnimatedAlign(
+                  duration: const Duration(milliseconds: 180),
+                  curve: Curves.easeOutCubic,
+
+                  // Đang kéo slider -> giữa
+                  // Bình thường -> trái
+                  alignment: _isScrubbing
+                      ? Alignment.center
+                      : Alignment.centerLeft,
+
+                  child: timer,
                 ),
-                child: IconButton(
-                  key: const ValueKey('player-fullscreen-button'),
-                  padding: EdgeInsets.all(5),
-                  onPressed: _toggleFullscreen,
-                  icon: SvgPicture.asset(
-                    _isFullscreen
-                        ? 'assets/icons/fullscreen_exit.svg'
-                        : 'assets/icons/fullscreen.svg',
-                    width: 25,
-                    height: 25,
-                    colorFilter: const ColorFilter.mode(
-                      Colors.white,
-                      BlendMode.srcIn,
+
+                // FULLSCREEN luôn bên phải
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: IgnorePointer(
+                    ignoring: _showSeekOverlay || _isScrubbing,
+                    child: AnimatedOpacity(
+                      opacity: (_showSeekOverlay || _isScrubbing) ? 0 : 1,
+                      duration: const Duration(milliseconds: 120),
+                      child: Container(
+                        width: 34,
+                        height: 34,
+                        decoration: BoxDecoration(
+                          color: Colors.black.withValues(alpha: 0.2),
+                          shape: BoxShape.circle,
+                        ),
+                        child: IconButton(
+                          key: const ValueKey('player-fullscreen-button'),
+                          padding: const EdgeInsets.all(5),
+                          onPressed: _toggleFullscreen,
+                          icon: SvgPicture.asset(
+                            _isFullscreen
+                                ? 'assets/icons/fullscreen_exit.svg'
+                                : 'assets/icons/fullscreen.svg',
+                            width: 25,
+                            height: 25,
+                            colorFilter: const ColorFilter.mode(
+                              Colors.white,
+                              BlendMode.srcIn,
+                            ),
+                          ),
+                        ),
+                      ),
                     ),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         );
       },
@@ -6707,7 +6853,8 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
                   ),
                 ),
                 if (_showSeekOverlay && _seekDir != null)
-                  _buildSeekOverlay(200),
+                  if (_showSeekOverlay && _seekDir != null)
+                    _buildSeekOverlay(200),
               ],
             );
           },

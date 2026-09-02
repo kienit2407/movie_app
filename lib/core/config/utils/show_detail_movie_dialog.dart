@@ -679,23 +679,29 @@ class _DialogContentState extends State<_DialogContent> {
         Expanded(
           flex: 2,
           child: GestureDetector(
-            onTap: () {
+            onTap: () async {
               HapticFeedback.mediumImpact();
               if (hasEpisodes) {
-                context.openMoviePlayer(
-                  MoviePlayerArgs(
-                    movie.slug,
-                    movie.poster_url,
-                    null,
-                    0,
-                    episodes.first.server_name,
-                    movie.name,
-                    episodes,
-                    movie,
-                    initialServerIndex: 0,
-                  ),
+                final playerArgs = MoviePlayerArgs(
+                  movie.slug,
+                  movie.poster_url,
+                  null,
+                  0,
+                  episodes.first.server_name,
+                  movie.name,
+                  episodes,
+                  movie,
+                  initialServerIndex: 0,
                 );
-                Navigator.pop(context);
+                final rootNavigator = Navigator.of(
+                  context,
+                  rootNavigator: true,
+                );
+                final playerLauncherContext = rootNavigator.context;
+                rootNavigator.pop();
+                await Future<void>.delayed(Duration.zero);
+                if (!playerLauncherContext.mounted) return;
+                playerLauncherContext.openMoviePlayer(playerArgs);
               } else {
                 showAnimatedDialog(
                   context: context,

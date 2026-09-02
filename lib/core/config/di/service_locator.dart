@@ -31,6 +31,7 @@ import 'package:movie_app/feature/home/notification/new_movie_notification_stora
 import 'package:movie_app/feature/home/notification/new_movie_inbox.dart';
 import 'package:movie_app/feature/search/data/datasources/search_remote_datasource.dart';
 import 'package:movie_app/feature/search/data/repositories/search_repository_impl.dart';
+import 'package:movie_app/feature/search/data/repositories/search_history_repository.dart';
 import 'package:movie_app/feature/search/domain/repositories/search_repository.dart';
 import 'package:movie_app/feature/search/domain/usecases/search_movies_usecase.dart';
 import 'package:movie_app/feature/search/presentation/bloc/search_cubit.dart';
@@ -82,6 +83,9 @@ Future<void> _initializeGetit() async {
 
   sl.registerLazySingleton<SearchRepository>(
     () => SearchRepositoryImpl(remoteDataSource: sl<SearchRemoteDataSource>()),
+  );
+  sl.registerLazySingleton<SearchHistoryRepository>(
+    SupabaseSearchHistoryRepository.new,
   );
 
   sl.registerLazySingleton<SignUpUsecase>(
@@ -154,7 +158,10 @@ Future<void> _initializeGetit() async {
     () => SearchMoviesUseCase(sl<SearchRepository>()),
   );
   sl.registerFactory<SearchCubit>(
-    () => SearchCubit(searchUseCase: sl<SearchMoviesUseCase>()),
+    () => SearchCubit(
+      searchUseCase: sl<SearchMoviesUseCase>(),
+      historyRepository: sl<SearchHistoryRepository>(),
+    ),
   );
   sl.registerLazySingleton<PlayerCubit>(() => PlayerCubit());
 }

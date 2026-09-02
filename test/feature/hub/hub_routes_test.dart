@@ -34,6 +34,7 @@ void main() {
     expect(rootPaths, contains(AppRoutes.player));
     expect(rootPaths, contains(AppRoutes.notifications));
     expect(rootPaths, contains(AppRoutes.editProfile));
+    expect(rootPaths, contains(AppRoutes.editDisplayName));
   });
 
   test(

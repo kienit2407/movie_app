@@ -3,8 +3,11 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
+import 'package:movie_app/core/config/routes/app_router.dart';
 import 'package:movie_app/feature/library/data/user_library_repository.dart';
 import 'package:movie_app/feature/library/presentation/cubit/user_library_cubit.dart';
+import 'package:movie_app/feature/library/presentation/pages/display_name_editor_page.dart';
 import 'package:movie_app/feature/library/presentation/pages/edit_profile_page.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -47,6 +50,8 @@ void main() {
     expect(find.text('Hủy'), findsOneWidget);
     expect(find.text('Lưu'), findsOneWidget);
     expect(find.byType(TextField), findsOneWidget);
+    expect(find.byType(DisplayNameEditorPage), findsOneWidget);
+    expect(find.byType(EditProfilePage), findsNothing);
   });
 }
 
@@ -63,19 +68,47 @@ UserLibraryCubit _createCubit() {
   );
 }
 
-class _TestApp extends StatelessWidget {
+class _TestApp extends StatefulWidget {
   const _TestApp({required this.cubit});
 
   final UserLibraryCubit cubit;
 
   @override
+  State<_TestApp> createState() => _TestAppState();
+}
+
+class _TestAppState extends State<_TestApp> {
+  late final GoRouter _router;
+
+  @override
+  void initState() {
+    super.initState();
+    _router = GoRouter(
+      routes: [
+        GoRoute(path: '/', builder: (_, __) => const EditProfilePage()),
+        GoRoute(
+          path: AppRoutes.editDisplayName,
+          builder: (_, state) =>
+              DisplayNameEditorPage(initialName: state.extra as String? ?? ''),
+        ),
+      ],
+    );
+  }
+
+  @override
+  void dispose() {
+    _router.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return BlocProvider.value(
-      value: cubit,
-      child: MaterialApp(
+      value: widget.cubit,
+      child: MaterialApp.router(
         themeMode: ThemeMode.dark,
         darkTheme: ThemeData.dark(),
-        home: const EditProfilePage(),
+        routerConfig: _router,
       ),
     );
   }

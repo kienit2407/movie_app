@@ -27,6 +27,8 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  flutter_localizations:
+    sdk: flutter
   
   # The following adds the Cupertino Icons font to your application.
   # Use with CupertinoIcons class for iOS style icons.
@@ -79,7 +81,6 @@ dependencies:
   solid_annotations: ^1.0.0
   flutter_solidart: ^2.7.0
   flutter_hooks: ^0.21.3+1
-  flutter_localization: ^0.3.3
   url_launcher: ^6.3.2
   youtube_player_flutter: ^9.1.1
   chewie: ^1.7.5
@@ -111,12 +112,17 @@ dependencies:
   firebase_core: ^4.14.0
   firebase_analytics: ^12.5.0
   firebase_crashlytics: ^5.3.0
+  bounce: ^1.0.2
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   build_runner: ^2.7.0
   json_serializable: ^6.10.0
+
+flutter:
+  generate: true
+  uses-material-design: true
   
     
   # The "flutter_lints" package below contains a set of recommended lints to

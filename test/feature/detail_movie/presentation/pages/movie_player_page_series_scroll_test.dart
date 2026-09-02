@@ -155,6 +155,50 @@ void main() {
     await tester.pump();
   });
 
+  testWidgets(
+    'player error replaces play pause controls in portrait and landscape',
+    (tester) async {
+      await _setPortraitSurface(tester, topPadding: 47);
+      await _pumpPlayer(tester, episodeCurrent: 'Full', episodeCount: 1);
+
+      const hiddenControlsKey = ValueKey('playback-controls-hidden-for-error');
+      expect(find.text('Server này chưa có nguồn phát.'), findsOneWidget);
+      expect(find.byKey(hiddenControlsKey), findsOneWidget);
+      expect(find.byKey(const ValueKey('play')), findsNothing);
+      expect(find.byKey(const ValueKey('pause')), findsNothing);
+      expect(find.byKey(const ValueKey('loading')), findsNothing);
+
+      final dynamic playerState = tester.state(find.byType(MoviePlayerPage));
+      final Future<void> enterFullscreen =
+          playerState.toggleFullscreenForTest() as Future<void>;
+      await tester.pump();
+      tester.view.physicalSize = const Size(1000, 430);
+      await tester.pump();
+      await enterFullscreen;
+      await tester.pump();
+
+      expect(
+        find.byKey(const ValueKey('rotated-landscape-player')),
+        findsOneWidget,
+      );
+      expect(find.text('Server này chưa có nguồn phát.'), findsOneWidget);
+      expect(find.byKey(hiddenControlsKey), findsOneWidget);
+      expect(find.byKey(const ValueKey('play')), findsNothing);
+      expect(find.byKey(const ValueKey('pause')), findsNothing);
+      expect(find.byKey(const ValueKey('loading')), findsNothing);
+
+      final Future<void> exitFullscreen =
+          playerState.toggleFullscreenForTest() as Future<void>;
+      tester.view.physicalSize = const Size(430, 1000);
+      await tester.pump();
+      await exitFullscreen;
+      await tester.pump();
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump(const Duration(milliseconds: 600));
+    },
+  );
+
   testWidgets('episode search stays above the software keyboard', (
     tester,
   ) async {

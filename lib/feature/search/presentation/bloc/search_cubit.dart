@@ -1,50 +1,64 @@
+import 'dart:async';
+
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:hive_ce/hive.dart';
+import 'package:movie_app/feature/search/data/repositories/search_history_repository.dart';
 import 'package:movie_app/feature/search/domain/entities/search_filter_params.dart';
 import 'package:movie_app/feature/search/domain/usecases/search_movies_usecase.dart';
 import 'package:movie_app/feature/search/presentation/bloc/search_state.dart';
 
 class SearchCubit extends Cubit<SearchState> {
   final SearchMoviesUseCase searchUseCase;
-  late Box<String> _historyBox;
-  static const String _historyBoxName = 'search_history';
+  final SearchHistoryRepository historyRepository;
+  late final StreamSubscription<String?> _userSubscription;
+  List<String> _history = const [];
+  int _historyLoadGeneration = 0;
 
-  SearchCubit({required this.searchUseCase}) : super(SearchLoading()) {
-    _initHive();
+  SearchCubit({required this.searchUseCase, required this.historyRepository})
+    : super(SearchLoading()) {
+    _userSubscription = historyRepository.userChanges.listen((_) {
+      unawaited(_loadHistory());
+    });
+    unawaited(_loadHistory());
   }
 
-  Future<void> _initHive() async {
-    _historyBox = await Hive.openBox<String>(_historyBoxName);
-    _loadHistory();
-  }
-
-  void _loadHistory() {
-    final history = _historyBox.values.toList().reversed.take(30).toList();
-    emit(SearchInitial(history));
+  Future<void> _loadHistory() async {
+    final generation = ++_historyLoadGeneration;
+    try {
+      final history = await historyRepository.getHistory();
+      if (isClosed || generation != _historyLoadGeneration) return;
+      _history = history;
+      emit(SearchInitial(_history));
+    } catch (_) {
+      if (isClosed || generation != _historyLoadGeneration) return;
+      _history = const [];
+      emit(const SearchInitial([]));
+    }
   }
 
   Future<void> addToHistory(String keyword) async {
-    if (keyword.trim().isEmpty) return;
-
-    final map = _historyBox.toMap();
-    final duplicateKeys = map.entries
-        .where((e) => e.value.toLowerCase() == keyword.toLowerCase())
-        .map((e) => e.key)
-        .toList();
-
-    for (var key in duplicateKeys) {
-      await _historyBox.delete(key);
+    final value = keyword.trim();
+    if (value.isEmpty || historyRepository.currentUserId == null) return;
+    _history = [
+      value,
+      ..._history.where((item) => item.toLowerCase() != value.toLowerCase()),
+    ].take(30).toList(growable: false);
+    if (state is SearchInitial) emit(SearchInitial(_history));
+    try {
+      await historyRepository.saveKeyword(value);
+    } catch (_) {
+      // Kết quả tìm kiếm vẫn hữu ích khi đồng bộ lịch sử tạm thời thất bại.
     }
-
-    await _historyBox.add(keyword);
   }
 
   Future<void> deleteHistoryItem(int index) async {
-    final realIndex = _historyBox.length - 1 - index;
-    await _historyBox.deleteAt(realIndex);
-
-    if (state is SearchInitial) {
-      _loadHistory();
+    if (index < 0 || index >= _history.length) return;
+    final keyword = _history[index];
+    _history = [..._history]..removeAt(index);
+    emit(SearchInitial(_history));
+    try {
+      await historyRepository.deleteKeyword(keyword);
+    } catch (_) {
+      // Không ghi lại local; lần tải kế tiếp sẽ phản ánh dữ liệu trên tài khoản.
     }
   }
 
@@ -55,7 +69,7 @@ class SearchCubit extends Cubit<SearchState> {
   }) async {
     final kw = keyword.trim();
     if (kw.isEmpty) {
-      _loadHistory();
+      emit(SearchInitial(_history));
       return;
     }
 
@@ -77,7 +91,7 @@ class SearchCubit extends Cubit<SearchState> {
     } else {
       // ✅ SEARCH MỚI
       emit(SearchLoading());
-      addToHistory(kw);
+      unawaited(addToHistory(kw));
     }
 
     final result = await searchUseCase.call(
@@ -126,6 +140,12 @@ class SearchCubit extends Cubit<SearchState> {
   }
 
   void clearSearch() {
-    _loadHistory();
+    emit(SearchInitial(_history));
+  }
+
+  @override
+  Future<void> close() async {
+    await _userSubscription.cancel();
+    return super.close();
   }
 }

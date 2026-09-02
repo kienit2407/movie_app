@@ -60,6 +60,38 @@ void main() {
     expect(overlay.args?.initialEpisodeLink, 'episode-1.m3u8');
     expect(overlay.args?.resumeFromHistory, isFalse);
   });
+
+  testWidgets('latest episode opens directly without the resume prompt', (
+    tester,
+  ) async {
+    final repository = _HistoryRepository();
+    final cubit = UserLibraryCubit(
+      repository: repository,
+      client: SupabaseClient(
+        'https://example.supabase.co',
+        'anon-key',
+        authOptions: const AuthClientOptions(autoRefreshToken: false),
+      ),
+      authChanges: const Stream<AuthState>.empty(),
+    );
+    addTearDown(cubit.close);
+    await cubit.refresh();
+
+    await tester.pumpWidget(
+      BlocProvider.value(
+        value: cubit,
+        child: const MaterialApp(home: Scaffold(body: _ActionHarness())),
+      ),
+    );
+
+    await tester.tap(find.text('Xem tập mới'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Tiếp tục xem?'), findsNothing);
+    expect(overlay.args?.initialEpisodeIndex, 1);
+    expect(overlay.args?.initialEpisodeLink, 'episode-2.m3u8');
+    expect(overlay.args?.bypassSeriesResumePrompt, isTrue);
+  });
 }
 
 class _ActionHarness extends StatefulWidget {

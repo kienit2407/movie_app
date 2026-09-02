@@ -171,6 +171,7 @@ class PlayerOverlayController extends ChangeNotifier {
       current.movie,
       initialServerIndex: serverIndex,
       resumeFromHistory: current.resumeFromHistory,
+      bypassSeriesResumePrompt: current.bypassSeriesResumePrompt,
       initialEpisodeNo: current.initialEpisodeNo,
       initialEpisodeSlug: current.initialEpisodeSlug,
       initialServerName: current.initialServerName,

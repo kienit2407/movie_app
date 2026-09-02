@@ -2203,8 +2203,9 @@ class _MovieDetailPageContentState extends State<_MovieDetailPageContent>
     void navigateToPlayer(
       int serverIndex,
       int episodeIndex,
-      String episodeLink,
-    ) {
+      String episodeLink, {
+      bool bypassSeriesResumePrompt = false,
+    }) {
       if (episodes.isEmpty) return;
 
       if (serverIndex < 0 || serverIndex >= episodes.length) {
@@ -2228,11 +2229,12 @@ class _MovieDetailPageContentState extends State<_MovieDetailPageContent>
           episodes,
           movie,
           initialServerIndex: serverIndex,
+          bypassSeriesResumePrompt: bypassSeriesResumePrompt,
         ),
       );
     }
 
-    void playFirstEpisode() {
+    void playFirstEpisode({bool bypassSeriesResumePrompt = false}) {
       if (episodes.isEmpty) return;
       if (episodes[0].server_data.isEmpty) return;
       int serverIndex = 0;
@@ -2240,7 +2242,12 @@ class _MovieDetailPageContentState extends State<_MovieDetailPageContent>
       String episodeLink = episodes[0].server_data[0].link_m3u8.isNotEmpty
           ? episodes[0].server_data[0].link_m3u8
           : episodes[0].server_data[0].link_embed;
-      navigateToPlayer(serverIndex, episodeIndex, episodeLink);
+      navigateToPlayer(
+        serverIndex,
+        episodeIndex,
+        episodeLink,
+        bypassSeriesResumePrompt: bypassSeriesResumePrompt,
+      );
     }
 
     void playLatestEpisode() {
@@ -2274,9 +2281,13 @@ class _MovieDetailPageContentState extends State<_MovieDetailPageContent>
             if (epMatch != null) {
               final epNum = int.tryParse(epMatch.group(1)!);
               if (epNum == currentEpisodeNum) {
+                final candidateLink = ep.link_m3u8.isNotEmpty
+                    ? ep.link_m3u8
+                    : ep.link_embed;
+                if (candidateLink.isEmpty) continue;
                 serverIndex = s;
                 episodeIndex = e;
-                episodeLink = ep.link_m3u8;
+                episodeLink = candidateLink;
                 break;
               }
             }
@@ -2286,11 +2297,16 @@ class _MovieDetailPageContentState extends State<_MovieDetailPageContent>
       }
 
       if (episodeLink == null) {
-        playFirstEpisode();
+        playFirstEpisode(bypassSeriesResumePrompt: true);
         return;
       }
 
-      navigateToPlayer(serverIndex, episodeIndex, episodeLink);
+      navigateToPlayer(
+        serverIndex,
+        episodeIndex,
+        episodeLink,
+        bypassSeriesResumePrompt: true,
+      );
     }
 
     Widget buildPlayButton({

@@ -10,8 +10,10 @@ import 'package:movie_app/feature/auth/presentation/sign_in/pages/sign_in.dart';
 import 'package:movie_app/feature/hub/presentation/pages/hub_page.dart';
 import 'package:movie_app/feature/home/presentation/pages/notifications_page.dart';
 import 'package:movie_app/feature/library/presentation/pages/edit_profile_page.dart';
+import 'package:movie_app/feature/library/presentation/pages/display_name_editor_page.dart';
 import 'package:movie_app/feature/library/presentation/pages/favorites_page.dart';
 import 'package:movie_app/feature/library/presentation/pages/profile_page.dart';
+import 'package:movie_app/core/config/themes/app_color.dart';
 
 class AppRoutes {
   static const String splash = '/splash';
@@ -23,6 +25,7 @@ class AppRoutes {
   static const String profile = '/profile';
   static const String notifications = '/notifications';
   static const String editProfile = '/profile/edit';
+  static const String editDisplayName = '/profile/edit/name';
   static const String signIn = '/sign-in';
 
   static final GlobalKey<NavigatorState> navigatorKey =
@@ -108,7 +111,65 @@ final goRouter = GoRouter(
       path: AppRoutes.editProfile,
       name: 'editProfile',
       parentNavigatorKey: AppRoutes.navigatorKey,
-      builder: (context, state) => const EditProfilePage(),
+      pageBuilder: (context, state) => CustomTransitionPage<void>(
+        key: state.pageKey,
+        opaque: true,
+        transitionDuration: const Duration(milliseconds: 260),
+        reverseTransitionDuration: const Duration(milliseconds: 220),
+        child: const EditProfilePage(),
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          final entrance = CurvedAnimation(
+            parent: animation,
+            curve: Curves.easeOutCubic,
+            reverseCurve: Curves.easeInCubic,
+          );
+          return ColoredBox(
+            color: AppColor.bgApp,
+            child: FadeTransition(
+              opacity: entrance,
+              child: SlideTransition(
+                position: Tween<Offset>(
+                  begin: const Offset(0, .025),
+                  end: Offset.zero,
+                ).animate(entrance),
+                child: child,
+              ),
+            ),
+          );
+        },
+      ),
+    ),
+    GoRoute(
+      path: AppRoutes.editDisplayName,
+      name: 'editDisplayName',
+      parentNavigatorKey: AppRoutes.navigatorKey,
+      pageBuilder: (context, state) => CustomTransitionPage<String>(
+        key: state.pageKey,
+        opaque: true,
+        transitionDuration: const Duration(milliseconds: 260),
+        reverseTransitionDuration: const Duration(milliseconds: 220),
+        child: DisplayNameEditorPage(initialName: state.extra as String? ?? ''),
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          final entrance = CurvedAnimation(
+            parent: animation,
+            curve: Curves.easeOutCubic,
+            reverseCurve: Curves.easeInCubic,
+          );
+          return ColoredBox(
+            color: AppColor.bgApp,
+            child: FadeTransition(
+              opacity: entrance,
+              child: SlideTransition(
+                position: Tween<Offset>(
+                  begin: const Offset(0, .025),
+                  end: Offset.zero,
+                ).animate(entrance),
+                child: child,
+              ),
+            ),
+          );
+        },
+      ),
     ),
     GoRoute(
       path: AppRoutes.movieDetail,

@@ -11,6 +11,7 @@ class MoviePlayerArgs {
   final String initialServer;
   final int initialServerIndex;
   final bool resumeFromHistory;
+  final bool bypassSeriesResumePrompt;
 
   final int? initialEpisodeNo;
   final String? initialEpisodeSlug;
@@ -27,10 +28,36 @@ class MoviePlayerArgs {
     this.movie, {
     this.initialServerIndex = 0,
     this.resumeFromHistory = true,
+    this.bypassSeriesResumePrompt = false,
     this.initialEpisodeNo,
     this.initialEpisodeSlug,
     this.initialServerName,
   });
 
   bool get hasFullData => movie != null && episodes.isNotEmpty;
+
+  MoviePlayerArgs copyWith({
+    String? initialEpisodeLink,
+    int? initialEpisodeIndex,
+    String? initialServer,
+    int? initialServerIndex,
+    bool? resumeFromHistory,
+    bool? bypassSeriesResumePrompt,
+  }) => MoviePlayerArgs(
+    slug,
+    thumbnailUrl,
+    initialEpisodeLink ?? this.initialEpisodeLink,
+    initialEpisodeIndex ?? this.initialEpisodeIndex,
+    initialServer ?? this.initialServer,
+    movieName,
+    episodes,
+    movie,
+    initialServerIndex: initialServerIndex ?? this.initialServerIndex,
+    resumeFromHistory: resumeFromHistory ?? this.resumeFromHistory,
+    bypassSeriesResumePrompt:
+        bypassSeriesResumePrompt ?? this.bypassSeriesResumePrompt,
+    initialEpisodeNo: initialEpisodeNo,
+    initialEpisodeSlug: initialEpisodeSlug,
+    initialServerName: initialServerName,
+  );
 }

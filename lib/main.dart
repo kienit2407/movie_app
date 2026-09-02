@@ -79,6 +79,14 @@ Future<void> main() async {
 
   await Hive.initFlutter();
 
+  // Lịch sử tìm kiếm đã chuyển sang Supabase theo tài khoản. Xóa box local
+  // cũ một lần để không giữ dữ liệu dùng chung trên thiết bị.
+  try {
+    await Hive.deleteBoxFromDisk('search_history');
+  } catch (error) {
+    debugPrint('Không thể xóa search_history local cũ: $error');
+  }
+
   Hive.registerAdapter(FavoriteMovieEntryAdapter());
   Hive.registerAdapter(WatchProgressModelAdapter());
   Hive.registerAdapter(WatchHistoryEntryAdapter());

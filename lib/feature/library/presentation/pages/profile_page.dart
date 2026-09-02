@@ -170,6 +170,7 @@ class _ProfilePageState extends State<ProfilePage>
               detail.episodes,
               detail.movie,
               initialServerIndex: serverIndex,
+              bypassSeriesResumePrompt: true,
             ),
           );
         },
