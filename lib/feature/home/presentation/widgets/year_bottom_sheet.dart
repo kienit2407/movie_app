@@ -7,6 +7,7 @@ import 'package:movie_app/common/components/alert_dialog/app_alert_dialog.dart';
 import 'package:movie_app/common/helpers/list_year.dart';
 import 'package:movie_app/common/helpers/navigation/app_navigation.dart';
 import 'package:movie_app/core/config/themes/app_color.dart';
+import 'package:movie_app/core/extension/build_context_extension.dart';
 import 'package:movie_app/core/config/utils/animated_dialog.dart';
 import 'package:movie_app/core/config/utils/shimmer_movie_genre.dart';
 import 'package:movie_app/feature/home/domain/entities/country_movie_entity.dart';
@@ -60,7 +61,10 @@ class _YearBottomSheetState extends State<YearBottomSheet> {
   void _showWarningDialog() {
     showAnimatedDialog(
       context: context,
-      dialog: AppAlertDialog(content: "Chọn năm để lọc!", title: 'Cảnh báo!'),
+      dialog: AppAlertDialog(
+        content: context.l10n.filterChooseYear,
+        title: context.l10n.commonWarningTitle,
+      ),
     );
   }
 
@@ -130,7 +134,10 @@ class _YearBottomSheetState extends State<YearBottomSheet> {
       children: [
         Icon(Iconsax.global_copy),
         SizedBox(width: 5),
-        Text('Năm', style: TextStyle(fontWeight: FontWeight.w700)),
+        Text(
+          context.l10n.homeYear,
+          style: const TextStyle(fontWeight: FontWeight.w700),
+        ),
       ],
     );
   }
@@ -148,13 +155,15 @@ class _YearBottomSheetState extends State<YearBottomSheet> {
     final years = YearHelper.getYears(); // List<String>
 
     return SingleChildScrollView(
-      
       scrollDirection: Axis.vertical,
       physics: BouncingScrollPhysics(),
       child: Container(
         padding: EdgeInsets.symmetric(vertical: 10),
         decoration: BoxDecoration(
-          border: Border(bottom: BorderSide(color: AppColor.buttonColor), top: BorderSide(color: AppColor.buttonColor),),
+          border: Border(
+            bottom: BorderSide(color: AppColor.buttonColor),
+            top: BorderSide(color: AppColor.buttonColor),
+          ),
           color: Color(0xff2F3345),
         ),
         child: Wrap(
@@ -162,7 +171,7 @@ class _YearBottomSheetState extends State<YearBottomSheet> {
           runSpacing: 5,
           children: years.map((year) {
             final bool isSelected = selectedYear == year;
-        
+
             return ChoiceChip(
               showCheckmark: false,
               side: BorderSide(
@@ -253,15 +262,18 @@ class _YearBottomSheetState extends State<YearBottomSheet> {
           child: Container(
             height: 50,
             alignment: Alignment.center,
-            child: const Row(
+            child: Row(
               spacing: 10,
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Text(
-                  'Lọc kết quả',
-                  style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12),
+                  context.l10n.filterResults,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 12,
+                  ),
                 ),
-                Icon(Iconsax.arrow_right_1_copy, size: 16),
+                const Icon(Iconsax.arrow_right_1_copy, size: 16),
               ],
             ),
           ),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:movie_app/core/extension/build_context_extension.dart';
 
 class CastSliver extends StatelessWidget {
   final List<String> actors;
@@ -8,13 +9,13 @@ class CastSliver extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (actors.isEmpty) {
-      return const SliverToBoxAdapter(
+      return SliverToBoxAdapter(
         child: SizedBox(
           height: 100,
           child: Center(
             child: Text(
-              'Không có thông tin diễn viên',
-              style: TextStyle(color: Colors.white54),
+              context.l10n.detailCastUnavailable,
+              style: const TextStyle(color: Colors.white54),
             ),
           ),
         ),
@@ -53,9 +54,9 @@ class CastSliver extends StatelessWidget {
                   ),
                 ),
               ),
-              const Text(
-                'Diễn viên',
-                style: TextStyle(color: Colors.grey, fontSize: 12),
+              Text(
+                context.l10n.detailCast,
+                style: const TextStyle(color: Colors.grey, fontSize: 12),
               ),
             ],
           ),

@@ -5,6 +5,7 @@ import 'package:sliver_tools/sliver_tools.dart';
 import 'package:movie_app/feature/movie_pagination/presentation/bloc/fetch_fillter_cubit.dart';
 import 'package:movie_app/feature/movie_pagination/presentation/bloc/fetch_fillter_state.dart';
 import 'package:movie_app/feature/detail_movie/presentation/widgets/recommendation_item.dart';
+import 'package:movie_app/core/extension/build_context_extension.dart';
 
 class RecommendationsSliver extends StatefulWidget {
   const RecommendationsSliver({super.key});
@@ -38,12 +39,12 @@ class _RecommendationsSliverState extends State<RecommendationsSliver> {
       duration: const Duration(milliseconds: 300),
       height: 30,
       width: double.infinity,
-      child: const Row(
+      child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          CircularProgressIndicator.adaptive(),
-          SizedBox(width: 8),
-          Text('Loading'),
+          const CircularProgressIndicator.adaptive(),
+          const SizedBox(width: 8),
+          Text(context.l10n.commonLoading),
         ],
       ),
     );
@@ -103,13 +104,13 @@ class _RecommendationsSliverState extends State<RecommendationsSliver> {
           );
         }
         if (state is FetchFillterFailure) {
-          return const SliverToBoxAdapter(
+          return SliverToBoxAdapter(
             child: SizedBox(
               height: 100,
               child: Center(
                 child: Text(
-                  'Không thể tải đề xuất',
-                  style: TextStyle(color: Colors.white54),
+                  context.l10n.detailRecommendationsLoadFailed,
+                  style: const TextStyle(color: Colors.white54),
                 ),
               ),
             ),
@@ -118,13 +119,13 @@ class _RecommendationsSliverState extends State<RecommendationsSliver> {
         if (state is FetchFillterLoaded) {
           final movies = state.items;
           if (movies.isEmpty) {
-            return const SliverToBoxAdapter(
+            return SliverToBoxAdapter(
               child: SizedBox(
                 height: 100,
                 child: Center(
                   child: Text(
-                    'Không có đề xuất',
-                    style: TextStyle(color: Colors.white54),
+                    context.l10n.detailNoRecommendations,
+                    style: const TextStyle(color: Colors.white54),
                   ),
                 ),
               ),

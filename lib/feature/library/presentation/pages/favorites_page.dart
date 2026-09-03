@@ -11,6 +11,7 @@ import 'package:movie_app/common/helpers/static_data.dart';
 import 'package:movie_app/core/config/themes/app_color.dart';
 import 'package:movie_app/core/config/utils/animated_dialog.dart';
 import 'package:movie_app/core/config/utils/sharder_text.dart';
+import 'package:movie_app/core/extension/build_context_extension.dart';
 import 'package:movie_app/feature/hub/presentation/pages/hub_page.dart';
 import 'package:movie_app/feature/library/presentation/cubit/user_library_cubit.dart';
 import 'package:movie_app/feature/library/presentation/widgets/auth_required_view.dart';
@@ -83,15 +84,16 @@ class _FavoritesPageState extends State<FavoritesPage>
 
   Future<bool> _confirmRemoval(int count) async {
     final many = count > 1;
+    final l10n = context.l10n;
     return await showAnimatedDialog<bool>(
           context: context,
           dialog: AppAlertDialog(
-            title: many ? 'Xóa $count phim đã chọn?' : 'Xóa phim này?',
-            content: many
-                ? 'Bạn có đồng ý xóa $count phim khỏi danh sách yêu thích không?'
-                : 'Bạn có đồng ý xóa phim này khỏi danh sách yêu thích không?',
-            buttonTitle: 'Xóa',
-            cancelButtonTitle: 'Hủy',
+            title: many
+                ? l10n.libraryDeleteSelectedMoviesTitle(count)
+                : l10n.libraryDeleteFavoriteMovieTitle,
+            content: l10n.libraryDeleteFavoritesConfirmation(count),
+            buttonTitle: l10n.commonDelete,
+            cancelButtonTitle: l10n.commonCancel,
             isDestructive: true,
           ),
         ) ??
@@ -150,7 +152,7 @@ class _FavoritesPageState extends State<FavoritesPage>
                   previous.errorMessage != current.errorMessage &&
                   current.errorMessage != null,
               listener: (context, state) {
-                AppToast.show(context, state.errorMessage!);
+                AppToast.show(context, context.l10n.libraryLoadFailed);
               },
               builder: (context, state) => RefreshIndicator.adaptive(
                 color: Colors.white,
@@ -188,7 +190,7 @@ class _FavoritesPageState extends State<FavoritesPage>
       systemOverlayStyle: SystemUiOverlayStyle.light,
       leading: _isSelecting
           ? IconButton(
-              tooltip: 'Hủy chọn',
+              tooltip: context.l10n.libraryCancelSelection,
               onPressed: () => setState(_selectedSlugs.clear),
               icon: const Icon(Icons.close_rounded, color: Colors.white),
             )
@@ -196,7 +198,7 @@ class _FavoritesPageState extends State<FavoritesPage>
       actions: _isSelecting
           ? [
               IconButton(
-                tooltip: 'Xóa phim đã chọn',
+                tooltip: context.l10n.libraryDeleteSelectedMovies,
                 onPressed: _removeSelected,
                 icon: const Icon(Iconsax.trash_copy, color: Colors.white),
               ),
@@ -227,7 +229,7 @@ class _FavoritesPageState extends State<FavoritesPage>
         duration: duration,
         child: _isSelecting
             ? Text(
-                '${_selectedSlugs.length} đã chọn',
+                context.l10n.commonSelectedCount(_selectedSlugs.length),
                 key: const ValueKey('selection-title'),
                 style: const TextStyle(
                   fontSize: 17,
@@ -238,9 +240,12 @@ class _FavoritesPageState extends State<FavoritesPage>
                 key: const ValueKey('favorites-title'),
                 duration: duration,
                 opacity: _showSmallTitle ? 1 : 0,
-                child: const Text(
-                  'Yêu thích',
-                  style: TextStyle(fontSize: 17, fontWeight: FontWeight.w600),
+                child: Text(
+                  context.l10n.libraryFavorites,
+                  style: const TextStyle(
+                    fontSize: 17,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ),
       ),
@@ -253,8 +258,8 @@ class _FavoritesPageState extends State<FavoritesPage>
       child: Padding(
         key: _largeTitleKey,
         padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-        child: const SharderText(
-          gradient: LinearGradient(
+        child: SharderText(
+          gradient: const LinearGradient(
             colors: [
               Colors.black,
               Colors.black,
@@ -265,8 +270,8 @@ class _FavoritesPageState extends State<FavoritesPage>
             end: Alignment.centerLeft,
           ),
           child: Text(
-            'Yêu thích',
-            style: TextStyle(
+            context.l10n.libraryFavorites,
+            style: const TextStyle(
               fontSize: 34,
               fontWeight: FontWeight.bold,
               fontFamily: 'Inter',
@@ -282,8 +287,8 @@ class _FavoritesPageState extends State<FavoritesPage>
       return SliverFillRemaining(
         hasScrollBody: false,
         child: AuthRequiredView(
-          title: 'Đăng nhập để lưu phim yêu thích',
-          description: 'Danh sách của bạn sẽ được đồng bộ trên các thiết bị.',
+          title: context.l10n.librarySignInToSaveFavorites,
+          description: context.l10n.libraryFavoritesSyncDescription,
           onSignedIn: () => context.read<UserLibraryCubit>().refresh(),
         ),
       );
@@ -310,7 +315,7 @@ class _FavoritesPageState extends State<FavoritesPage>
                 ),
                 const SizedBox(height: 14),
                 Text(
-                  state.errorMessage!,
+                  context.l10n.libraryLoadFailed,
                   textAlign: TextAlign.center,
                   style: const TextStyle(color: Colors.white70),
                 ),
@@ -318,7 +323,7 @@ class _FavoritesPageState extends State<FavoritesPage>
                 OutlinedButton.icon(
                   onPressed: context.read<UserLibraryCubit>().refresh,
                   icon: const Icon(Icons.refresh),
-                  label: const Text('Thử lại'),
+                  label: Text(context.l10n.commonRetry),
                 ),
               ],
             ),
@@ -327,17 +332,21 @@ class _FavoritesPageState extends State<FavoritesPage>
       );
     }
     if (state.favorites.isEmpty) {
-      return const SliverFillRemaining(
+      return SliverFillRemaining(
         hasScrollBody: false,
         child: Center(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Icons.favorite_border, color: Colors.white38, size: 58),
-              SizedBox(height: 14),
+              const Icon(
+                Icons.favorite_border,
+                color: Colors.white38,
+                size: 58,
+              ),
+              const SizedBox(height: 14),
               Text(
-                'Chưa có phim yêu thích',
-                style: TextStyle(color: Colors.white70, fontSize: 16),
+                context.l10n.libraryNoFavorites,
+                style: const TextStyle(color: Colors.white70, fontSize: 16),
               ),
             ],
           ),

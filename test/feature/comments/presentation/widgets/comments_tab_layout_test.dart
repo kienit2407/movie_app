@@ -8,6 +8,7 @@ import 'package:movie_app/feature/comments/presentation/bloc/comments_cubit.dart
 import 'package:movie_app/feature/comments/presentation/widgets/comments_tab.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:visibility_detector/visibility_detector.dart';
+import '../../../../helpers/localized_test_app.dart';
 
 void main() {
   testWidgets('error state does not overflow a compact comments viewport', (
@@ -41,8 +42,8 @@ void main() {
           BlocProvider.value(value: commentsCubit),
           BlocProvider(create: (_) => AuthSessionCubit(client: authClient)),
         ],
-        child: const MaterialApp(
-          home: Scaffold(
+        child: localizedTestApp(
+          home: const Scaffold(
             body: SingleChildScrollView(
               key: ValueKey('detail-scroll'),
               child: Column(
@@ -140,8 +141,10 @@ void main() {
           BlocProvider.value(value: commentsCubit),
           BlocProvider(create: (_) => AuthSessionCubit(client: authClient)),
         ],
-        child: const MaterialApp(
-          home: Scaffold(body: SizedBox(height: 760, child: CommentsTab())),
+        child: localizedTestApp(
+          home: const Scaffold(
+            body: SizedBox(height: 760, child: CommentsTab()),
+          ),
         ),
       ),
     );
@@ -195,7 +198,7 @@ void main() {
             BlocProvider.value(value: commentsCubit),
             BlocProvider(create: (_) => AuthSessionCubit(client: authClient)),
           ],
-          child: MaterialApp(
+          child: localizedTestApp(
             home: Scaffold(
               body: CommentsTab(
                 composerVisibilityListenable: composerVisible,

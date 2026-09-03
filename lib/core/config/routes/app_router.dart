@@ -13,7 +13,10 @@ import 'package:movie_app/feature/library/presentation/pages/edit_profile_page.d
 import 'package:movie_app/feature/library/presentation/pages/display_name_editor_page.dart';
 import 'package:movie_app/feature/library/presentation/pages/favorites_page.dart';
 import 'package:movie_app/feature/library/presentation/pages/profile_page.dart';
+import 'package:movie_app/feature/library/presentation/pages/settings_page.dart';
 import 'package:movie_app/core/config/themes/app_color.dart';
+import 'package:movie_app/language_page.dart';
+import 'package:movie_app/core/extension/build_context_extension.dart';
 
 class AppRoutes {
   static const String splash = '/splash';
@@ -27,6 +30,8 @@ class AppRoutes {
   static const String editProfile = '/profile/edit';
   static const String editDisplayName = '/profile/edit/name';
   static const String signIn = '/sign-in';
+  static const String settings = '/settings';
+  static const String language = '/settings/language';
 
   static final GlobalKey<NavigatorState> navigatorKey =
       GlobalKey<NavigatorState>();
@@ -106,6 +111,19 @@ final goRouter = GoRouter(
       name: 'notifications',
       parentNavigatorKey: AppRoutes.navigatorKey,
       builder: (context, state) => const NotificationsPage(),
+    ),
+    GoRoute(
+      path: AppRoutes.settings,
+      name: 'settings',
+      parentNavigatorKey: AppRoutes.navigatorKey,
+      builder: (context, state) => const SettingsPage(),
+      routes: [
+        GoRoute(
+          path: 'language',
+          name: 'language',
+          builder: (context, state) => const LanguagePage(),
+        ),
+      ],
     ),
     GoRoute(
       path: AppRoutes.editProfile,
@@ -209,11 +227,11 @@ final goRouter = GoRouter(
         children: [
           const Icon(Icons.error_outline, size: 64, color: Colors.red),
           const SizedBox(height: 16),
-          Text('Lỗi: ${state.error}'),
+          Text(context.l10n.commonErrorWithDetails('${state.error}')),
           const SizedBox(height: 16),
           ElevatedButton(
             onPressed: () => context.go(AppRoutes.home),
-            child: const Text('Về trang chủ'),
+            child: Text(context.l10n.commonGoHome),
           ),
         ],
       ),

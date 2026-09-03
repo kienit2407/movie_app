@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:movie_app/core/config/assets/app_icon.dart';
+import 'package:movie_app/core/extension/build_context_extension.dart';
 
 class AppOption extends StatelessWidget {
   const AppOption({
@@ -15,7 +16,7 @@ class AppOption extends StatelessWidget {
   Widget build(BuildContext context) {
     return Semantics(
       button: true,
-      label: 'Tiếp tục với Google',
+      label: context.l10n.authContinueWithGoogle,
       child: Material(
         color: Colors.transparent,
         child: InkWell(
@@ -53,9 +54,9 @@ class AppOption extends StatelessWidget {
                         children: [
                           Image.asset(AppIcon.appIconGoogle, width: 24),
                           const SizedBox(width: 12),
-                          const Text(
-                            'Tiếp tục với Google',
-                            style: TextStyle(
+                          Text(
+                            context.l10n.authContinueWithGoogle,
+                            style: const TextStyle(
                               color: Color(0xff202124),
                               fontSize: 16,
                               fontWeight: FontWeight.w700,

@@ -21,8 +21,10 @@ class AuthRepositoryImpl implements AuthRepository {
   }
 
   @override
-  Future<Either> signInWithGoogle() async {
-    return await authService.signInWithGoogle();
+  Future<Either> signInWithGoogle({bool forceAccountPicker = false}) async {
+    return await authService.signInWithGoogle(
+      forceAccountPicker: forceAccountPicker,
+    );
   }
 
   @override

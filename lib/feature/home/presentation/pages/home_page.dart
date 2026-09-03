@@ -19,6 +19,7 @@ import 'package:movie_app/common/components/lost_network.dart';
 import 'package:movie_app/common/helpers/navigation/app_navigation.dart';
 import 'package:movie_app/core/config/constants/const_globals.dart';
 import 'package:movie_app/core/config/routes/app_router.dart';
+import 'package:movie_app/core/extension/build_context_extension.dart';
 import 'package:movie_app/core/config/utils/episode_map.dart';
 import 'package:movie_app/core/config/utils/movie_player_args.dart';
 import 'package:movie_app/core/config/utils/package_infor.dart';
@@ -292,15 +293,12 @@ class _HomePageState extends State<HomePage>
       final shouldEnable = await showAnimatedDialog<bool>(
         context: context,
         barrierDismissible: false,
-        dialog: const AppAlertDialog(
-          icon: Icon(Iconsax.notification_copy, size: 30),
-          title: 'Nhận thông báo phim mới?',
-          content:
-              'Liquid Phim có thể kiểm tra định kỳ trong nền và thông báo '
-              'khi phát hiện phim mới. Hệ điều hành có thể thực hiện việc '
-              'kiểm tra trễ hơn 20 phút để tiết kiệm pin.',
-          buttonTitle: 'Bật thông báo',
-          cancelButtonTitle: 'Không bật',
+        dialog: AppAlertDialog(
+          icon: const Icon(Iconsax.notification_copy, size: 30),
+          title: context.l10n.homeEnableNewMovieNotificationsTitle,
+          content: context.l10n.homeEnableNewMovieNotificationsBody,
+          buttonTitle: context.l10n.homeEnableNotifications,
+          cancelButtonTitle: context.l10n.homeDoNotEnable,
         ),
       );
 
@@ -308,11 +306,7 @@ class _HomePageState extends State<HomePage>
         final permissionGranted = await coordinator.enableNotifications();
         if (!mounted || permissionGranted) return;
 
-        AppToast.show(
-          context,
-          'Quyền thông báo chưa được bật. Bạn có thể bật lại trong '
-          'Cài đặt của điện thoại.',
-        );
+        AppToast.show(context, context.l10n.homeNotificationPermissionDisabled);
       } else {
         await coordinator.declineNotifications();
       }
@@ -362,8 +356,7 @@ class _HomePageState extends State<HomePage>
                   ),
                   SizedBox(height: 12.h),
                   Text(
-                    'Không thể tải dữ liệu phim.\n'
-                    'Kéo xuống để thử lại.',
+                    context.l10n.homeLoadMoviesFailed,
                     textAlign: TextAlign.center,
                     style: TextStyle(fontSize: 14.sp),
                   ),
@@ -466,7 +459,7 @@ class _HomePageState extends State<HomePage>
                           ),
                         ),
                         Text(
-                          Global.instance.subTilleLogo,
+                          context.l10n.appTagline,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
@@ -494,7 +487,7 @@ class _HomePageState extends State<HomePage>
                         alignment: Alignment.center,
                         children: [
                           IconButton.outlined(
-                            tooltip: 'Thông báo',
+                            tooltip: context.l10n.navNotifications,
                             onPressed: () =>
                                 context.push(AppRoutes.notifications),
                             icon: const Icon(Iconsax.notification_copy),
@@ -547,9 +540,12 @@ class _HomePageState extends State<HomePage>
                       spacing: 10.w,
                       mainAxisAlignment: MainAxisAlignment.start,
                       children: [
-                        _buildChipButton('Đề Xuất', isSelected: true),
                         _buildChipButton(
-                          'Thể loại',
+                          context.l10n.homeRecommended,
+                          isSelected: true,
+                        ),
+                        _buildChipButton(
+                          context.l10n.homeGenres,
                           icon: Iconsax.arrow_down_1_copy,
                           showIcon: true,
                           onPressed: () {
@@ -559,13 +555,13 @@ class _HomePageState extends State<HomePage>
                         ),
                         _buildChipButton(
                           onPressed: () => CountryBottomSheet.show(context),
-                          'Quốc gia',
+                          context.l10n.homeCountries,
                           icon: Iconsax.arrow_down_1_copy,
                           showIcon: true,
                         ),
                         _buildChipButton(
                           onPressed: () => YearBottomSheet.show(context),
-                          'Năm',
+                          context.l10n.homeYear,
                           icon: Iconsax.arrow_down_1_copy,
                           showIcon: true,
                         ),
@@ -662,7 +658,7 @@ class _HomePageState extends State<HomePage>
                   slivers: [
                     SliverFillRemaining(
                       hasScrollBody: false,
-                      child: const Center(child: Text("Không có dữ liệu")),
+                      child: Center(child: Text(context.l10n.commonNoData)),
                     ),
                   ],
                 );
@@ -728,7 +724,7 @@ class _HomePageState extends State<HomePage>
           Padding(
             padding: EdgeInsets.only(left: 10.w),
             child: Text(
-              'Phim mới coóng!',
+              context.l10n.homeFreshMovies,
               style: TextStyle(
                 color: Colors.white,
                 fontSize: 18.sp,
@@ -750,7 +746,7 @@ class _HomePageState extends State<HomePage>
               children: [
                 CountryMovieSection(
                   key: const ValueKey('country-section-han-quoc'),
-                  title: "Phim Hàn Quốc",
+                  title: context.l10n.homeKoreanMovies,
                   gradient: LinearGradient(
                     colors: [
                       Color(0xff94D877),
@@ -765,7 +761,7 @@ class _HomePageState extends State<HomePage>
                 SizedBox(height: 20.h),
                 CountryMovieSection(
                   key: const ValueKey('country-section-trung-quoc'),
-                  title: "Phim Trung Quốc",
+                  title: context.l10n.homeChineseMovies,
                   gradient: LinearGradient(
                     colors: [
                       Color(0xffA088BD),
@@ -779,7 +775,7 @@ class _HomePageState extends State<HomePage>
                 SizedBox(height: 20.h),
                 CountryMovieSection(
                   key: const ValueKey('country-section-au-my'),
-                  title: "Phim Mỹ - UK",
+                  title: context.l10n.homeUsUkMovies,
                   gradient: LinearGradient(
                     colors: [
                       Color(0xffEAC66B),
@@ -873,14 +869,14 @@ class _HomePageState extends State<HomePage>
                       children: [
                         _buildActionButton(
                           Iconsax.play_circle,
-                          'Xem Phim',
+                          context.l10n.homeWatchMovie,
                           () async {
                             await _navigateToPlayer(selectedMovie.slug);
                           },
                         ),
                         _buildActionButton(
                           Iconsax.info_circle,
-                          'Thông Tin',
+                          context.l10n.homeInformation,
                           () {
                             Navigator.of(context, rootNavigator: true).push(
                               MaterialPageRoute(
@@ -1015,7 +1011,7 @@ class _HomePageState extends State<HomePage>
                   _buildInforChip(
                     child: Text(
                       (movie.episodeCurrent == 'Full')
-                          ? movie.time.toFormatEpisode()
+                          ? movie.time.toFormatEpisode(context.l10n)
                           : movie.time,
                       style: TextStyle(
                         fontSize: 10.sp,
@@ -1059,7 +1055,7 @@ class _HomePageState extends State<HomePage>
                       isGadient: true,
                       borderColor: Colors.transparent,
                       child: Text(
-                        'Sub Độc Quyền',
+                        context.l10n.detailExclusiveSubtitles,
                         style: TextStyle(
                           fontSize: 10.sp,
                           fontWeight: FontWeight.w600,
@@ -1842,7 +1838,7 @@ class _CountryMovieSectionState extends State<CountryMovieSection> {
                     child: Padding(
                       padding: EdgeInsets.only(right: 10.w),
                       child: Text(
-                        'Xem tất cả',
+                        context.l10n.homeViewAll,
                         style: TextStyle(
                           color: Colors.white.withOpacity(0.7),
                           fontSize: 12.sp,

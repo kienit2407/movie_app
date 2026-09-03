@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
 import 'package:movie_app/core/config/themes/app_color.dart';
+import 'package:movie_app/core/extension/build_context_extension.dart';
 import 'package:movie_app/feature/auth/presentation/sign_in/pages/sign_in.dart';
 
 class AuthRequiredView extends StatelessWidget {
@@ -50,9 +51,9 @@ class AuthRequiredView extends StatelessWidget {
                   if (signedIn && context.mounted) onSignedIn?.call();
                 },
                 icon: const Icon(Iconsax.login_1_copy),
-                label: const Text(
-                  'Tham gia thành viên',
-                  style: TextStyle(fontWeight: FontWeight.w600),
+                label: Text(
+                  context.l10n.authJoinMember,
+                  style: const TextStyle(fontWeight: FontWeight.w600),
                 ),
               ),
             ),

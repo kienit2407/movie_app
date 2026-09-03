@@ -9,6 +9,7 @@ import 'package:iconsax_flutter/iconsax_flutter.dart';
 import 'package:movie_app/common/components/alert_dialog/app_alert_dialog.dart';
 import 'package:movie_app/core/config/di/service_locator.dart';
 import 'package:movie_app/core/config/themes/app_color.dart';
+import 'package:movie_app/core/extension/build_context_extension.dart';
 import 'package:movie_app/core/config/utils/animated_dialog.dart';
 import 'package:movie_app/feature/search/domain/entities/search_filter_params.dart';
 import 'package:movie_app/feature/search/presentation/bloc/search_cubit.dart';
@@ -110,9 +111,9 @@ class _SearchPageViewState extends State<_SearchPageView> {
   void _showKeywordRequiredMessage() {
     showAnimatedDialog(
       context: context,
-      dialog: const AppAlertDialog(
-        title: 'Chú ý!',
-        content: 'Nhập từ khóa trước khi lọc phim.',
+      dialog: AppAlertDialog(
+        title: context.l10n.searchAttentionTitle,
+        content: context.l10n.searchEnterKeywordBeforeFiltering,
       ),
     );
   }
@@ -224,10 +225,10 @@ class _SearchPageViewState extends State<_SearchPageView> {
                             },
                           );
                         } else if (state is SearchError) {
-                          return const Center(
+                          return Center(
                             child: Text(
-                              "Không tìm thấy",
-                              style: TextStyle(color: Colors.white),
+                              context.l10n.searchNoResults,
+                              style: const TextStyle(color: Colors.white),
                             ),
                           );
                         }
@@ -284,7 +285,7 @@ class _SearchPageViewState extends State<_SearchPageView> {
                   textAlignVertical: TextAlignVertical.center,
 
                   decoration: InputDecoration(
-                    hintText: 'Tìm kiếm phim, diễn viên...',
+                    hintText: context.l10n.searchMovieActorHint,
                     hintStyle: TextStyle(
                       color: Colors.white.withValues(alpha: 0.5),
                     ),
@@ -356,7 +357,7 @@ class _SearchPageViewState extends State<_SearchPageView> {
       focusNode: _focusNode,
       style: const TextStyle(color: Colors.white, fontSize: 13),
       decoration: InputDecoration(
-        hintText: 'Tìm kiếm phim, diễn viên...',
+        hintText: context.l10n.searchMovieActorHint,
         hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.5)),
         prefixIcon: const Icon(
           Iconsax.search_normal_1_copy,
@@ -415,7 +416,7 @@ class _SearchPageViewState extends State<_SearchPageView> {
       clipBehavior: Clip.none,
       children: [
         IconButton(
-          tooltip: 'Bộ lọc tìm kiếm',
+          tooltip: context.l10n.searchFilterTooltip,
           onPressed: _openFilterSheet,
           style: IconButton.styleFrom(
             backgroundColor: Colors.white.withValues(alpha: 0.1),

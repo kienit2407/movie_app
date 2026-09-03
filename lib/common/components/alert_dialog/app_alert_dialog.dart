@@ -3,6 +3,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
 import 'package:movie_app/core/config/themes/app_color.dart';
+import 'package:movie_app/core/extension/build_context_extension.dart';
 
 class AppAlertDialog extends StatelessWidget {
   const AppAlertDialog({
@@ -69,7 +70,7 @@ class AppAlertDialog extends StatelessWidget {
                       ),
                       const SizedBox(height: 15),
                       Text(
-                        title ?? 'Chúc mừng!',
+                        title ?? context.l10n.commonCongratulationsTitle,
                         style: const TextStyle(
                           color: AppColor.secondColor,
                           fontWeight: FontWeight.w600,
@@ -100,7 +101,7 @@ class AppAlertDialog extends StatelessWidget {
                                   onPressed:
                                       onCancel ??
                                       () => Navigator.pop(context, false),
-                                  child: Text(cancelButtonTitle!, ),
+                                  child: Text(cancelButtonTitle!),
                                 ),
                               ),
                               const SizedBox(width: 10),
@@ -119,7 +120,7 @@ class AppAlertDialog extends StatelessWidget {
                                     onPressed ??
                                     () => Navigator.pop(context, true),
                                 child: Text(
-                                  buttonTitle ?? 'Đồng ý',
+                                  buttonTitle ?? context.l10n.commonAgree,
                                   style: const TextStyle(
                                     fontSize: 12,
                                     fontWeight: FontWeight.w600,

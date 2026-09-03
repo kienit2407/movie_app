@@ -5,6 +5,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:movie_app/feature/detail_movie/data/model/detail_movie_model.dart';
 import 'package:movie_app/feature/library/presentation/cubit/user_library_cubit.dart';
 import 'package:movie_app/feature/movie_engagement/data/movie_engagement_repository.dart';
+import 'package:movie_app/core/extension/build_context_extension.dart';
 
 class ViewCountSection extends StatefulWidget {
   const ViewCountSection({
@@ -86,9 +87,10 @@ class _ViewCountSectionState extends State<ViewCountSection> {
       fontSize: widget.compact ? 10 : 12,
     );
     final parts = <String>[
-      '${formatCompactCount(views)} lượt xem',
-      '${formatCompactCount(likes)} lượt thích',
-      if (!widget.compact && updatedAt != null) _relativeTime(updatedAt),
+      context.l10n.detailViews(formatCompactCount(views)),
+      context.l10n.detailLikes(formatCompactCount(likes)),
+      if (!widget.compact && updatedAt != null)
+        _relativeTime(context, updatedAt),
     ];
 
     return Wrap(
@@ -116,12 +118,22 @@ String _compact(double value, String suffix) {
   return '$formatted$suffix';
 }
 
-String _relativeTime(DateTime value) {
+String _relativeTime(BuildContext context, DateTime value) {
   final difference = DateTime.now().difference(value);
-  if (difference.isNegative || difference.inMinutes < 1) return 'Vừa cập nhật';
-  if (difference.inHours < 1) return '${difference.inMinutes} phút trước';
-  if (difference.inDays < 1) return '${difference.inHours} giờ trước';
-  if (difference.inDays < 30) return '${difference.inDays} ngày trước';
-  if (difference.inDays < 365) return '${difference.inDays ~/ 30} tháng trước';
-  return '${difference.inDays ~/ 365} năm trước';
+  if (difference.isNegative || difference.inMinutes < 1) {
+    return context.l10n.detailUpdatedJustNow;
+  }
+  if (difference.inHours < 1) {
+    return context.l10n.commentsMinutesAgo(difference.inMinutes);
+  }
+  if (difference.inDays < 1) {
+    return context.l10n.commentsHoursAgo(difference.inHours);
+  }
+  if (difference.inDays < 30) {
+    return context.l10n.commentsDaysAgo(difference.inDays);
+  }
+  if (difference.inDays < 365) {
+    return context.l10n.commentsMonthsAgo(difference.inDays ~/ 30);
+  }
+  return context.l10n.commentsYearsAgo(difference.inDays ~/ 365);
 }

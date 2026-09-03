@@ -5,12 +5,13 @@ import 'package:movie_app/feature/detail_movie/data/model/detail_movie_model.dar
 import 'package:movie_app/feature/home/presentation/widgets/top_movie_rankings.dart';
 import 'package:movie_app/feature/movie_engagement/data/movie_engagement_repository.dart';
 import 'package:stroke_text/stroke_text.dart';
+import '../../../../helpers/localized_test_app.dart';
 
 void main() {
   testWidgets('renders view and liked movie rankings', (tester) async {
     await tester.pumpWidget(
-      const MaterialApp(
-        home: Scaffold(
+      localizedTestApp(
+        home: const Scaffold(
           body: SingleChildScrollView(
             child: TopMovieRankings(repository: _FakeRankingRepository()),
           ),
@@ -19,7 +20,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('Top Phim yêu thích'), findsOneWidget);
+    expect(find.text('TOP Phim yêu thích'), findsOneWidget);
     expect(find.text('TOP 30 Phim Lẻ Hot'), findsOneWidget);
     expect(find.text('TOP 30 của Liquid Phim'), findsOneWidget);
     expect(find.text('THÍCH NHIỀU NHẤT'), findsOneWidget);
@@ -50,8 +51,8 @@ void main() {
     addTearDown(() => tester.binding.setSurfaceSize(null));
 
     await tester.pumpWidget(
-      const MaterialApp(
-        home: Scaffold(
+      localizedTestApp(
+        home: const Scaffold(
           body: SingleChildScrollView(
             child: TopMovieRankings(
               repository: _FakeRankingRepository(movieCount: 12),

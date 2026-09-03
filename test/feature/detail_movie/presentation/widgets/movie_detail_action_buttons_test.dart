@@ -9,6 +9,7 @@ import 'package:movie_app/feature/detail_movie/presentation/widgets/movie_detail
 import 'package:movie_app/feature/library/data/user_library_repository.dart';
 import 'package:movie_app/feature/library/presentation/cubit/user_library_cubit.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../../../helpers/localized_test_app.dart';
 
 void main() {
   final overlay = PlayerOverlayController.instance;
@@ -35,11 +36,14 @@ void main() {
     await tester.pumpWidget(
       BlocProvider.value(
         value: cubit,
-        child: const MaterialApp(home: Scaffold(body: _ActionHarness())),
+        child: localizedTestApp(home: const Scaffold(body: _ActionHarness())),
       ),
     );
 
     await tester.tap(find.text('Xem phim'));
+    await tester.pumpAndSettle();
+    expect(find.text('Xem tập mới'), findsOneWidget);
+    await tester.tap(find.text('Xem phim').last);
     await tester.pumpAndSettle();
     expect(find.text('Tiếp tục xem?'), findsOneWidget);
     expect(find.text('Xem tiếp'), findsOneWidget);
@@ -53,6 +57,8 @@ void main() {
 
     overlay.close();
     await tester.tap(find.text('Xem phim'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Xem phim').last);
     await tester.pumpAndSettle();
     await tester.tap(find.text('Xem lại từ đầu'));
     await tester.pumpAndSettle();
@@ -80,10 +86,12 @@ void main() {
     await tester.pumpWidget(
       BlocProvider.value(
         value: cubit,
-        child: const MaterialApp(home: Scaffold(body: _ActionHarness())),
+        child: localizedTestApp(home: const Scaffold(body: _ActionHarness())),
       ),
     );
 
+    await tester.tap(find.text('Xem phim'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Xem tập mới'));
     await tester.pumpAndSettle();
 

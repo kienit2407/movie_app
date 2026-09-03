@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
 import 'package:movie_app/feature/search/presentation/bloc/search_cubit.dart';
+import 'package:movie_app/core/extension/build_context_extension.dart';
 
 class SearchHistoryView extends StatelessWidget {
   final List<String> history;
@@ -18,7 +19,7 @@ class SearchHistoryView extends StatelessWidget {
     if (history.isEmpty) {
       return Center(
         child: Text(
-          'Hãy nhập tên phim để tìm kiếm',
+          context.l10n.searchStartPrompt,
           style: TextStyle(color: Colors.white.withValues(alpha: 0.5)),
         ),
       );
@@ -30,7 +31,7 @@ class SearchHistoryView extends StatelessWidget {
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           child: Text(
-            'Tìm kiếm gần đây',
+            context.l10n.searchRecent,
             style: TextStyle(
               color: Colors.white.withValues(alpha: 0.7),
               fontSize: 13,

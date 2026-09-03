@@ -11,6 +11,7 @@ import 'package:movie_app/core/config/themes/app_color.dart';
 import 'package:movie_app/core/config/di/service_locator.dart';
 import 'package:movie_app/core/config/utils/movie_player_args.dart';
 import 'package:movie_app/core/config/utils/animated_dialog.dart';
+import 'package:movie_app/core/extension/build_context_extension.dart';
 import 'package:movie_app/core/player_overlay_launcher.dart';
 import 'package:movie_app/common/components/alert_dialog/app_alert_dialog.dart';
 import 'package:movie_app/feature/detail_movie/domain/usecase/get_detail_movie_usecase.dart';
@@ -19,7 +20,6 @@ import 'package:movie_app/feature/library/presentation/cubit/user_library_cubit.
 import 'package:movie_app/feature/library/presentation/widgets/auth_required_view.dart';
 import 'package:movie_app/feature/library/presentation/widgets/library_movie_card.dart';
 import 'package:movie_app/feature/hub/presentation/pages/hub_page.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -69,22 +69,6 @@ class _ProfilePageState extends State<ProfilePage>
     super.dispose();
   }
 
-  Future<void> _signOut() async {
-    final confirmed = await showAnimatedDialog<bool>(
-      context: context,
-      dialog: const AppAlertDialog(
-        title: 'Đăng xuất?',
-        content: 'Bạn có chắc muốn đăng xuất khỏi tài khoản này?',
-        buttonTitle: 'Đăng xuất',
-        cancelButtonTitle: 'Hủy',
-        isDestructive: true,
-      ),
-    );
-    if (confirmed != true || !mounted) return;
-    await Supabase.instance.client.auth.signOut();
-    if (mounted) context.go(AppRoutes.home);
-  }
-
   void _toggleHistorySelection(String slug) {
     setState(() {
       if (!_selectedHistorySlugs.add(slug)) {
@@ -95,15 +79,16 @@ class _ProfilePageState extends State<ProfilePage>
 
   Future<bool> _confirmHistoryRemoval(int count) async {
     final many = count > 1;
+    final l10n = context.l10n;
     return await showAnimatedDialog<bool>(
           context: context,
           dialog: AppAlertDialog(
-            title: many ? 'Xóa $count phim đã chọn?' : 'Xóa lịch sử phim này?',
-            content: many
-                ? 'Bạn có đồng ý xóa $count phim khỏi lịch sử xem không?'
-                : 'Bạn có đồng ý xóa phim này khỏi lịch sử xem không?',
-            buttonTitle: 'Xóa',
-            cancelButtonTitle: 'Hủy',
+            title: many
+                ? l10n.libraryDeleteSelectedMoviesTitle(count)
+                : l10n.libraryDeleteHistoryMovieTitle,
+            content: l10n.libraryDeleteHistoryConfirmation(count),
+            buttonTitle: l10n.commonDelete,
+            cancelButtonTitle: l10n.commonCancel,
             isDestructive: true,
           ),
         ) ??
@@ -137,7 +122,7 @@ class _ProfilePageState extends State<ProfilePage>
       if (!mounted) return;
       Navigator.of(context, rootNavigator: true).pop();
       result.fold(
-        (_) => AppToast.show(context, 'Không thể mở lại phim lúc này.'),
+        (_) => AppToast.show(context, context.l10n.libraryCannotResumeMovie),
         (detail) {
           if (detail.episodes.isEmpty) return;
           var serverIndex = history.lastServerIndex ?? 0;
@@ -178,7 +163,7 @@ class _ProfilePageState extends State<ProfilePage>
     } catch (_) {
       if (!mounted) return;
       Navigator.of(context, rootNavigator: true).pop();
-      AppToast.show(context, 'Không thể mở lại phim lúc này.');
+      AppToast.show(context, context.l10n.libraryCannotResumeMovie);
     }
   }
 
@@ -217,9 +202,8 @@ class _ProfilePageState extends State<ProfilePage>
                   final user = state.user;
                   if (user == null) {
                     return AuthRequiredView(
-                      title: 'Hồ sơ của bạn',
-                      description:
-                          'Đăng nhập để chỉnh sửa hồ sơ và đồng bộ lịch sử xem.',
+                      title: context.l10n.libraryYourProfile,
+                      description: context.l10n.librarySignInProfileDescription,
                       onSignedIn: () =>
                           context.read<UserLibraryCubit>().refresh(),
                     );
@@ -239,7 +223,7 @@ class _ProfilePageState extends State<ProfilePage>
                             email: user.email ?? '',
                             avatarUrl: avatarUrl,
                             onEdit: () => context.push(AppRoutes.editProfile),
-                            onSignOut: _signOut,
+                            onSettings: () => context.push(AppRoutes.settings),
                           ),
                         ),
                         SliverPadding(
@@ -250,8 +234,10 @@ class _ProfilePageState extends State<ProfilePage>
                                 Expanded(
                                   child: Text(
                                     _isSelectingHistory
-                                        ? '${_selectedHistorySlugs.length} đã chọn'
-                                        : 'Lịch sử xem',
+                                        ? context.l10n.commonSelectedCount(
+                                            _selectedHistorySlugs.length,
+                                          )
+                                        : context.l10n.libraryWatchHistory,
                                     style: const TextStyle(
                                       color: Colors.white,
                                       fontSize: 20,
@@ -261,13 +247,16 @@ class _ProfilePageState extends State<ProfilePage>
                                 ),
                                 if (_isSelectingHistory) ...[
                                   IconButton(
-                                    tooltip: 'Hủy chọn',
+                                    tooltip:
+                                        context.l10n.libraryCancelSelection,
                                     onPressed: () =>
                                         setState(_selectedHistorySlugs.clear),
                                     icon: const Icon(Icons.close_rounded),
                                   ),
                                   IconButton(
-                                    tooltip: 'Xóa phim đã chọn',
+                                    tooltip: context
+                                        .l10n
+                                        .libraryDeleteSelectedMovies,
                                     onPressed: _removeSelectedHistory,
                                     icon: Icon(
                                       Iconsax.trash_copy,
@@ -291,7 +280,7 @@ class _ProfilePageState extends State<ProfilePage>
                             hasScrollBody: false,
                             child: Center(
                               child: Text(
-                                'Chưa có lịch sử xem',
+                                context.l10n.libraryNoWatchHistory,
                                 style: TextStyle(
                                   color: Colors.white.withValues(alpha: .55),
                                 ),
@@ -369,14 +358,14 @@ class _ProfileHeader extends StatelessWidget {
     required this.email,
     required this.avatarUrl,
     required this.onEdit,
-    required this.onSignOut,
+    required this.onSettings,
   });
 
   final String displayName;
   final String email;
   final String avatarUrl;
   final VoidCallback onEdit;
-  final VoidCallback onSignOut;
+  final VoidCallback onSettings;
 
   @override
   Widget build(BuildContext context) {
@@ -387,9 +376,9 @@ class _ProfileHeader extends StatelessWidget {
           Align(
             alignment: Alignment.centerRight,
             child: IconButton(
-              tooltip: 'Đăng xuất',
-              onPressed: onSignOut,
-              icon: const Icon(Iconsax.logout_1_copy, color: Colors.white70),
+              tooltip: context.l10n.settingsTitle,
+              onPressed: onSettings,
+              icon: const Icon(Iconsax.setting_2_copy, color: Colors.white70),
             ),
           ),
 

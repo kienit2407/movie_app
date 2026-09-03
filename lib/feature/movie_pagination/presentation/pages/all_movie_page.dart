@@ -13,6 +13,7 @@ import 'package:movie_app/core/config/utils/episode_map.dart';
 import 'package:movie_app/feature/detail_movie/presentation/pages/movie_detail_page.dart';
 import 'package:movie_app/common/helpers/static_data.dart';
 import 'package:movie_app/core/config/themes/app_color.dart';
+import 'package:movie_app/core/extension/build_context_extension.dart';
 import 'package:movie_app/core/config/utils/animated_dialog.dart';
 import 'package:movie_app/core/config/utils/sharder_text.dart';
 import 'package:movie_app/core/config/utils/show_detail_movie_dialog.dart';
@@ -297,7 +298,7 @@ class _AllMoviePageState extends State<AllMoviePage> {
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
                                 Text(
-                                  'Không có phim',
+                                  context.l10n.searchNoMovies,
                                   style: TextStyle(
                                     fontSize: 18,
                                     fontWeight: FontWeight.w600,
@@ -306,7 +307,7 @@ class _AllMoviePageState extends State<AllMoviePage> {
                                 ),
                                 const SizedBox(height: 8),
                                 Text(
-                                  'Thử lại với bộ lọc khác',
+                                  context.l10n.searchTryDifferentFilters,
                                   style: TextStyle(
                                     fontSize: 14,
                                     color: Colors.white.withOpacity(0.6),
@@ -394,7 +395,7 @@ class _AllMoviePageState extends State<AllMoviePage> {
             // Bạn có thể chỉnh độ lớn nhỏ ở đây
             color: Colors.grey, // Màu sắc của loading
           ),
-          Text('Loading...'),
+          Text(context.l10n.commonLoading),
         ],
       ),
     );

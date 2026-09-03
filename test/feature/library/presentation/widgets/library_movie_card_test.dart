@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:movie_app/feature/library/presentation/widgets/library_movie_card.dart';
+import '../../../../helpers/localized_test_app.dart';
 
 void main() {
   test('starts a new date group only when the local calendar day changes', () {
@@ -17,7 +18,7 @@ void main() {
     tester,
   ) async {
     await tester.pumpWidget(
-      MaterialApp(
+      localizedTestApp(
         home: Scaffold(
           body: SizedBox(
             width: 150,
@@ -47,7 +48,7 @@ void main() {
     tester,
   ) async {
     await tester.pumpWidget(
-      MaterialApp(
+      localizedTestApp(
         home: Scaffold(
           body: SizedBox(
             width: 150,
@@ -78,7 +79,7 @@ void main() {
     tester,
   ) async {
     await tester.pumpWidget(
-      MaterialApp(
+      localizedTestApp(
         home: Scaffold(
           body: SizedBox(
             width: 150,

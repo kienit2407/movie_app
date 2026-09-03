@@ -10,6 +10,7 @@ import 'package:movie_app/feature/auth/domain/repositories/auth_repository.dart'
 import 'package:movie_app/feature/auth/domain/usecases/sigin_with_facebook.dart';
 import 'package:movie_app/feature/auth/domain/usecases/sigin_with_google.dart';
 import 'package:movie_app/feature/auth/presentation/sign_in/pages/sign_in.dart';
+import '../../../helpers/localized_test_app.dart';
 
 void main() {
   testWidgets('page presentation only exposes Google sign in', (tester) async {
@@ -44,7 +45,7 @@ Widget _testApp(Widget child) {
       SiginWithGoogleUsecase(repository),
       SiginWithFacebookUsecase(repository),
     ),
-    child: MaterialApp(theme: ThemeData.dark(), home: child),
+    child: localizedTestApp(theme: ThemeData.dark(), home: child),
   );
 }
 
@@ -63,7 +64,8 @@ class _FakeAuthRepository implements AuthRepository {
   Future<Either> signInWithFacebook() async => const Right('ok');
 
   @override
-  Future<Either> signInWithGoogle() async => const Right('ok');
+  Future<Either> signInWithGoogle({bool forceAccountPicker = false}) async =>
+      const Right('ok');
 
   @override
   Future<Either> signOut() async => const Right('ok');

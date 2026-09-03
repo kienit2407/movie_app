@@ -8,6 +8,8 @@ import 'package:movie_app/common/helpers/navigation/app_navigation.dart';
 import 'package:movie_app/common/helpers/list_year.dart';
 import 'package:movie_app/common/helpers/sort_map.dart';
 import 'package:movie_app/core/config/themes/app_color.dart';
+import 'package:movie_app/core/extension/build_context_extension.dart';
+import 'package:movie_app/core/extension/filter_localization_extension.dart';
 import 'package:movie_app/core/config/utils/animated_dialog.dart';
 import 'package:movie_app/feature/home/domain/entities/fillterType.dart';
 import 'package:movie_app/feature/home/domain/entities/fillter_genre_movie_req.dart';
@@ -114,8 +116,8 @@ class _ComprehensiveFilterBottomSheetState
     showAnimatedDialog(
       context: context,
       dialog: AppAlertDialog(
-        content: "Làm ơn hãy chọn loại phim !",
-        title: 'Chú ý!',
+        content: context.l10n.filterChooseMovieType,
+        title: context.l10n.searchAttentionTitle,
       ),
     );
   }
@@ -152,18 +154,12 @@ class _ComprehensiveFilterBottomSheetState
                           const SizedBox(height: 10),
                           _buildSectionHeader(
                             Iconsax.category,
-                            'Loại phim',
+                            context.l10n.filterMovieType,
                             selectedType,
                             false,
-                            displayName: selectedType != null
-                                ? typeList.firstWhere(
-                                    (t) => t['slug'] == selectedType,
-                                    orElse: () => {
-                                      'slug': '',
-                                      'name': selectedType!,
-                                    },
-                                  )['name']
-                                : null,
+                            displayName: selectedType == null
+                                ? null
+                                : context.movieTypeLabel(selectedType!),
                           ),
                           const SizedBox(height: 10),
                           _buildTypeFilter(),
@@ -173,7 +169,7 @@ class _ComprehensiveFilterBottomSheetState
                             builder: (context, countryState) {
                               return _buildSectionHeader(
                                 Iconsax.global,
-                                'Quốc gia',
+                                context.l10n.homeCountries,
                                 selectedCountry,
                                 expandCountry,
                                 displayName:
@@ -200,7 +196,7 @@ class _ComprehensiveFilterBottomSheetState
 
                           _buildSectionHeader(
                             Iconsax.calendar,
-                            'Năm',
+                            context.l10n.homeYear,
                             selectedYear,
                             expandYear,
                             onTap: () {
@@ -214,7 +210,7 @@ class _ComprehensiveFilterBottomSheetState
 
                           _buildSectionHeader(
                             Iconsax.translate_copy,
-                            'Ngôn ngữ',
+                            context.l10n.filterLanguage,
                             selectedLanguage,
                             expandLanguage,
                             onTap: () {
@@ -222,24 +218,18 @@ class _ComprehensiveFilterBottomSheetState
                                 expandLanguage = !expandLanguage;
                               });
                             },
-                            displayName: selectedLanguage != null
-                                ? SortMap.sortLangMap
-                                      .firstWhere(
-                                        (s) => s.containsKey(selectedLanguage),
-                                        orElse: () => {
-                                          selectedLanguage!: selectedLanguage!,
-                                        },
-                                      )
-                                      .values
-                                      .first
-                                : null,
+                            displayName: selectedLanguage == null
+                                ? null
+                                : context.filterLanguageLabel(
+                                    selectedLanguage!,
+                                  ),
                           ),
                           const SizedBox(height: 10),
                           _buildLanguageFilter(),
 
                           _buildSectionHeader(
                             Iconsax.sort_copy,
-                            'Sắp xếp',
+                            context.l10n.filterSortBy,
                             selectedSortField,
                             onTap: () {
                               setState(() {
@@ -247,25 +237,16 @@ class _ComprehensiveFilterBottomSheetState
                               });
                             },
                             expandSortField,
-                            displayName: selectedSortField != null
-                                ? SortMap.sortFieldMap
-                                      .firstWhere(
-                                        (s) => s.containsKey(selectedSortField),
-                                        orElse: () => {
-                                          selectedSortField!:
-                                              selectedSortField!,
-                                        },
-                                      )
-                                      .values
-                                      .first
-                                : null,
+                            displayName: selectedSortField == null
+                                ? null
+                                : context.filterSortLabel(selectedSortField!),
                           ),
                           const SizedBox(height: 10),
                           _buildSortFieldFilter(),
 
                           _buildSectionHeader(
                             Iconsax.filter,
-                            'Thể loại',
+                            context.l10n.homeGenres,
                             selectedGenre,
                             expandGenre,
                             displayName:
@@ -319,9 +300,9 @@ class _ComprehensiveFilterBottomSheetState
                                 child: Container(
                                   height: 50,
                                   alignment: Alignment.center,
-                                  child: const Text(
-                                    'Áp dụng bộ lọc',
-                                    style: TextStyle(
+                                  child: Text(
+                                    context.l10n.filterApply,
+                                    style: const TextStyle(
                                       color: Colors.white,
                                       fontWeight: FontWeight.w600,
                                       fontSize: 14,
@@ -387,7 +368,7 @@ class _ComprehensiveFilterBottomSheetState
                       Text(
                         (displayName ?? selected) == null ||
                                 (displayName ?? selected)!.isEmpty
-                            ? "Tất cả"
+                            ? context.l10n.commonAll
                             : (displayName ?? selected)!,
                         style: TextStyle(
                           fontSize: 10,
@@ -438,7 +419,7 @@ class _ComprehensiveFilterBottomSheetState
           alignment: WrapAlignment.start,
           children: List.generate(typeList.length, (index) {
             final slug = typeList[index]['slug'] as String;
-            final label = typeList[index]['name'] as String;
+            final label = context.movieTypeLabel(slug);
             final bool isSelected = selectedType == slug;
             return ChoiceChip(
               showCheckmark: false,
@@ -557,7 +538,7 @@ class _ComprehensiveFilterBottomSheetState
                 backgroundColor: const Color(0xff2F3345),
                 selectedColor: const Color(0xff2F3345),
                 label: Text(
-                  SortMap.sortLangMap[index].values.single,
+                  context.filterLanguageLabel(slug),
                   style: TextStyle(
                     color: isSelected ? const Color(0xffF1D775) : Colors.white,
                     fontSize: 10,
@@ -614,7 +595,7 @@ class _ComprehensiveFilterBottomSheetState
                 backgroundColor: const Color(0xff2F3345),
                 selectedColor: const Color(0xff2F3345),
                 label: Text(
-                  SortMap.sortFieldMap[index].values.single,
+                  context.filterSortLabel(slug),
                   style: TextStyle(
                     color: isSelected ? const Color(0xffF1D775) : Colors.white,
                     fontSize: 10,

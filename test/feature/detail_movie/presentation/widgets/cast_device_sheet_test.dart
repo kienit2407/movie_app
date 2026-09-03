@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:movie_app/core/casting/casting_service.dart';
 import 'package:movie_app/feature/detail_movie/presentation/widgets/cast_device_sheet.dart';
+import '../../../../helpers/localized_test_app.dart';
 
 void main() {
   testWidgets('opens above a player overlay that has no Navigator ancestor', (
@@ -23,7 +24,7 @@ void main() {
     );
 
     await tester.pumpWidget(
-      MaterialApp(
+      localizedTestApp(
         home: const SizedBox.shrink(),
         builder: (context, child) => Overlay(
           initialEntries: [

@@ -3,6 +3,7 @@ import 'package:movie_app/core/config/themes/app_color.dart';
 import 'package:movie_app/feature/detail_movie/data/model/detail_movie_model.dart';
 import 'package:movie_app/feature/detail_movie/presentation/widgets/movie_info_chip.dart';
 import 'package:movie_app/core/config/utils/format_episode.dart';
+import 'package:movie_app/core/extension/build_context_extension.dart';
 
 class MovieInfoChips extends StatelessWidget {
   final MovieModel movie;
@@ -66,7 +67,7 @@ class MovieInfoChips extends StatelessWidget {
           MovieInfoChip(
             child: Text(
               (movie.episode_current == 'Full')
-                  ? movie.time.toFormatEpisode()
+                  ? movie.time.toFormatEpisode(context.l10n)
                   : movie.time,
               style: const TextStyle(
                 fontSize: 10,
@@ -79,9 +80,9 @@ class MovieInfoChips extends StatelessWidget {
           MovieInfoChip(
             isGradient: true,
             borderColor: Colors.transparent,
-            child: const Text(
-              'Chiếu Rạp',
-              style: TextStyle(
+            child: Text(
+              context.l10n.detailInTheaters,
+              style: const TextStyle(
                 fontSize: 10,
                 fontWeight: FontWeight.w600,
                 color: Colors.white,
@@ -91,9 +92,9 @@ class MovieInfoChips extends StatelessWidget {
         if (movie.sub_docquyen == true)
           MovieInfoChip(
             isGradient: true,
-            child: const Text(
-              'Sub Độc Quyền',
-              style: TextStyle(
+            child: Text(
+              context.l10n.detailExclusiveSubtitles,
+              style: const TextStyle(
                 fontSize: 10,
                 fontWeight: FontWeight.w600,
                 color: Colors.white,

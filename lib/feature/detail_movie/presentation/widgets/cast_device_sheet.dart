@@ -6,6 +6,7 @@ import 'package:iconsax_flutter/iconsax_flutter.dart';
 import 'package:movie_app/common/components/alert_dialog/app_alert_dialog.dart';
 import 'package:movie_app/core/casting/casting_service.dart';
 import 'package:movie_app/core/config/utils/animated_dialog.dart';
+import 'package:movie_app/core/extension/build_context_extension.dart';
 
 class CastDeviceSheet extends StatefulWidget {
   const CastDeviceSheet({super.key, required this.service, this.media});
@@ -156,8 +157,8 @@ class _CastDeviceSheetState extends State<CastDeviceSheet> {
     if (opened) return;
     await _showInfo(
       context,
-      title: 'Không thể mở AirPlay',
-      content: 'Hãy kiểm tra iPhone và TV/Mac đang cùng Wi-Fi rồi thử lại.',
+      title: context.l10n.castAirPlayUnavailableTitle,
+      content: context.l10n.castAirPlayUnavailableBody,
     );
   }
 
@@ -169,8 +170,8 @@ class _CastDeviceSheetState extends State<CastDeviceSheet> {
     if (castMedia == null) {
       await _showInfo(
         context,
-        title: 'Chưa có video để phát',
-        content: 'Hãy chờ video tải xong rồi chọn thiết bị Google Cast.',
+        title: context.l10n.castVideoUnavailableTitle,
+        content: context.l10n.castVideoUnavailableBody,
       );
       return;
     }
@@ -188,9 +189,8 @@ class _CastDeviceSheetState extends State<CastDeviceSheet> {
     }
     await _showInfo(
       context,
-      title: 'Không thể kết nối Google Cast',
-      content:
-          'Hãy kiểm tra Google Play services và bảo đảm điện thoại, Chromecast hoặc Google TV đang cùng Wi-Fi.',
+      title: context.l10n.castConnectionFailedTitle,
+      content: context.l10n.castConnectionFailedBody,
     );
   }
 
@@ -204,7 +204,7 @@ class _CastDeviceSheetState extends State<CastDeviceSheet> {
       dialog: AppAlertDialog(
         title: title,
         content: content,
-        buttonTitle: 'Đã hiểu',
+        buttonTitle: context.l10n.commonUnderstood,
         icon: const Icon(Icons.cast_connected_rounded, size: 30),
       ),
     );
@@ -238,16 +238,19 @@ class _CastDeviceSheetState extends State<CastDeviceSheet> {
                 color: Colors.grey,
               ),
             ),
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 10),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 10),
               child: Row(
                 spacing: 10,
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                  Icon(Iconsax.mobile_copy, size: 20),
+                  const Icon(Iconsax.mobile_copy, size: 20),
                   Text(
-                    'Chọn thiết bị',
-                    style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
+                    context.l10n.castChooseDevice,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 16,
+                    ),
                   ),
                 ],
               ),
@@ -256,7 +259,7 @@ class _CastDeviceSheetState extends State<CastDeviceSheet> {
             if (isIos)
               _DeviceOption(
                 icon: Icons.airplay_rounded,
-                title: 'Các thiết bị AirPlay và Bluetooth',
+                title: context.l10n.castAirPlayAndBluetoothDevices,
                 onTap: () => _showAirPlay(context),
               )
             else
@@ -278,10 +281,10 @@ class _CastDeviceSheetState extends State<CastDeviceSheet> {
                 icon: Iconsax.mirroring_screen_copy,
                 title: device.name,
                 subtitle: connecting
-                    ? 'Đang kết nối...'
+                    ? context.l10n.castConnecting
                     : (device.description?.trim().isNotEmpty == true
                           ? device.description
-                          : 'Google Cast'),
+                          : context.l10n.castDefaultDeviceName),
                 trailing: connecting
                     ? const SizedBox.square(
                         dimension: 18,
@@ -300,19 +303,19 @@ class _CastDeviceSheetState extends State<CastDeviceSheet> {
     }
 
     if (_isSearching && !_searchFinished) {
-      return const Padding(
-        padding: EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
         child: Row(
           children: [
-            SizedBox.square(
+            const SizedBox.square(
               dimension: 20,
               child: CircularProgressIndicator.adaptive(strokeWidth: 2),
             ),
-            SizedBox(width: 16),
+            const SizedBox(width: 16),
             Expanded(
               child: Text(
-                'Đang tìm thiết bị Google Cast...',
-                style: TextStyle(color: Colors.white70, fontSize: 14),
+                context.l10n.castSearching,
+                style: const TextStyle(color: Colors.white70, fontSize: 14),
               ),
             ),
           ],
@@ -326,21 +329,24 @@ class _CastDeviceSheetState extends State<CastDeviceSheet> {
         children: [
           const Icon(Icons.cast_outlined, color: Colors.white38, size: 34),
           const SizedBox(height: 10),
-          const Text(
-            'Không tìm thấy thiết bị',
-            style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+          Text(
+            context.l10n.castNoDevices,
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.w600,
+            ),
           ),
           const SizedBox(height: 5),
-          const Text(
-            'Hãy bảo đảm điện thoại và Chromecast hoặc Google TV đang cùng Wi-Fi.',
+          Text(
+            context.l10n.castSameWifiGuidance,
             textAlign: TextAlign.center,
-            style: TextStyle(color: Colors.white38, fontSize: 12),
+            style: const TextStyle(color: Colors.white38, fontSize: 12),
           ),
           const SizedBox(height: 12),
           TextButton.icon(
             onPressed: _startDiscovery,
             icon: const Icon(Icons.refresh_rounded, size: 18),
-            label: const Text('Tìm lại'),
+            label: Text(context.l10n.castSearchAgain),
           ),
         ],
       ),

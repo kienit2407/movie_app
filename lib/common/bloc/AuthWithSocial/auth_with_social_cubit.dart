@@ -19,9 +19,11 @@ class AuthWithSocialCubit extends Cubit<AuthWithSocialState> {
     }
   }
 
-  Future<void> signInWithGoogle() async {
+  Future<void> signInWithGoogle({bool forceAccountPicker = false}) async {
     emit(AuthWithSocialLoading());
-    final result = await siginWithGoogleUsecase(const NoParams());
+    final result = await siginWithGoogleUsecase(
+      GoogleSignInParams(forceAccountPicker: forceAccountPicker),
+    );
     result.fold(
       (haveError) {
         if (haveError == 'The user canceled login!') {

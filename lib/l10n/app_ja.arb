@@ -1,0 +1,1475 @@
+{
+  "@@locale": "ja",
+  "appTitle": "Liquid Phim",
+  "@appTitle": {
+    "description": "Application name"
+  },
+  "appTagline": "いつでも、どこでも映画を楽しもう",
+  "@appTagline": {
+    "description": "Tagline displayed on the splash or branding screen"
+  },
+  "commonAgree": "OK",
+  "@commonAgree": {
+    "description": "Generic confirmation action"
+  },
+  "commonCancel": "キャンセル",
+  "@commonCancel": {
+    "description": "Generic cancel action"
+  },
+  "commonClose": "閉じる",
+  "@commonClose": {
+    "description": "Generic close action or tooltip"
+  },
+  "commonDone": "完了",
+  "@commonDone": {
+    "description": "Generic done action"
+  },
+  "commonSave": "保存",
+  "@commonSave": {
+    "description": "Generic save action"
+  },
+  "commonDelete": "削除",
+  "@commonDelete": {
+    "description": "Generic delete action"
+  },
+  "commonEdit": "編集",
+  "@commonEdit": {
+    "description": "Generic edit action"
+  },
+  "commonReport": "報告",
+  "@commonReport": {
+    "description": "Generic report action"
+  },
+  "commonRetry": "もう一度試す",
+  "@commonRetry": {
+    "description": "Generic retry action"
+  },
+  "commonReset": "リセット",
+  "@commonReset": {
+    "description": "Generic reset action"
+  },
+  "commonAll": "すべて",
+  "@commonAll": {
+    "description": "Option representing all available values"
+  },
+  "commonSeeMore": "もっと見る",
+  "@commonSeeMore": {
+    "description": "Action that expands content"
+  },
+  "commonCollapse": "折りたたむ",
+  "@commonCollapse": {
+    "description": "Action that collapses content"
+  },
+  "commonLoading": "読み込み中...",
+  "@commonLoading": {
+    "description": "Generic loading state"
+  },
+  "commonUpdating": "更新中",
+  "@commonUpdating": {
+    "description": "Fallback text while movie information is being updated"
+  },
+  "commonUnderstood": "わかりました",
+  "@commonUnderstood": {
+    "description": "Acknowledgement action in an informational dialog"
+  },
+  "commonNoData": "データがありません",
+  "@commonNoData": {
+    "description": "Generic empty data state"
+  },
+  "commonNotAvailable": "利用不可",
+  "@commonNotAvailable": {
+    "description": "Fallback value when information is unavailable"
+  },
+  "commonWarningTitle": "警告",
+  "@commonWarningTitle": {
+    "description": "Generic warning dialog title"
+  },
+  "commonNoticeTitle": "お知らせ",
+  "@commonNoticeTitle": {
+    "description": "Generic informational dialog title"
+  },
+  "commonCongratulationsTitle": "おめでとうございます！",
+  "@commonCongratulationsTitle": {
+    "description": "Generic success dialog title"
+  },
+  "commonBack": "戻る",
+  "@commonBack": {
+    "description": "Generic back navigation tooltip"
+  },
+  "commonGoHome": "ホームへ",
+  "@commonGoHome": {
+    "description": "Action on the router error page that navigates home"
+  },
+  "commonSelectedCount": "{count, plural, =0{選択なし} other{{count}件選択}}",
+  "@commonSelectedCount": {
+    "description": "Number of selected list items",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "commonErrorWithDetails": "エラー: {error}",
+  "@commonErrorWithDetails": {
+    "description": "Generic error containing technical details",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "commonDurationHoursMinutes": "{hours}時間 {minutes}分",
+  "@commonDurationHoursMinutes": {
+    "description": "Movie duration containing hours and minutes",
+    "placeholders": {
+      "hours": {
+        "type": "int"
+      },
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "settingsLanguage": "言語",
+  "@settingsLanguage": {
+    "description": "Application language setting title"
+  },
+  "settingsLanguageSystem": "端末の言語を使用",
+  "@settingsLanguageSystem": {
+    "description": "Option that follows the operating system language"
+  },
+  "settingsLanguageVietnamese": "Tiếng Việt",
+  "@settingsLanguageVietnamese": {
+    "description": "Vietnamese language option written in its native name"
+  },
+  "settingsLanguageEnglish": "English",
+  "@settingsLanguageEnglish": {
+    "description": "English language option written in its native name"
+  },
+  "settingsLanguageJapanese": "日本語",
+  "@settingsLanguageJapanese": {
+    "description": "Japanese language option written in its native name"
+  },
+  "settingsLanguageThai": "ไทย",
+  "@settingsLanguageThai": {
+    "description": "Thai language option written in its native name"
+  },
+  "settingsLanguageKorean": "한국어",
+  "@settingsLanguageKorean": {
+    "description": "Korean language option written in its native name"
+  },
+  "settingsLanguageChineseSimplified": "简体中文",
+  "@settingsLanguageChineseSimplified": {
+    "description": "Simplified Chinese language option written in its native name"
+  },
+  "settingsLanguageChineseTraditional": "繁體中文",
+  "@settingsLanguageChineseTraditional": {
+    "description": "Traditional Chinese language option written in its native name"
+  },
+  "settingsTitle": "設定",
+  "@settingsTitle": {
+    "description": "Settings page title and settings button tooltip"
+  },
+  "settingsGeneralSection": "一般",
+  "@settingsGeneralSection": {
+    "description": "General settings section heading"
+  },
+  "settingsAppLanguage": "アプリの言語",
+  "@settingsAppLanguage": {
+    "description": "App language row and language picker title"
+  },
+  "settingsAccountSection": "アカウント",
+  "@settingsAccountSection": {
+    "description": "Account settings section heading"
+  },
+  "settingsSwitchAccount": "アカウントを切り替える",
+  "@settingsSwitchAccount": {
+    "description": "Switch account row and bottom sheet title"
+  },
+  "settingsAddAccount": "アカウントを追加",
+  "@settingsAddAccount": {
+    "description": "Action that starts sign-in for another account"
+  },
+  "settingsAccountSwitchFailed": "アカウントを切り替えられませんでした。もう一度そのアカウントにサインインしてください。",
+  "@settingsAccountSwitchFailed": {
+    "description": "Error shown when a saved account session cannot be restored"
+  },
+  "settingsSignOutFailed": "サインアウトできませんでした。もう一度お試しください。",
+  "@settingsSignOutFailed": {
+    "description": "Error shown when signing out fails"
+  },
+  "navHome": "ホーム",
+  "@navHome": {
+    "description": "Home tab accessibility label"
+  },
+  "navSearch": "検索",
+  "@navSearch": {
+    "description": "Search tab accessibility label"
+  },
+  "navFavorites": "お気に入り",
+  "@navFavorites": {
+    "description": "Favorites tab accessibility label"
+  },
+  "navProfile": "プロフィール",
+  "@navProfile": {
+    "description": "Profile tab accessibility label"
+  },
+  "navNotifications": "通知",
+  "@navNotifications": {
+    "description": "Notifications page title and tooltip"
+  },
+  "internetOffline": "インターネットに接続されていません",
+  "@internetOffline": {
+    "description": "Banner shown while the device is offline"
+  },
+  "internetBackOnline": "オンラインに戻りました",
+  "@internetBackOnline": {
+    "description": "Banner shown when Internet access returns"
+  },
+  "authJoinMember": "メンバーとして参加",
+  "@authJoinMember": {
+    "description": "Action inviting a signed-out user to authenticate"
+  },
+  "authSignInTitle": "Liquid Phim にサインイン",
+  "@authSignInTitle": {
+    "description": "Sign-in page heading"
+  },
+  "authSignIn": "サインイン",
+  "@authSignIn": {
+    "description": "Sign-in action"
+  },
+  "authSignInFailed": "サインインに失敗しました。もう一度お試しください。",
+  "@authSignInFailed": {
+    "description": "Fallback sign-in failure message"
+  },
+  "authSignInToComment": "コメントやコミュニティ交流を利用するにはサインインしてください。",
+  "@authSignInToComment": {
+    "description": "Sign-in benefit shown when authentication is required for comments"
+  },
+  "authGoogleSyncDescription": "Google で続行してアカウントを同期し、コミュニティに参加します。",
+  "@authGoogleSyncDescription": {
+    "description": "Description of Google sign-in benefits"
+  },
+  "authGoogleConsent": "続行すると、Google アカウントを Liquid Phim で使用することに同意したものとみなされます。",
+  "@authGoogleConsent": {
+    "description": "Consent copy below the Google sign-in action"
+  },
+  "authContinueWithGoogle": "Google で続行",
+  "@authContinueWithGoogle": {
+    "description": "Google sign-in action"
+  },
+  "authGoogleSignInFailed": "Google でサインインできませんでした。もう一度お試しください。",
+  "@authGoogleSignInFailed": {
+    "description": "Google sign-in failure message"
+  },
+  "authGoogleSignInCheckFailed": "Google でサインインできませんでした。接続を確認してもう一度お試しください。",
+  "@authGoogleSignInCheckFailed": {
+    "description": "Google sign-in failure message that asks the user to check and retry"
+  },
+  "authSessionUpdateFailed": "サインインセッションを更新できませんでした。",
+  "@authSessionUpdateFailed": {
+    "description": "Authentication session refresh failure"
+  },
+  "authLoginRequired": "サインインが必要です。",
+  "@authLoginRequired": {
+    "description": "Message shown when a signed-in user is required"
+  },
+  "authLoginRequiredForAction": "この操作を行うにはサインインが必要です。",
+  "@authLoginRequiredForAction": {
+    "description": "Message shown when an action requires authentication"
+  },
+  "authEmail": "メールアドレス",
+  "@authEmail": {
+    "description": "Email field label or hint"
+  },
+  "authPassword": "パスワード",
+  "@authPassword": {
+    "description": "Password field label or hint"
+  },
+  "authFullName": "氏名",
+  "@authFullName": {
+    "description": "Full name field label or hint"
+  },
+  "authForgotPassword": "パスワードをお忘れですか？",
+  "@authForgotPassword": {
+    "description": "Forgot password action"
+  },
+  "authOrContinueWith": "または次で続行",
+  "@authOrContinueWith": {
+    "description": "Separator before social sign-in options"
+  },
+  "authAlreadyHaveAccount": "すでにアカウントをお持ちですか？",
+  "@authAlreadyHaveAccount": {
+    "description": "Prompt on the sign-up page"
+  },
+  "authFullNameRequired": "氏名を入力してください。",
+  "@authFullNameRequired": {
+    "description": "Full name validation error"
+  },
+  "authFullNameLength": "氏名は3〜15文字で入力してください。",
+  "@authFullNameLength": {
+    "description": "Full name length validation error"
+  },
+  "authEmailRequired": "メールアドレスを入力してください。",
+  "@authEmailRequired": {
+    "description": "Email validation error"
+  },
+  "authEmailInvalid": "有効なメールアドレスを入力してください。",
+  "@authEmailInvalid": {
+    "description": "Email format validation error"
+  },
+  "authPasswordRequired": "パスワードを入力してください。",
+  "@authPasswordRequired": {
+    "description": "Password validation error"
+  },
+  "authPasswordLength": "パスワードは6〜15文字で入力してください。",
+  "@authPasswordLength": {
+    "description": "Password length validation error"
+  },
+  "authAccountAlreadyExists": "このアカウントはすでに存在します。別のメールアドレスを選択してください。",
+  "@authAccountAlreadyExists": {
+    "description": "Sign-up failure when an account already exists"
+  },
+  "authWeakPassword": "このパスワードは弱すぎます。より強力なパスワードを入力してください。",
+  "@authWeakPassword": {
+    "description": "Weak password validation returned by authentication"
+  },
+  "authInvalidCredentials": "メールアドレスまたはパスワードが正しくありません。もう一度お試しください。",
+  "@authInvalidCredentials": {
+    "description": "Invalid sign-in credentials message"
+  },
+  "authUnexpectedError": "問題が発生しました。もう一度お試しください。",
+  "@authUnexpectedError": {
+    "description": "Generic authentication failure"
+  },
+  "authSignUpFailed": "アカウントを作成できませんでした。もう一度お試しください。",
+  "@authSignUpFailed": {
+    "description": "Generic sign-up failure"
+  },
+  "authSignUpSucceeded": "アカウントが作成されました。",
+  "@authSignUpSucceeded": {
+    "description": "Sign-up success message"
+  },
+  "authSignInSucceeded": "サインインしました。",
+  "@authSignInSucceeded": {
+    "description": "Sign-in success message"
+  },
+  "authSignOutSucceeded": "サインアウトしました。",
+  "@authSignOutSucceeded": {
+    "description": "Sign-out success message"
+  },
+  "authTokenConfirmed": "確認コードを確認しました。",
+  "@authTokenConfirmed": {
+    "description": "Password reset token confirmation success"
+  },
+  "authTokenInvalid": "確認コードが正しくありません。",
+  "@authTokenInvalid": {
+    "description": "Password reset token validation failure"
+  },
+  "homeEnableNewMovieNotificationsTitle": "新着映画の通知を受け取りますか？",
+  "@homeEnableNewMovieNotificationsTitle": {
+    "description": "Title of the new movie notification opt-in dialog"
+  },
+  "homeEnableNewMovieNotificationsBody": "Liquid Phim はバックグラウンドで定期的に確認し、新しい映画が見つかったときに通知できます。バッテリー節約のため、OS により確認が20分以上遅れる場合があります。",
+  "@homeEnableNewMovieNotificationsBody": {
+    "description": "Explanation in the new movie notification opt-in dialog"
+  },
+  "homeEnableNotifications": "通知を有効にする",
+  "@homeEnableNotifications": {
+    "description": "Action that enables new movie notifications"
+  },
+  "homeDoNotEnable": "今はしない",
+  "@homeDoNotEnable": {
+    "description": "Action that declines new movie notifications"
+  },
+  "homeNotificationPermissionDisabled": "通知権限が無効です。端末の設定から再度有効にできます。",
+  "@homeNotificationPermissionDisabled": {
+    "description": "Message shown when notification permission is not granted"
+  },
+  "homeLoadMoviesFailed": "映画を読み込めませんでした。\n下に引っ張ってもう一度お試しください。",
+  "@homeLoadMoviesFailed": {
+    "description": "Home page movie loading error with retry guidance"
+  },
+  "homeRecommended": "おすすめ",
+  "@homeRecommended": {
+    "description": "Recommended movies filter"
+  },
+  "homeGenres": "ジャンル",
+  "@homeGenres": {
+    "description": "Genres filter or section label"
+  },
+  "homeCountries": "国",
+  "@homeCountries": {
+    "description": "Countries filter or section label"
+  },
+  "homeYear": "年",
+  "@homeYear": {
+    "description": "Year filter label"
+  },
+  "homeFreshMovies": "新着作品！",
+  "@homeFreshMovies": {
+    "description": "Heading for newly released movies"
+  },
+  "homeKoreanMovies": "韓国映画",
+  "@homeKoreanMovies": {
+    "description": "Heading for the Korean movie section"
+  },
+  "homeChineseMovies": "中国映画",
+  "@homeChineseMovies": {
+    "description": "Heading for the Chinese movie section"
+  },
+  "homeUsUkMovies": "欧米映画",
+  "@homeUsUkMovies": {
+    "description": "Heading for the US and UK movie section"
+  },
+  "homeWatchMovie": "視聴",
+  "@homeWatchMovie": {
+    "description": "Primary action that starts movie playback"
+  },
+  "homeInformation": "情報",
+  "@homeInformation": {
+    "description": "Action that opens movie information"
+  },
+  "homeViewAll": "すべて表示",
+  "@homeViewAll": {
+    "description": "Action that opens all items in a section"
+  },
+  "homeWhatToWatch": "今日は何を観ますか？",
+  "@homeWhatToWatch": {
+    "description": "Heading above movie type recommendations"
+  },
+  "homeViewMore": "もっと見る",
+  "@homeViewMore": {
+    "description": "Action to show more movie recommendations"
+  },
+  "homeAppVersion": "バージョン: {version} ({buildNumber})",
+  "@homeAppVersion": {
+    "description": "Application version and build number",
+    "placeholders": {
+      "version": {
+        "type": "String"
+      },
+      "buildNumber": {
+        "type": "String"
+      }
+    }
+  },
+  "filterMovieType": "作品タイプ",
+  "@filterMovieType": {
+    "description": "Movie type filter heading"
+  },
+  "filterSeries": "ドラマ",
+  "@filterSeries": {
+    "description": "Series movie type"
+  },
+  "filterSingleMovies": "映画",
+  "@filterSingleMovies": {
+    "description": "Single movie type"
+  },
+  "filterAnimation": "アニメ",
+  "@filterAnimation": {
+    "description": "Animation movie type"
+  },
+  "filterTvShows": "TV番組",
+  "@filterTvShows": {
+    "description": "TV show movie type"
+  },
+  "filterSubtitled": "字幕",
+  "@filterSubtitled": {
+    "description": "Content with subtitles"
+  },
+  "filterVoiceOver": "ボイスオーバー",
+  "@filterVoiceOver": {
+    "description": "Content with voice-over narration"
+  },
+  "filterDubbed": "吹き替え",
+  "@filterDubbed": {
+    "description": "Dubbed content"
+  },
+  "filterChooseMovieType": "作品タイプを選択してください。",
+  "@filterChooseMovieType": {
+    "description": "Validation message when no movie type is selected"
+  },
+  "filterChooseGenre": "ジャンルを選択してください。",
+  "@filterChooseGenre": {
+    "description": "Validation message when no genre is selected"
+  },
+  "filterChooseCountry": "絞り込む国を選択してください。",
+  "@filterChooseCountry": {
+    "description": "Validation message when no country is selected"
+  },
+  "filterChooseYear": "絞り込む年を選択してください。",
+  "@filterChooseYear": {
+    "description": "Validation message when no year is selected"
+  },
+  "filterLanguage": "言語",
+  "@filterLanguage": {
+    "description": "Content language filter heading"
+  },
+  "filterSortBy": "並び替え",
+  "@filterSortBy": {
+    "description": "Sort field heading"
+  },
+  "filterSortDirection": "並び順",
+  "@filterSortDirection": {
+    "description": "Ascending or descending sort heading"
+  },
+  "filterDescending": "降順",
+  "@filterDescending": {
+    "description": "Descending sort option"
+  },
+  "filterAscending": "昇順",
+  "@filterAscending": {
+    "description": "Ascending sort option"
+  },
+  "filterMostViewed": "再生回数順",
+  "@filterMostViewed": {
+    "description": "Most viewed sort option"
+  },
+  "filterNewest": "新着順",
+  "@filterNewest": {
+    "description": "Newest sort option"
+  },
+  "filterReleaseYear": "公開年",
+  "@filterReleaseYear": {
+    "description": "Release year sort option"
+  },
+  "filterApply": "フィルターを適用",
+  "@filterApply": {
+    "description": "Action that applies all selected filters"
+  },
+  "filterResults": "結果を絞り込む",
+  "@filterResults": {
+    "description": "Action that applies a simple filter"
+  },
+  "searchAttentionTitle": "注意",
+  "@searchAttentionTitle": {
+    "description": "Search validation dialog title"
+  },
+  "searchEnterKeywordBeforeFiltering": "映画を絞り込む前にキーワードを入力してください。",
+  "@searchEnterKeywordBeforeFiltering": {
+    "description": "Validation shown when filters are opened without a search keyword"
+  },
+  "searchNoResults": "結果が見つかりません",
+  "@searchNoResults": {
+    "description": "Search empty result message"
+  },
+  "searchMovieActorHint": "映画、俳優を検索...",
+  "@searchMovieActorHint": {
+    "description": "Search input hint"
+  },
+  "searchFilterTooltip": "検索フィルター",
+  "@searchFilterTooltip": {
+    "description": "Tooltip and title for search filters"
+  },
+  "searchStartPrompt": "映画タイトルを入力して検索を開始",
+  "@searchStartPrompt": {
+    "description": "Prompt shown before the first search"
+  },
+  "searchRecent": "最近の検索",
+  "@searchRecent": {
+    "description": "Recent search history heading"
+  },
+  "searchLoadingGenres": "ジャンルを読み込み中...",
+  "@searchLoadingGenres": {
+    "description": "Loading state for genres in search filters"
+  },
+  "searchLoadingCountries": "国を読み込み中...",
+  "@searchLoadingCountries": {
+    "description": "Loading state for countries in search filters"
+  },
+  "searchNoMovies": "映画がありません",
+  "@searchNoMovies": {
+    "description": "Movie list empty state"
+  },
+  "searchTryDifferentFilters": "別のフィルターをお試しください",
+  "@searchTryDifferentFilters": {
+    "description": "Guidance shown when filters return no movies"
+  },
+  "librarySignOutTitle": "サインアウトしますか？",
+  "@librarySignOutTitle": {
+    "description": "Sign-out confirmation dialog title"
+  },
+  "librarySignOutConfirmation": "このアカウントからサインアウトしますか？",
+  "@librarySignOutConfirmation": {
+    "description": "Sign-out confirmation dialog body"
+  },
+  "librarySignOut": "サインアウト",
+  "@librarySignOut": {
+    "description": "Sign-out action and tooltip"
+  },
+  "libraryDeleteSelectedMoviesTitle": "選択した{count}件の映画を削除しますか？",
+  "@libraryDeleteSelectedMoviesTitle": {
+    "description": "Title for deleting selected movies",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "libraryDeleteHistoryMovieTitle": "この映画を履歴から削除しますか？",
+  "@libraryDeleteHistoryMovieTitle": {
+    "description": "Title for deleting one history item"
+  },
+  "libraryDeleteHistoryConfirmation": "視聴履歴から{count}件の映画を削除しますか？",
+  "@libraryDeleteHistoryConfirmation": {
+    "description": "Confirmation for removing movies from watch history",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "libraryDeleteFavoriteMovieTitle": "この映画をお気に入りから削除しますか？",
+  "@libraryDeleteFavoriteMovieTitle": {
+    "description": "Title for deleting one favorite movie"
+  },
+  "libraryDeleteFavoritesConfirmation": "お気に入りから{count}件の映画を削除しますか？",
+  "@libraryDeleteFavoritesConfirmation": {
+    "description": "Confirmation for removing movies from favorites",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "libraryCancelSelection": "選択を解除",
+  "@libraryCancelSelection": {
+    "description": "Tooltip that exits selection mode"
+  },
+  "libraryDeleteSelectedMovies": "選択した映画を削除",
+  "@libraryDeleteSelectedMovies": {
+    "description": "Tooltip that deletes selected movies"
+  },
+  "libraryCannotResumeMovie": "現在この映画を再開できません。",
+  "@libraryCannotResumeMovie": {
+    "description": "Error shown when playback cannot resume from history"
+  },
+  "libraryYourProfile": "あなたのプロフィール",
+  "@libraryYourProfile": {
+    "description": "Profile section title"
+  },
+  "librarySignInProfileDescription": "プロフィールの編集と視聴履歴の同期にはサインインしてください。",
+  "@librarySignInProfileDescription": {
+    "description": "Description shown to a signed-out user on the profile page"
+  },
+  "libraryWatchHistory": "視聴履歴",
+  "@libraryWatchHistory": {
+    "description": "Watch history heading"
+  },
+  "libraryNoWatchHistory": "視聴履歴はまだありません",
+  "@libraryNoWatchHistory": {
+    "description": "Empty watch history message"
+  },
+  "libraryFavorites": "お気に入り",
+  "@libraryFavorites": {
+    "description": "Favorites page title"
+  },
+  "librarySignInToSaveFavorites": "お気に入りを保存するにはサインインしてください",
+  "@librarySignInToSaveFavorites": {
+    "description": "Signed-out favorites page heading"
+  },
+  "libraryFavoritesSyncDescription": "リストは端末間で同期されます。",
+  "@libraryFavoritesSyncDescription": {
+    "description": "Signed-out favorites page description"
+  },
+  "libraryNoFavorites": "お気に入りの映画はまだありません",
+  "@libraryNoFavorites": {
+    "description": "Empty favorites message"
+  },
+  "libraryRemoveFromList": "リストから削除",
+  "@libraryRemoveFromList": {
+    "description": "Tooltip for deleting a library movie card"
+  },
+  "libraryContinueProgress": "{progress}%から続ける",
+  "@libraryContinueProgress": {
+    "description": "Playback progress action on a library movie card",
+    "placeholders": {
+      "progress": {
+        "type": "int"
+      }
+    }
+  },
+  "libraryDateDayMonth": "{date}",
+  "@libraryDateDayMonth": {
+    "description": "Short month and day label for a watch history group",
+    "placeholders": {
+      "date": {
+        "type": "DateTime",
+        "format": "MMMd"
+      }
+    }
+  },
+  "libraryLoadFailed": "ライブラリを読み込めませんでした。もう一度お試しください。",
+  "@libraryLoadFailed": {
+    "description": "Library loading failure"
+  },
+  "libraryFavoriteUpdateFailed": "お気に入りを更新できませんでした。もう一度お試しください。",
+  "@libraryFavoriteUpdateFailed": {
+    "description": "Favorite update failure"
+  },
+  "libraryFavoriteRemoveFailed": "お気に入りから削除できませんでした。もう一度お試しください。",
+  "@libraryFavoriteRemoveFailed": {
+    "description": "Favorite removal failure"
+  },
+  "libraryHistorySyncLater": "視聴履歴は後でもう一度同期されます。",
+  "@libraryHistorySyncLater": {
+    "description": "Deferred watch history synchronization message"
+  },
+  "libraryHistoryDeleteFailed": "視聴履歴を削除できませんでした。もう一度お試しください。",
+  "@libraryHistoryDeleteFailed": {
+    "description": "Watch history deletion failure"
+  },
+  "profileEdit": "プロフィールを編集",
+  "@profileEdit": {
+    "description": "Edit profile page title"
+  },
+  "profileChangePhoto": "写真を変更",
+  "@profileChangePhoto": {
+    "description": "Action for changing the profile photo"
+  },
+  "profileName": "名前",
+  "@profileName": {
+    "description": "Display name field label"
+  },
+  "profileNameDescription": "この名前は Liquid Phim のプロフィールに表示されます。",
+  "@profileNameDescription": {
+    "description": "Display name explanation"
+  },
+  "profileNameHint": "表示名を入力",
+  "@profileNameHint": {
+    "description": "Display name input hint"
+  },
+  "profileClearName": "名前を消去",
+  "@profileClearName": {
+    "description": "Tooltip that clears the display name field"
+  },
+  "profileEmailDescription": "このメールアドレスはアカウントに紐づいており、ここにのみ表示されます。",
+  "@profileEmailDescription": {
+    "description": "Email privacy explanation on the edit profile page"
+  },
+  "profileChangeAvatar": "プロフィール写真を変更",
+  "@profileChangeAvatar": {
+    "description": "Avatar action sheet heading"
+  },
+  "profileTakePhoto": "写真を撮る",
+  "@profileTakePhoto": {
+    "description": "Camera avatar source action"
+  },
+  "profileUploadPhoto": "写真をアップロード",
+  "@profileUploadPhoto": {
+    "description": "Gallery avatar source action"
+  },
+  "profileViewPhoto": "写真を見る",
+  "@profileViewPhoto": {
+    "description": "Action that opens the current avatar"
+  },
+  "profileAvatar": "プロフィール写真",
+  "@profileAvatar": {
+    "description": "Full-screen profile photo page title"
+  },
+  "profileCropAvatar": "プロフィール写真を切り抜く",
+  "@profileCropAvatar": {
+    "description": "Image cropper title"
+  },
+  "profileAvatarUpdated": "プロフィール写真を更新しました。",
+  "@profileAvatarUpdated": {
+    "description": "Avatar update success message"
+  },
+  "profileAvatarUpdateFailed": "プロフィール写真を更新できませんでした。もう一度お試しください。",
+  "@profileAvatarUpdateFailed": {
+    "description": "Avatar update failure message"
+  },
+  "profilePhotoOpenFailed": "写真を開けませんでした。写真へのアクセス権限を確認してください。",
+  "@profilePhotoOpenFailed": {
+    "description": "Photo picker failure message"
+  },
+  "profileNameUpdated": "表示名を更新しました。",
+  "@profileNameUpdated": {
+    "description": "Display name update success message"
+  },
+  "profileNameUpdateFailed": "名前を更新できませんでした。もう一度お試しください。",
+  "@profileNameUpdateFailed": {
+    "description": "Display name update failure message"
+  },
+  "profileNameRequired": "名前を入力してください。",
+  "@profileNameRequired": {
+    "description": "Display name required validation message"
+  },
+  "profileUpdatedProfileReadFailed": "更新したプロフィールを読み込めませんでした。",
+  "@profileUpdatedProfileReadFailed": {
+    "description": "Failure while reading the profile immediately after an update"
+  },
+  "detailCastUnavailable": "出演者情報はありません",
+  "@detailCastUnavailable": {
+    "description": "Empty cast message"
+  },
+  "detailCast": "出演者",
+  "@detailCast": {
+    "description": "Cast tab or section title"
+  },
+  "detailRecommendationsLoadFailed": "おすすめを読み込めませんでした",
+  "@detailRecommendationsLoadFailed": {
+    "description": "Movie recommendations loading failure"
+  },
+  "detailNoRecommendations": "おすすめはありません",
+  "@detailNoRecommendations": {
+    "description": "Empty movie recommendations message"
+  },
+  "detailEpisodeNotFound": "現在のサーバーではエピソード{episode}を利用できません。",
+  "@detailEpisodeNotFound": {
+    "description": "Dialog message when an episode does not exist on the selected server",
+    "placeholders": {
+      "episode": {
+        "type": "int"
+      }
+    }
+  },
+  "detailNoEpisodes": "利用可能なエピソードはありません",
+  "@detailNoEpisodes": {
+    "description": "Empty episode list message"
+  },
+  "detailWatchThisVersion": "このバージョンを視聴",
+  "@detailWatchThisVersion": {
+    "description": "Action that starts a particular server or dub version"
+  },
+  "detailServer": "サーバー",
+  "@detailServer": {
+    "description": "Single movie server section label"
+  },
+  "detailServerNumber": "サーバー {number}",
+  "@detailServerNumber": {
+    "description": "Fallback server name",
+    "placeholders": {
+      "number": {
+        "type": "int"
+      }
+    }
+  },
+  "detailEpisodeRange": "エピソード 1–{count}",
+  "@detailEpisodeRange": {
+    "description": "Episode range heading",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "detailEnterEpisode": "エピソード番号を入力",
+  "@detailEnterEpisode": {
+    "description": "Episode search input hint"
+  },
+  "detailLoadMovieError": "映画を読み込めませんでした",
+  "@detailLoadMovieError": {
+    "description": "Movie detail loading error title"
+  },
+  "detailEpisodesTab": "エピソード",
+  "@detailEpisodesTab": {
+    "description": "Episodes tab title"
+  },
+  "detailRecommendationsTab": "おすすめ",
+  "@detailRecommendationsTab": {
+    "description": "Recommendations tab title"
+  },
+  "detailCommentsTab": "コメント",
+  "@detailCommentsTab": {
+    "description": "Comments tab title"
+  },
+  "detailInTheaters": "劇場公開",
+  "@detailInTheaters": {
+    "description": "Badge for theatrical movies"
+  },
+  "detailExclusiveSubtitles": "独占字幕",
+  "@detailExclusiveSubtitles": {
+    "description": "Badge for exclusive subtitles"
+  },
+  "detailDirectorLabel": "監督:",
+  "@detailDirectorLabel": {
+    "description": "Movie director metadata label"
+  },
+  "detailCreatedDateLabel": "追加日:",
+  "@detailCreatedDateLabel": {
+    "description": "Movie record creation date metadata label"
+  },
+  "detailProductionYearLabel": "製作年:",
+  "@detailProductionYearLabel": {
+    "description": "Movie production year metadata label"
+  },
+  "detailCountryLabel": "国:",
+  "@detailCountryLabel": {
+    "description": "Movie country metadata label"
+  },
+  "detailWatchLatestEpisode": "最新話を視聴",
+  "@detailWatchLatestEpisode": {
+    "description": "Action that starts the latest episode"
+  },
+  "detailWatchMovie": "映画を視聴",
+  "@detailWatchMovie": {
+    "description": "Action that starts a full movie"
+  },
+  "detailIntroduction": "概要",
+  "@detailIntroduction": {
+    "description": "Movie description section heading"
+  },
+  "detailFavorite": "お気に入り",
+  "@detailFavorite": {
+    "description": "Favorite movie action label"
+  },
+  "detailContent": "あらすじ",
+  "@detailContent": {
+    "description": "Movie synopsis heading in the quick detail dialog"
+  },
+  "detailNoPlayableEpisodes": "この作品にはまだ再生可能なエピソードがありません。しばらくしてからもう一度お試しください。",
+  "@detailNoPlayableEpisodes": {
+    "description": "Dialog message when a movie has no playable episodes"
+  },
+  "detailDetails": "詳細",
+  "@detailDetails": {
+    "description": "Movie details section or action"
+  },
+  "detailVideoQuality": "画質",
+  "@detailVideoQuality": {
+    "description": "Video quality selection sheet title"
+  },
+  "detailViews": "{count} 回視聴",
+  "@detailViews": {
+    "description": "Formatted movie view count",
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "detailLikes": "{count} いいね",
+  "@detailLikes": {
+    "description": "Formatted movie like count",
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "detailUpdatedJustNow": "たった今更新",
+  "@detailUpdatedJustNow": {
+    "description": "Relative update time less than one minute ago"
+  },
+  "playerSubtitleServer": "字幕",
+  "@playerSubtitleServer": {
+    "description": "Fallback name for a subtitle server"
+  },
+  "playerNowPlaying": "再生中",
+  "@playerNowPlaying": {
+    "description": "Label for the currently playing episode or server"
+  },
+  "playerNowPlayingEpisode": "再生中: {episode}",
+  "@playerNowPlayingEpisode": {
+    "description": "Currently playing episode label",
+    "placeholders": {
+      "episode": {
+        "type": "String"
+      }
+    }
+  },
+  "playerEpisodeAndServer": "{episode} — {server}",
+  "@playerEpisodeAndServer": {
+    "description": "Now-playing subtitle containing episode and server names",
+    "placeholders": {
+      "episode": {
+        "type": "String"
+      },
+      "server": {
+        "type": "String"
+      }
+    }
+  },
+  "playerSourceUnavailable": "このサーバーには再生可能なソースがありません。",
+  "@playerSourceUnavailable": {
+    "description": "Player error when a server contains no source URL"
+  },
+  "playerSourceLoadFailed": "この動画ソースを読み込めませんでした。",
+  "@playerSourceLoadFailed": {
+    "description": "Player source loading failure"
+  },
+  "playerAutoplayEnabled": "自動再生を有効にしました",
+  "@playerAutoplayEnabled": {
+    "description": "Toast shown after enabling episode autoplay"
+  },
+  "playerAutoplayDisabled": "自動再生を無効にしました",
+  "@playerAutoplayDisabled": {
+    "description": "Toast shown after disabling episode autoplay"
+  },
+  "playerNoMoreEpisodes": "最終話です",
+  "@playerNoMoreEpisodes": {
+    "description": "Toast shown when navigating after the final episode"
+  },
+  "playerFirstEpisode": "これは第1話です",
+  "@playerFirstEpisode": {
+    "description": "Toast shown when navigating before the first episode"
+  },
+  "playerPlaybackFailed": "動画を再生できませんでした。もう一度お試しください。",
+  "@playerPlaybackFailed": {
+    "description": "Generic video playback failure"
+  },
+  "playerPlay": "再生",
+  "playerPause": "一時停止",
+  "playerPullDownToCloseComments": "下に引っ張ってコメントを閉じる",
+  "@playerPullDownToCloseComments": {
+    "description": "Accessibility label for dismissing the comments sheet"
+  },
+  "playerPlayOnTv": "テレビで再生",
+  "@playerPlayOnTv": {
+    "description": "Casting action tooltip"
+  },
+  "playerEpisodeList": "エピソード一覧",
+  "@playerEpisodeList": {
+    "description": "Episode list button tooltip"
+  },
+  "playerVideoProgress": "動画の再生位置",
+  "@playerVideoProgress": {
+    "description": "Accessibility label for the video seek bar"
+  },
+  "playerClose": "プレーヤーを閉じる",
+  "@playerClose": {
+    "description": "Tooltip that closes the persistent player"
+  },
+  "playerContinueWatchingTitle": "視聴を続けますか？",
+  "@playerContinueWatchingTitle": {
+    "description": "Resume playback dialog title"
+  },
+  "playerContinueWatchingBody": "{episode}を視聴していました。続きから再生しますか、それとも第1話から再開しますか？",
+  "@playerContinueWatchingBody": {
+    "description": "Resume playback dialog body",
+    "placeholders": {
+      "episode": {
+        "type": "String"
+      }
+    }
+  },
+  "playerRestartFromBeginning": "最初から再生",
+  "@playerRestartFromBeginning": {
+    "description": "Action that restarts playback from episode 1"
+  },
+  "playerContinue": "続ける",
+  "@playerContinue": {
+    "description": "Action that resumes playback from history"
+  },
+  "commentsReply": "返信",
+  "@commentsReply": {
+    "description": "Action that replies to a comment"
+  },
+  "commentsReplyCount": "{count, plural, =0{返信なし} other{{count}件の返信}}",
+  "@commentsReplyCount": {
+    "description": "Number of replies to a comment",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "commentsLoadFailedTitle": "コメントを読み込めませんでした",
+  "@commentsLoadFailedTitle": {
+    "description": "Comments loading error title"
+  },
+  "commentsEmptyTitle": "コメントはまだありません",
+  "@commentsEmptyTitle": {
+    "description": "Empty comments title"
+  },
+  "commentsEmptySubtitle": "最初のコメントを投稿してみましょう。",
+  "@commentsEmptySubtitle": {
+    "description": "Empty comments guidance"
+  },
+  "commentsEditHint": "コメントを編集...",
+  "@commentsEditHint": {
+    "description": "Comment composer hint while editing"
+  },
+  "commentsReplyToHint": "{name}さんに返信...",
+  "@commentsReplyToHint": {
+    "description": "Comment composer hint while replying to a person",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "commentsAddReplyHint": "返信を追加...",
+  "@commentsAddReplyHint": {
+    "description": "Reply composer hint"
+  },
+  "commentsComposerHint": "コメントを書く...",
+  "@commentsComposerHint": {
+    "description": "Default comment composer hint"
+  },
+  "commentsEditingStatus": "コメントを編集中",
+  "@commentsEditingStatus": {
+    "description": "Comment composer editing status"
+  },
+  "commentsReplyingStatus": "{name}さんに返信中",
+  "@commentsReplyingStatus": {
+    "description": "Comment composer reply status",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "commentsWrite": "コメントを書く",
+  "@commentsWrite": {
+    "description": "Comment input accessibility label"
+  },
+  "commentsSend": "送信",
+  "@commentsSend": {
+    "description": "Send comment action tooltip"
+  },
+  "commentsCloseMenu": "コメントメニューを閉じる",
+  "@commentsCloseMenu": {
+    "description": "Accessibility label for closing a comment action menu"
+  },
+  "commentsCopied": "コメントをコピーしました",
+  "@commentsCopied": {
+    "description": "Toast after copying a comment"
+  },
+  "commentsYourComment": "あなたのコメント",
+  "@commentsYourComment": {
+    "description": "Action sheet title for the signed-in user's own comment"
+  },
+  "commentsReportReasonTitle": "このコメントを報告する理由は？",
+  "@commentsReportReasonTitle": {
+    "description": "Comment report reason sheet title"
+  },
+  "commentsReportSent": "報告を送信しました。ありがとうございます。",
+  "@commentsReportSent": {
+    "description": "Toast after successfully reporting a comment"
+  },
+  "commentsDeleteTitle": "コメントを削除しますか？",
+  "@commentsDeleteTitle": {
+    "description": "Delete comment confirmation title"
+  },
+  "commentsRepliesPreserved": "返信は保持されます。",
+  "@commentsRepliesPreserved": {
+    "description": "Delete comment confirmation explanation"
+  },
+  "commentsDeleteAction": "コメントを削除",
+  "@commentsDeleteAction": {
+    "description": "Delete comment confirmation action"
+  },
+  "commentsSortTitle": "コメントを並び替え",
+  "@commentsSortTitle": {
+    "description": "Comment sort sheet title and tooltip"
+  },
+  "commentsPopular": "人気",
+  "@commentsPopular": {
+    "description": "Popular comment sort option"
+  },
+  "commentsNewest": "新着",
+  "@commentsNewest": {
+    "description": "Newest comment sort option"
+  },
+  "commentsCount": "{count, plural, =0{コメント} other{{count}件のコメント}}",
+  "@commentsCount": {
+    "description": "Comments section count heading",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "commentsCopy": "コメントをコピー",
+  "@commentsCopy": {
+    "description": "Comment context menu copy action"
+  },
+  "commentsEdited": "編集済み",
+  "@commentsEdited": {
+    "description": "Label for an edited comment"
+  },
+  "commentsDeleted": "コメントは削除されました",
+  "@commentsDeleted": {
+    "description": "Placeholder shown for a deleted comment"
+  },
+  "commentsJustNow": "たった今",
+  "@commentsJustNow": {
+    "description": "Relative time for an event less than one minute ago"
+  },
+  "commentsMinutesAgo": "{count}分前",
+  "@commentsMinutesAgo": {
+    "description": "Relative time in minutes",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "commentsHoursAgo": "{count}時間前",
+  "@commentsHoursAgo": {
+    "description": "Relative time in hours",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "commentsDaysAgo": "{count}日前",
+  "@commentsDaysAgo": {
+    "description": "Relative time in days",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "commentsWeeksAgo": "{count}週間前",
+  "@commentsWeeksAgo": {
+    "description": "Relative time in weeks",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "commentsMonthsAgo": "{count}か月前",
+  "@commentsMonthsAgo": {
+    "description": "Relative time in months",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "commentsYearsAgo": "{count}年前",
+  "@commentsYearsAgo": {
+    "description": "Relative time in years",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "commentsSpamReason": "スパム",
+  "@commentsSpamReason": {
+    "description": "Comment report reason for spam"
+  },
+  "commentsHarassmentReason": "嫌がらせ・誹謗中傷",
+  "@commentsHarassmentReason": {
+    "description": "Comment report reason for harassment"
+  },
+  "commentsSpoilerReason": "ネタバレ",
+  "@commentsSpoilerReason": {
+    "description": "Comment report reason for spoilers"
+  },
+  "commentsInappropriateReason": "不適切な内容",
+  "@commentsInappropriateReason": {
+    "description": "Comment report reason for inappropriate content"
+  },
+  "commentsOtherReason": "その他",
+  "@commentsOtherReason": {
+    "description": "Fallback comment report reason"
+  },
+  "commentsLoadFailed": "コメントを読み込めませんでした。もう一度お試しください。",
+  "@commentsLoadFailed": {
+    "description": "Initial comments loading failure"
+  },
+  "commentsLoadMoreFailed": "コメントをさらに読み込めませんでした。",
+  "@commentsLoadMoreFailed": {
+    "description": "Pagination failure for comments"
+  },
+  "commentsRepliesLoadFailed": "返信を読み込めませんでした。",
+  "@commentsRepliesLoadFailed": {
+    "description": "Initial replies loading failure"
+  },
+  "commentsRepliesLoadMoreFailed": "返信をさらに読み込めませんでした。",
+  "@commentsRepliesLoadMoreFailed": {
+    "description": "Pagination failure for replies"
+  },
+  "commentsSendFailed": "コメントを送信できませんでした。入力内容は保持されています。",
+  "@commentsSendFailed": {
+    "description": "Comment submission failure"
+  },
+  "commentsEditFailed": "コメントを編集できませんでした。",
+  "@commentsEditFailed": {
+    "description": "Comment editing failure"
+  },
+  "commentsDeleteFailed": "コメントを削除できませんでした。",
+  "@commentsDeleteFailed": {
+    "description": "Comment deletion failure"
+  },
+  "commentsReactionFailed": "リアクションを更新できませんでした。",
+  "@commentsReactionFailed": {
+    "description": "Comment reaction update failure"
+  },
+  "commentsReportFailed": "このコメントはすでに報告済みか、報告を送信できませんでした。",
+  "@commentsReportFailed": {
+    "description": "Comment report failure"
+  },
+  "commentsOperationInProgress": "この操作はすでに実行中です。",
+  "@commentsOperationInProgress": {
+    "description": "Message shown when the same comment operation is already running"
+  },
+  "notificationsEmpty": "新しい通知はありません",
+  "@notificationsEmpty": {
+    "description": "Empty notification inbox message"
+  },
+  "notificationsRepliedToYourComment": "あなたのコメントに返信しました",
+  "@notificationsRepliedToYourComment": {
+    "description": "Action phrase in a reply notification"
+  },
+  "notificationsLikedYourComment": "あなたのコメントにいいねしました",
+  "@notificationsLikedYourComment": {
+    "description": "Action phrase in a reaction notification"
+  },
+  "notificationsToday": "今日",
+  "@notificationsToday": {
+    "description": "Notification date group for today"
+  },
+  "notificationsYesterday": "昨日",
+  "@notificationsYesterday": {
+    "description": "Notification date group for yesterday"
+  },
+  "notificationsUnknownUser": "ユーザー",
+  "@notificationsUnknownUser": {
+    "description": "Fallback actor name in a notification"
+  },
+  "notificationsNewMovieTitle": "新着映画",
+  "@notificationsNewMovieTitle": {
+    "description": "Notification channel and single new movie notification title"
+  },
+  "notificationsNewMoviesTitle": "新着映画 {count}件",
+  "@notificationsNewMoviesTitle": {
+    "description": "Notification title for multiple new movies",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "notificationsMovieAdded": "{movieName} が Liquid Phim に追加されました。",
+  "@notificationsMovieAdded": {
+    "description": "Single new movie notification body",
+    "placeholders": {
+      "movieName": {
+        "type": "String"
+      }
+    }
+  },
+  "notificationsNewMovieChannelDescription": "Liquid Phim が新しい映画を見つけたときの通知",
+  "@notificationsNewMovieChannelDescription": {
+    "description": "Android new movie notification channel description"
+  },
+  "castChooseDevice": "デバイスを選択",
+  "@castChooseDevice": {
+    "description": "Casting device sheet title"
+  },
+  "castAirPlayUnavailableTitle": "AirPlay を開けませんでした",
+  "@castAirPlayUnavailableTitle": {
+    "description": "AirPlay launch failure dialog title"
+  },
+  "castAirPlayUnavailableBody": "iPhone とテレビまたは Mac が同じ Wi-Fi ネットワークに接続されていることを確認して、もう一度お試しください。",
+  "@castAirPlayUnavailableBody": {
+    "description": "AirPlay launch failure guidance"
+  },
+  "castVideoUnavailableTitle": "利用可能な動画がありません",
+  "@castVideoUnavailableTitle": {
+    "description": "Casting dialog title when video is not ready"
+  },
+  "castVideoUnavailableBody": "動画の読み込みが完了してから Google Cast デバイスを選択してください。",
+  "@castVideoUnavailableBody": {
+    "description": "Casting guidance when video is not ready"
+  },
+  "castConnectionFailedTitle": "Google Cast に接続できませんでした",
+  "@castConnectionFailedTitle": {
+    "description": "Google Cast connection failure title"
+  },
+  "castConnectionFailedBody": "Google Play 開発者サービスを確認し、スマートフォンと Chromecast または Google TV が同じ Wi-Fi ネットワークに接続されていることを確認してください。",
+  "@castConnectionFailedBody": {
+    "description": "Google Cast connection failure guidance"
+  },
+  "castAirPlayAndBluetoothDevices": "AirPlay と Bluetooth デバイス",
+  "@castAirPlayAndBluetoothDevices": {
+    "description": "AirPlay route picker item title"
+  },
+  "castConnecting": "接続中...",
+  "@castConnecting": {
+    "description": "Casting device connection state"
+  },
+  "castSearching": "Google Cast デバイスを検索中...",
+  "@castSearching": {
+    "description": "Casting device discovery loading state"
+  },
+  "castNoDevices": "デバイスが見つかりません",
+  "@castNoDevices": {
+    "description": "Casting device discovery empty state"
+  },
+  "castSameWifiGuidance": "スマートフォンと Chromecast または Google TV が同じ Wi-Fi ネットワークに接続されていることを確認してください。",
+  "@castSameWifiGuidance": {
+    "description": "Casting device discovery guidance"
+  },
+  "castSearchAgain": "もう一度検索",
+  "@castSearchAgain": {
+    "description": "Action that restarts casting device discovery"
+  },
+  "castDefaultDeviceName": "Google Cast デバイス",
+  "@castDefaultDeviceName": {
+    "description": "Fallback Google Cast device name"
+  },
+  "shareMovieSubject": "Liquid Phim で {movieName} を視聴",
+  "@shareMovieSubject": {
+    "description": "Movie share sheet subject",
+    "placeholders": {
+      "movieName": {
+        "type": "String"
+      }
+    }
+  },
+  "shareOpenFailed": "共有シートを開けませんでした。",
+  "@shareOpenFailed": {
+    "description": "Share sheet launch failure"
+  },
+  "rankingTopFavorites": "お気に入り映画 TOP",
+  "@rankingTopFavorites": {
+    "description": "Favorite movies ranking title"
+  },
+  "rankingTopLiquidPhim": "Liquid Phim TOP 30",
+  "@rankingTopLiquidPhim": {
+    "description": "Overall Liquid Phim ranking title"
+  },
+  "rankingTopHotMovies": "話題の映画 TOP 30",
+  "@rankingTopHotMovies": {
+    "description": "Hot single movies ranking title"
+  },
+  "rankingMostViewed": "最も視聴された作品",
+  "@rankingMostViewed": {
+    "description": "Most viewed ranking subtitle"
+  },
+  "rankingMostLiked": "最も「いいね」された作品",
+  "@rankingMostLiked": {
+    "description": "Most liked ranking subtitle"
+  },
+  "rankingEmptyLikes": "映画に「いいね」が付くとランキングが表示されます。",
+  "@rankingEmptyLikes": {
+    "description": "Empty most-liked ranking message"
+  },
+  "rankingEmptyViews": "映画が視聴されるとランキングが表示されます。",
+  "@rankingEmptyViews": {
+    "description": "Empty most-viewed ranking message"
+  },
+  "rankingLoadFailed": "ランキングを読み込めませんでした。",
+  "@rankingLoadFailed": {
+    "description": "Ranking loading failure"
+  },
+  "playerEpisodeNumber": "第{number}話",
+  "@playerEpisodeNumber": {
+    "description": "Episode number label",
+    "placeholders": {
+      "number": {
+        "type": "int"
+      }
+    }
+  },
+  "libraryMonthLabel": "{month}月",
+  "@libraryMonthLabel": {
+    "description": "Month label",
+    "placeholders": {
+      "month": {
+        "type": "int"
+      }
+    }
+  }
+}

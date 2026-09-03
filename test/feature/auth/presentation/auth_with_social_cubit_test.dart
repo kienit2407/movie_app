@@ -15,7 +15,7 @@ void main() {
   group('AuthWithSocialCubit Google', () {
     test('emits loading then success', () async {
       final completer = Completer<Either>();
-      final cubit = _buildCubit(() => completer.future);
+      final cubit = _buildCubit((_) => completer.future);
       final states = <AuthWithSocialState>[];
       final subscription = cubit.stream.listen(states.add);
 
@@ -33,7 +33,7 @@ void main() {
 
     test('a user cancellation returns to initial without an error', () async {
       final cubit = _buildCubit(
-        () async => const Left('The user canceled login!'),
+        (_) async => const Left('The user canceled login!'),
       );
 
       await cubit.signInWithGoogle();
@@ -44,7 +44,7 @@ void main() {
 
     test('a real Google error remains retryable', () async {
       final cubit = _buildCubit(
-        () async => const Left('Không thể kết nối Google'),
+        (_) async => const Left('Không thể kết nối Google'),
       );
 
       await cubit.signInWithGoogle();
@@ -58,10 +58,25 @@ void main() {
       expect(cubit.state, isA<AuthWithSocialInitial>());
       await cubit.close();
     });
+
+    test('forwards the forced account-picker option', () async {
+      bool? receivedForceAccountPicker;
+      final cubit = _buildCubit((forceAccountPicker) async {
+        receivedForceAccountPicker = forceAccountPicker;
+        return const Right('ok');
+      });
+
+      await cubit.signInWithGoogle(forceAccountPicker: true);
+
+      expect(receivedForceAccountPicker, isTrue);
+      await cubit.close();
+    });
   });
 }
 
-AuthWithSocialCubit _buildCubit(Future<Either> Function() googleSignIn) {
+AuthWithSocialCubit _buildCubit(
+  Future<Either> Function(bool forceAccountPicker) googleSignIn,
+) {
   final repository = _ConfigurableAuthRepository(googleSignIn);
   return AuthWithSocialCubit(
     SiginWithGoogleUsecase(repository),
@@ -72,10 +87,11 @@ AuthWithSocialCubit _buildCubit(Future<Either> Function() googleSignIn) {
 class _ConfigurableAuthRepository implements AuthRepository {
   _ConfigurableAuthRepository(this._googleSignIn);
 
-  final Future<Either> Function() _googleSignIn;
+  final Future<Either> Function(bool forceAccountPicker) _googleSignIn;
 
   @override
-  Future<Either> signInWithGoogle() => _googleSignIn();
+  Future<Either> signInWithGoogle({bool forceAccountPicker = false}) =>
+      _googleSignIn(forceAccountPicker);
 
   @override
   Future<Either> confirmTokenOtpEmail(ConfirmToken confirmToken) async =>

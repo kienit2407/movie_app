@@ -13,6 +13,7 @@ import 'package:movie_app/core/config/utils/animated_dialog.dart';
 import 'package:movie_app/core/config/utils/format_episode.dart';
 import 'package:movie_app/core/config/utils/movie_player_args.dart';
 import 'package:movie_app/core/player_overlay_launcher.dart';
+import 'package:movie_app/core/extension/build_context_extension.dart';
 import 'package:movie_app/feature/detail_movie/data/model/detail_movie_model.dart';
 import 'package:movie_app/feature/detail_movie/domain/usecase/get_detail_movie_usecase.dart';
 import 'package:movie_app/feature/detail_movie/presentation/bloc/detail_movie_cubit.dart';
@@ -352,7 +353,7 @@ class _DialogContentState extends State<_DialogContent> {
                     ],
                     if (movie.content.isNotEmpty) ...[
                       Text(
-                        'Nội dung',
+                        context.l10n.detailContent,
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
@@ -386,7 +387,9 @@ class _DialogContentState extends State<_DialogContent> {
                               });
                             },
                             child: Text(
-                              _isContentExpanded ? 'Thu gọn' : 'Xem thêm',
+                              _isContentExpanded
+                                  ? context.l10n.commonCollapse
+                                  : context.l10n.commonSeeMore,
                               style: TextStyle(
                                 color: AppColor.secondColor,
                                 fontWeight: FontWeight.bold,
@@ -571,7 +574,7 @@ class _DialogContentState extends State<_DialogContent> {
           _buildInforChip(
             child: Text(
               (movie.episode_current == 'Full')
-                  ? movie.time.toFormatEpisode()
+                  ? movie.time.toFormatEpisode(context.l10n)
                   : movie.time,
               style: const TextStyle(
                 fontSize: 10,
@@ -706,10 +709,9 @@ class _DialogContentState extends State<_DialogContent> {
                 showAnimatedDialog(
                   context: context,
                   dialog: AppAlertDialog(
-                    buttonTitle: 'Đóng',
-                    content:
-                        'Phim hiện chưa có tập để xem. Vui lòng thử lại sau nhé!',
-                    title: 'Thông báo',
+                    buttonTitle: context.l10n.commonClose,
+                    content: context.l10n.detailNoPlayableEpisodes,
+                    title: context.l10n.commonNoticeTitle,
                   ),
                 );
               }
@@ -778,14 +780,18 @@ class _DialogContentState extends State<_DialogContent> {
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(color: Colors.white.withOpacity(0.7)),
               ),
-              child: const Row(
+              child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Iconsax.info_circle, color: Colors.white, size: 20),
-                  SizedBox(width: 6),
+                  const Icon(
+                    Iconsax.info_circle,
+                    color: Colors.white,
+                    size: 20,
+                  ),
+                  const SizedBox(width: 6),
                   Text(
-                    'Chi tiết',
-                    style: TextStyle(
+                    context.l10n.detailDetails,
+                    style: const TextStyle(
                       color: Colors.white,
                       fontWeight: FontWeight.w600,
                       fontSize: 13,

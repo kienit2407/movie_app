@@ -46,6 +46,8 @@ import 'package:movie_app/core/ios_picture_in_picture_service.dart';
 import 'package:movie_app/core/player_overlay_controller.dart';
 import 'package:movie_app/core/playback_wakelock.dart';
 import 'package:movie_app/core/movie_sharing/movie_share_service.dart';
+import 'package:movie_app/core/extension/build_context_extension.dart';
+import 'package:movie_app/core/extension/filter_localization_extension.dart';
 import 'package:movie_app/feature/detail_movie/data/model/detail_movie_model.dart';
 import 'package:movie_app/feature/detail_movie/presentation/widgets/cast_device_sheet.dart';
 import 'package:movie_app/feature/library/data/user_library_repository.dart';
@@ -1097,7 +1099,7 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
     }
     if (episodeName.isEmpty) return serverName;
     if (serverName.isEmpty) return episodeName;
-    return '$episodeName - $serverName';
+    return context.l10n.playerEpisodeAndServer(episodeName, serverName);
   }
 
   String _friendlyCurrentServerLabel() {
@@ -1109,9 +1111,9 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
     }
 
     final serverInfo = CoverMap.getConfigFromServerName(serverName);
-    final title = serverInfo['title'];
-    if (title is String && title.trim().isNotEmpty) return title.trim();
-    return 'Phụ Đề';
+    final title = context.serverLabel(serverInfo['title']).trim();
+    if (title.isNotEmpty) return title;
+    return context.l10n.playerSubtitleServer;
   }
 
   String _currentLandscapePlaybackLine() {
@@ -1127,7 +1129,7 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
 
     final fallback = widget.movie.episode_current.trim();
     if (fallback.isNotEmpty) return fallback;
-    return 'Đang phát';
+    return context.l10n.playerNowPlaying;
   }
 
   void _syncPlaybackSideEffects({bool force = false}) {
@@ -1638,7 +1640,7 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
       if (!mounted || generation != _playerInitGeneration) return;
       setState(() {
         _isVideoLoading = false;
-        _playerLoadError = 'Server này chưa có nguồn phát.';
+        _playerLoadError = context.l10n.playerSourceUnavailable;
       });
       return;
     }
@@ -1657,7 +1659,7 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
       if (!mounted || generation != _playerInitGeneration) return;
       setState(() {
         _isVideoLoading = false;
-        _playerLoadError = 'Không tải được nguồn phim này.';
+        _playerLoadError = context.l10n.playerSourceLoadFailed;
       });
       debugPrint('InitializePlayer failed: $error');
       return;
@@ -1795,7 +1797,7 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
       if (!mounted || generation != _playerInitGeneration) return;
       setState(() {
         _isVideoLoading = false;
-        _playerLoadError = 'Server này chưa có nguồn phát.';
+        _playerLoadError = context.l10n.playerSourceUnavailable;
       });
       return;
     }
@@ -1816,7 +1818,7 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
       if (!mounted || generation != _playerInitGeneration) return;
       setState(() {
         _isVideoLoading = false;
-        _playerLoadError = 'Không tải được nguồn phim này.';
+        _playerLoadError = context.l10n.playerSourceLoadFailed;
       });
       debugPrint('_disposeAndInitializePlayer failed: $error');
       return;
@@ -1900,7 +1902,9 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
   void _showAutoPlayMessage(bool enabled) {
     AppToast.show(
       context,
-      enabled ? 'Đã bật tự động phát' : 'Đã tắt tự động phát',
+      enabled
+          ? context.l10n.playerAutoplayEnabled
+          : context.l10n.playerAutoplayDisabled,
       duration: const Duration(milliseconds: 1200),
     );
   }
@@ -2164,7 +2168,7 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
       if (mounted) {
         AppToast.show(
           context,
-          'Đã hết tập phim',
+          context.l10n.playerNoMoreEpisodes,
           duration: const Duration(seconds: 5),
         );
       }
@@ -2185,7 +2189,7 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
     } else {
       AppToast.show(
         context,
-        'Đây là tập đầu tiên',
+        context.l10n.playerFirstEpisode,
         duration: const Duration(seconds: 2),
       );
     }
@@ -2363,9 +2367,9 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
       showAnimatedDialog(
         context: context,
         dialog: AppAlertDialog(
-          title: 'Chú ý',
-          content: 'Không tìm thấy tập $epNum trên server hiện tại.',
-          buttonTitle: 'Đóng',
+          title: context.l10n.commonNoticeTitle,
+          content: context.l10n.detailEpisodeNotFound(epNum),
+          buttonTitle: context.l10n.commonClose,
         ),
       );
       return;
@@ -2921,7 +2925,7 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
                 FilledButton.icon(
                   onPressed: _retryCurrentVideo,
                   icon: const Icon(Icons.refresh_rounded, size: 17),
-                  label: const Text('Thử lại'),
+                  label: Text(context.l10n.commonRetry),
                   style: FilledButton.styleFrom(
                     foregroundColor: Colors.black,
                     backgroundColor: AppColor.secondColor,
@@ -3123,7 +3127,7 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
               child: Column(
                 children: [
                   Semantics(
-                    label: 'Kéo xuống để đóng bình luận',
+                    label: context.l10n.playerPullDownToCloseComments,
                     child: SizedBox(
                       height: 22,
                       child: Center(
@@ -3205,7 +3209,7 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
 
         return KeyedSubtree(
           key: const ValueKey('playback-error'),
-          child: _buildPlayerError('Không thể phát video. Vui lòng thử lại.'),
+          child: _buildPlayerError(context.l10n.playerPlaybackFailed),
         );
       },
     );
@@ -4050,7 +4054,15 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
               Center(
                 child: AspectRatio(
                   aspectRatio: 16 / 9,
-                  child: _buildStablePlayerSurface(_chewieController!),
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      // Background của chính viewport video
+                      const ColoredBox(color: Colors.black),
+
+                      _buildStablePlayerSurface(_chewieController!),
+                    ],
+                  ),
                 ),
               )
             else
@@ -4091,7 +4103,7 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
                         ),
                         const Spacer(),
                         IconButton(
-                          tooltip: 'Phát trên TV',
+                          tooltip: context.l10n.playerPlayOnTv,
                           onPressed: _showCastingOptions,
                           icon: Icon(
                             Iconsax.mirroring_screen_copy,
@@ -4671,7 +4683,10 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
 
                                                       Expanded(
                                                         child: Text(
-                                                          'Đang phát: $epName',
+                                                          context.l10n
+                                                              .playerNowPlayingEpisode(
+                                                                epName,
+                                                              ),
                                                           maxLines: 1,
                                                           overflow: TextOverflow
                                                               .ellipsis,
@@ -4782,8 +4797,9 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
                                                           TextSpan(
                                                             children: [
                                                               TextSpan(
-                                                                text:
-                                                                    'Bình luận',
+                                                                text: context
+                                                                    .l10n
+                                                                    .detailCommentsTab,
                                                                 style: TextStyle(
                                                                   fontSize:
                                                                       14.sp,
@@ -4894,7 +4910,7 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
                                                                     Expanded(
                                                                       child: Text(
                                                                         firstComment.isDeleted
-                                                                            ? 'Bình luận đã bị xóa'
+                                                                            ? context.l10n.commentsDeleted
                                                                             : firstComment.body,
                                                                         maxLines:
                                                                             2,
@@ -5003,7 +5019,9 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
                                                                     ),
 
                                                                     child: Text(
-                                                                      'Chưa có bình luận',
+                                                                      context
+                                                                          .l10n
+                                                                          .commentsEmptyTitle,
                                                                       style: TextStyle(
                                                                         color:
                                                                             _isCommentsEmptyPressed
@@ -5105,7 +5123,9 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
               Expanded(
                 flex: 1,
                 child: Text(
-                  'Tập 1 - ${widget.episodes[_selectedServerIndex].server_data.length}',
+                  context.l10n.detailEpisodeRange(
+                    widget.episodes[_selectedServerIndex].server_data.length,
+                  ),
                   style: const TextStyle(
                     color: Colors.white70,
                     fontSize: 11,
@@ -5143,7 +5163,7 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
                       isDense: true,
                       filled: true,
                       fillColor: Colors.transparent,
-                      hintText: 'Nhập tập',
+                      hintText: context.l10n.detailEnterEpisode,
                       hintStyle: const TextStyle(
                         color: Colors.white30,
                         fontSize: 10,
@@ -5386,7 +5406,7 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
               ),
               child: Center(
                 child: Text(
-                  serverInfo['title'],
+                  context.serverLabel(serverInfo['title']),
                   style: TextStyle(
                     color: isSelected ? Colors.black : Colors.white,
                     fontSize: 12,
@@ -5706,7 +5726,9 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
                                     const SizedBox(width: 4),
                                     Flexible(
                                       child: Text(
-                                        serverName['title'],
+                                        context.serverLabel(
+                                          serverName['title'],
+                                        ),
                                         maxLines: 1,
                                         overflow: TextOverflow.ellipsis,
                                         softWrap: false,
@@ -5756,8 +5778,10 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
                                     children: [
                                       Text(
                                         isPlaying && isCurrentServer
-                                            ? 'Đang phát'
-                                            : 'Xem bản này',
+                                            ? context.l10n.playerNowPlaying
+                                            : context
+                                                  .l10n
+                                                  .detailWatchThisVersion,
                                         style: TextStyle(
                                           fontSize: 9,
                                           color: Colors.black,
@@ -6140,102 +6164,6 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
     );
   }
 
-  // Widget _buildBottomInfoRow() {
-  //   final chewie = _chewieController;
-  //   if (chewie == null) return const SizedBox.shrink();
-
-  //   final vp = chewie.videoPlayerController;
-
-  //   return ListenableBuilder(
-  //     listenable: Listenable.merge([vp, _scrubProgress]),
-  //     builder: (context, _) {
-  //       final value = vp.value;
-
-  //       return Padding(
-  //         padding: const EdgeInsets.symmetric(horizontal: 10),
-  //         child: SizedBox(
-  //           height: 34,
-  //           child: Row(
-  //             children: [
-  //               ClipRRect(
-  //                 borderRadius: BorderRadius.circular(20),
-  //                 child: Container(
-  //                   padding: const EdgeInsets.symmetric(
-  //                     horizontal: 10,
-  //                     vertical: 5,
-  //                   ),
-  //                   decoration: BoxDecoration(
-  //                     color: Colors.black.withValues(alpha: 0.3),
-  //                     borderRadius: BorderRadius.circular(20),
-  //                   ),
-  //                   child: Row(
-  //                     mainAxisSize: MainAxisSize.min,
-  //                     children: [
-  //                       Text(
-  //                         _formatDuration(_displayPosition(value)),
-  //                         style: const TextStyle(
-  //                           color: Colors.white,
-  //                           fontSize: 11,
-  //                           fontWeight: FontWeight.bold,
-  //                         ),
-  //                       ),
-  //                       const Text(
-  //                         ' / ',
-  //                         style: TextStyle(
-  //                           color: Colors.white,
-  //                           fontSize: 11,
-  //                           fontWeight: FontWeight.bold,
-  //                         ),
-  //                       ),
-  //                       Text(
-  //                         _formatDuration(value.duration),
-  //                         style: const TextStyle(
-  //                           color: Colors.white,
-  //                           fontSize: 11,
-  //                           fontWeight: FontWeight.bold,
-  //                         ),
-  //                       ),
-  //                     ],
-  //                   ),
-  //                 ),
-  //               ),
-
-  //               const Spacer(),
-  //               // fullscreen button giữ nguyên
-  //               if (!_showSeekOverlay) ...[
-  //                 Container(
-  //                   width: 34,
-  //                   height: 34,
-  //                   decoration: BoxDecoration(
-  //                     color: Colors.black.withValues(alpha: 0.2),
-  //                     shape: BoxShape.circle,
-  //                   ),
-  //                   child: IconButton(
-  //                     key: const ValueKey('player-fullscreen-button'),
-  //                     padding: const EdgeInsets.all(5),
-  //                     onPressed: _toggleFullscreen,
-  //                     icon: SvgPicture.asset(
-  //                       _isFullscreen
-  //                           ? 'assets/icons/fullscreen_exit.svg'
-  //                           : 'assets/icons/fullscreen.svg',
-  //                       width: 25,
-  //                       height: 25,
-  //                       colorFilter: const ColorFilter.mode(
-  //                         Colors.white,
-  //                         BlendMode.srcIn,
-  //                       ),
-  //                     ),
-  //                   ),
-  //                 ),
-  //               ],
-  //             ],
-  //           ),
-  //         ),
-  //       );
-  //     },
-  //   );
-  // }
-
   Widget _buildBottomInfoRow() {
     final chewie = _chewieController;
     if (chewie == null) return const SizedBox.shrink();
@@ -6414,7 +6342,7 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
           }
 
           return Semantics(
-            label: 'Thanh tiến trình video',
+            label: context.l10n.playerVideoProgress,
             value: semanticValue,
             increasedValue: semanticValueAfter(0.05),
             decreasedValue: semanticValueAfter(-0.05),
@@ -6785,7 +6713,7 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
                       child: Row(
                         children: [
                           IconButton(
-                            tooltip: 'Quay lại',
+                            tooltip: context.l10n.commonBack,
                             icon: const Icon(
                               Iconsax.arrow_down_1_copy,
                               color: Colors.white,
@@ -6799,7 +6727,7 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
                           const Spacer(),
 
                           IconButton(
-                            tooltip: 'Phát trên TV',
+                            tooltip: context.l10n.playerPlayOnTv,
                             onPressed: _showCastingOptions,
                             icon: Icon(
                               Iconsax.mirroring_screen_copy,
@@ -6814,7 +6742,7 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
                             _buildAutoPlayToggleButton(),
 
                           IconButton(
-                            tooltip: 'Danh sách tập',
+                            tooltip: context.l10n.playerEpisodeList,
                             icon: const Icon(
                               Iconsax.menu,
                               color: Colors.white,

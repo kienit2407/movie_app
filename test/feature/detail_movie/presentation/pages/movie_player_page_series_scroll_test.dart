@@ -21,6 +21,7 @@ import 'package:movie_app/feature/detail_movie/presentation/bloc/player_cubit.da
 import 'package:movie_app/feature/detail_movie/presentation/pages/movie_player_page.dart';
 import 'package:movie_app/hive_registrar.g.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../../../helpers/localized_test_app.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -123,7 +124,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(tester.getSize(controlsFinder).height, initialHeight);
 
-      await tester.tap(find.text('Lồng Tiếng'));
+      await tester.tap(find.text('Phim lồng tiếng'));
       await tester.pump();
       await tester.enterText(find.byType(TextField), '10');
       await tester.testTextInput.receiveAction(TextInputAction.search);
@@ -148,7 +149,7 @@ void main() {
     );
     expect(find.byKey(const ValueKey('series-episode-scroll')), findsNothing);
     expect(find.byType(GridView), findsOneWidget);
-    expect(find.text('Phụ Đề'), findsOneWidget);
+    expect(find.text('Phụ đề'), findsOneWidget);
     expect(tester.takeException(), isNull);
 
     await tester.pumpWidget(const SizedBox.shrink());
@@ -615,7 +616,7 @@ Future<void> _pumpPlayer(
           ),
         ],
         child: appLevelOverlay
-            ? MaterialApp(
+            ? localizedTestApp(
                 home: const SizedBox.shrink(),
                 builder: (context, child) => Overlay(
                   initialEntries: [
@@ -628,7 +629,7 @@ Future<void> _pumpPlayer(
                   ],
                 ),
               )
-            : MaterialApp(home: player),
+            : localizedTestApp(home: player),
       ),
     ),
   );

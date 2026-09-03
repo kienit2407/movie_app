@@ -3,14 +3,10 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
 import 'package:movie_app/core/config/themes/app_color.dart';
+import 'package:movie_app/core/extension/build_context_extension.dart';
 
 class AppFullnameTextfield extends StatefulWidget {
-  const AppFullnameTextfield
-  ({
-    super.key, 
-    required this.controller,
- 
-  });
+  const AppFullnameTextfield({super.key, required this.controller});
 
   final TextEditingController controller;
   @override
@@ -21,10 +17,10 @@ class _AppFullnameTextfieldState extends State<AppFullnameTextfield> {
   final _focusedNode = FocusNode();
   bool _isFocused = false;
   bool _hideClear = false;
-@override
+  @override
   void initState() {
-    _focusedNode.addListener((){
-      if(_focusedNode.hasFocus != _isFocused){
+    _focusedNode.addListener(() {
+      if (_focusedNode.hasFocus != _isFocused) {
         setState(() {
           _isFocused = _focusedNode.hasFocus;
         });
@@ -38,6 +34,7 @@ class _AppFullnameTextfieldState extends State<AppFullnameTextfield> {
     _focusedNode.dispose();
     super.dispose();
   }
+
   @override
   Widget build(BuildContext context) {
     return ClipRect(
@@ -56,26 +53,29 @@ class _AppFullnameTextfieldState extends State<AppFullnameTextfield> {
             gradient: LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
-                colors: [
-                  Colors.white60.withOpacity(.3),
-                  Colors.white10.withOpacity(.1),
-              ]
+              colors: [
+                Colors.white60.withOpacity(.3),
+                Colors.white10.withOpacity(.1),
+              ],
             ),
             border: Border(
               top: BorderSide(color: Colors.white60.withOpacity(0.7), width: 1),
-              left: BorderSide(color: Colors.white60.withOpacity(0.7), width: 1)
+              left: BorderSide(
+                color: Colors.white60.withOpacity(0.7),
+                width: 1,
+              ),
             ),
           ),
           child: TextField(
             textInputAction: TextInputAction.next,
             onSubmitted: (value) {
-              if(value.isNotEmpty){
+              if (value.isNotEmpty) {
                 FocusScope.of(context).nextFocus();
-              } else{
+              } else {
                 _focusedNode.requestFocus();
               }
             },
-            
+
             onChanged: (value) {
               setState(() {
                 _hideClear = value.isNotEmpty;
@@ -92,25 +92,30 @@ class _AppFullnameTextfieldState extends State<AppFullnameTextfield> {
               filled: true,
               fillColor: _isFocused
                   ? AppColor.secondColor.withOpacity(.2)
-                  :  Colors.transparent,
+                  : Colors.transparent,
               prefixIconColor: _isFocused ? AppColor.secondColor : Colors.white,
               suffixIcon: AnimatedSwitcher(
                 duration: Duration(milliseconds: 300),
                 switchInCurve: Curves.elasticInOut,
                 transitionBuilder: (Widget child, Animation<double> animation) {
-                  return ScaleTransition(scale: animation, child: child); // Hiệu ứng scale
+                  return ScaleTransition(
+                    scale: animation,
+                    child: child,
+                  ); // Hiệu ứng scale
                 },
-                child: (_hideClear && _isFocused) ? IconButton(
-                  onPressed: (){
-                    setState(() {
-                      widget.controller.clear();
-                      _hideClear = false;
-                    });
-                  }, 
-                  icon: Icon(Iconsax.tag_cross_copy) ,
-                ): null,
+                child: (_hideClear && _isFocused)
+                    ? IconButton(
+                        onPressed: () {
+                          setState(() {
+                            widget.controller.clear();
+                            _hideClear = false;
+                          });
+                        },
+                        icon: Icon(Iconsax.tag_cross_copy),
+                      )
+                    : null,
               ),
-              hintText: 'Full name',
+              hintText: context.l10n.authFullName,
             ).applyDefaults(Theme.of(context).inputDecorationTheme),
           ),
         ),

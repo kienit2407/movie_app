@@ -1,0 +1,1475 @@
+{
+  "@@locale": "zh_Hant",
+  "appTitle": "Liquid Phim",
+  "@appTitle": {
+    "description": "Application name"
+  },
+  "appTagline": "隨時隨地，暢享電影",
+  "@appTagline": {
+    "description": "Tagline displayed on the splash or branding screen"
+  },
+  "commonAgree": "確定",
+  "@commonAgree": {
+    "description": "Generic confirmation action"
+  },
+  "commonCancel": "取消",
+  "@commonCancel": {
+    "description": "Generic cancel action"
+  },
+  "commonClose": "關閉",
+  "@commonClose": {
+    "description": "Generic close action or tooltip"
+  },
+  "commonDone": "完成",
+  "@commonDone": {
+    "description": "Generic done action"
+  },
+  "commonSave": "保存",
+  "@commonSave": {
+    "description": "Generic save action"
+  },
+  "commonDelete": "刪除",
+  "@commonDelete": {
+    "description": "Generic delete action"
+  },
+  "commonEdit": "編輯",
+  "@commonEdit": {
+    "description": "Generic edit action"
+  },
+  "commonReport": "舉報",
+  "@commonReport": {
+    "description": "Generic report action"
+  },
+  "commonRetry": "重試",
+  "@commonRetry": {
+    "description": "Generic retry action"
+  },
+  "commonReset": "重置",
+  "@commonReset": {
+    "description": "Generic reset action"
+  },
+  "commonAll": "全部",
+  "@commonAll": {
+    "description": "Option representing all available values"
+  },
+  "commonSeeMore": "查看更多",
+  "@commonSeeMore": {
+    "description": "Action that expands content"
+  },
+  "commonCollapse": "收起",
+  "@commonCollapse": {
+    "description": "Action that collapses content"
+  },
+  "commonLoading": "加載中...",
+  "@commonLoading": {
+    "description": "Generic loading state"
+  },
+  "commonUpdating": "更新中",
+  "@commonUpdating": {
+    "description": "Fallback text while movie information is being updated"
+  },
+  "commonUnderstood": "知道了",
+  "@commonUnderstood": {
+    "description": "Acknowledgement action in an informational dialog"
+  },
+  "commonNoData": "暫無資料",
+  "@commonNoData": {
+    "description": "Generic empty data state"
+  },
+  "commonNotAvailable": "暫無",
+  "@commonNotAvailable": {
+    "description": "Fallback value when information is unavailable"
+  },
+  "commonWarningTitle": "警告",
+  "@commonWarningTitle": {
+    "description": "Generic warning dialog title"
+  },
+  "commonNoticeTitle": "提示",
+  "@commonNoticeTitle": {
+    "description": "Generic informational dialog title"
+  },
+  "commonCongratulationsTitle": "恭喜！",
+  "@commonCongratulationsTitle": {
+    "description": "Generic success dialog title"
+  },
+  "commonBack": "返回",
+  "@commonBack": {
+    "description": "Generic back navigation tooltip"
+  },
+  "commonGoHome": "返回首頁",
+  "@commonGoHome": {
+    "description": "Action on the router error page that navigates home"
+  },
+  "commonSelectedCount": "{count, plural, =0{未選擇} other{已選擇 {count} 項}}",
+  "@commonSelectedCount": {
+    "description": "Number of selected list items",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "commonErrorWithDetails": "錯誤：{error}",
+  "@commonErrorWithDetails": {
+    "description": "Generic error containing technical details",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "commonDurationHoursMinutes": "{hours} 小時 {minutes} 分鐘",
+  "@commonDurationHoursMinutes": {
+    "description": "Movie duration containing hours and minutes",
+    "placeholders": {
+      "hours": {
+        "type": "int"
+      },
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "settingsLanguage": "語言",
+  "@settingsLanguage": {
+    "description": "Application language setting title"
+  },
+  "settingsLanguageSystem": "使用裝置語言",
+  "@settingsLanguageSystem": {
+    "description": "Option that follows the operating system language"
+  },
+  "settingsLanguageVietnamese": "Tiếng Việt",
+  "@settingsLanguageVietnamese": {
+    "description": "Vietnamese language option written in its native name"
+  },
+  "settingsLanguageEnglish": "English",
+  "@settingsLanguageEnglish": {
+    "description": "English language option written in its native name"
+  },
+  "settingsLanguageJapanese": "日本語",
+  "@settingsLanguageJapanese": {
+    "description": "Japanese language option written in its native name"
+  },
+  "settingsLanguageThai": "ไทย",
+  "@settingsLanguageThai": {
+    "description": "Thai language option written in its native name"
+  },
+  "settingsLanguageKorean": "한국어",
+  "@settingsLanguageKorean": {
+    "description": "Korean language option written in its native name"
+  },
+  "settingsLanguageChineseSimplified": "简体中文",
+  "@settingsLanguageChineseSimplified": {
+    "description": "Simplified Chinese language option written in its native name"
+  },
+  "settingsLanguageChineseTraditional": "繁體中文",
+  "@settingsLanguageChineseTraditional": {
+    "description": "Traditional Chinese language option written in its native name"
+  },
+  "settingsTitle": "設定",
+  "@settingsTitle": {
+    "description": "Settings page title and settings button tooltip"
+  },
+  "settingsGeneralSection": "一般",
+  "@settingsGeneralSection": {
+    "description": "General settings section heading"
+  },
+  "settingsAppLanguage": "應用程式語言",
+  "@settingsAppLanguage": {
+    "description": "App language row and language picker title"
+  },
+  "settingsAccountSection": "帳號",
+  "@settingsAccountSection": {
+    "description": "Account settings section heading"
+  },
+  "settingsSwitchAccount": "切換帳號",
+  "@settingsSwitchAccount": {
+    "description": "Switch account row and bottom sheet title"
+  },
+  "settingsAddAccount": "新增帳號",
+  "@settingsAddAccount": {
+    "description": "Action that starts sign-in for another account"
+  },
+  "settingsAccountSwitchFailed": "無法切換帳號。請重新登入該帳號。",
+  "@settingsAccountSwitchFailed": {
+    "description": "Error shown when a saved account session cannot be restored"
+  },
+  "settingsSignOutFailed": "無法登出，請再試一次。",
+  "@settingsSignOutFailed": {
+    "description": "Error shown when signing out fails"
+  },
+  "navHome": "首頁",
+  "@navHome": {
+    "description": "Home tab accessibility label"
+  },
+  "navSearch": "搜尋",
+  "@navSearch": {
+    "description": "Search tab accessibility label"
+  },
+  "navFavorites": "收藏",
+  "@navFavorites": {
+    "description": "Favorites tab accessibility label"
+  },
+  "navProfile": "個人資料",
+  "@navProfile": {
+    "description": "Profile tab accessibility label"
+  },
+  "navNotifications": "通知",
+  "@navNotifications": {
+    "description": "Notifications page title and tooltip"
+  },
+  "internetOffline": "無網際網路連線",
+  "@internetOffline": {
+    "description": "Banner shown while the device is offline"
+  },
+  "internetBackOnline": "已恢復網路連線",
+  "@internetBackOnline": {
+    "description": "Banner shown when Internet access returns"
+  },
+  "authJoinMember": "加入會員",
+  "@authJoinMember": {
+    "description": "Action inviting a signed-out user to authenticate"
+  },
+  "authSignInTitle": "登入 Liquid Phim",
+  "@authSignInTitle": {
+    "description": "Sign-in page heading"
+  },
+  "authSignIn": "登入",
+  "@authSignIn": {
+    "description": "Sign-in action"
+  },
+  "authSignInFailed": "登入失敗，請再試一次。",
+  "@authSignInFailed": {
+    "description": "Fallback sign-in failure message"
+  },
+  "authSignInToComment": "登入後即可留言並與社群互動。",
+  "@authSignInToComment": {
+    "description": "Sign-in benefit shown when authentication is required for comments"
+  },
+  "authGoogleSyncDescription": "使用 Google 繼續，以同步帳號並加入社群。",
+  "@authGoogleSyncDescription": {
+    "description": "Description of Google sign-in benefits"
+  },
+  "authGoogleConsent": "繼續即表示你同意在 Liquid Phim 中使用你的 Google 帳號。",
+  "@authGoogleConsent": {
+    "description": "Consent copy below the Google sign-in action"
+  },
+  "authContinueWithGoogle": "使用 Google 繼續",
+  "@authContinueWithGoogle": {
+    "description": "Google sign-in action"
+  },
+  "authGoogleSignInFailed": "無法使用 Google 登入，請再試一次。",
+  "@authGoogleSignInFailed": {
+    "description": "Google sign-in failure message"
+  },
+  "authGoogleSignInCheckFailed": "無法使用 Google 登入。請檢查網路連線後再試一次。",
+  "@authGoogleSignInCheckFailed": {
+    "description": "Google sign-in failure message that asks the user to check and retry"
+  },
+  "authSessionUpdateFailed": "無法更新登入工作階段。",
+  "@authSessionUpdateFailed": {
+    "description": "Authentication session refresh failure"
+  },
+  "authLoginRequired": "你需要先登入。",
+  "@authLoginRequired": {
+    "description": "Message shown when a signed-in user is required"
+  },
+  "authLoginRequiredForAction": "執行此操作需要先登入。",
+  "@authLoginRequiredForAction": {
+    "description": "Message shown when an action requires authentication"
+  },
+  "authEmail": "電子郵件",
+  "@authEmail": {
+    "description": "Email field label or hint"
+  },
+  "authPassword": "密碼",
+  "@authPassword": {
+    "description": "Password field label or hint"
+  },
+  "authFullName": "姓名",
+  "@authFullName": {
+    "description": "Full name field label or hint"
+  },
+  "authForgotPassword": "忘記密碼？",
+  "@authForgotPassword": {
+    "description": "Forgot password action"
+  },
+  "authOrContinueWith": "或使用以下方式繼續",
+  "@authOrContinueWith": {
+    "description": "Separator before social sign-in options"
+  },
+  "authAlreadyHaveAccount": "已有帳號？",
+  "@authAlreadyHaveAccount": {
+    "description": "Prompt on the sign-up page"
+  },
+  "authFullNameRequired": "姓名不能留空。",
+  "@authFullNameRequired": {
+    "description": "Full name validation error"
+  },
+  "authFullNameLength": "姓名長度必須為 3 到 15 個字元。",
+  "@authFullNameLength": {
+    "description": "Full name length validation error"
+  },
+  "authEmailRequired": "電子郵件不能留空。",
+  "@authEmailRequired": {
+    "description": "Email validation error"
+  },
+  "authEmailInvalid": "請輸入有效的電子郵件地址。",
+  "@authEmailInvalid": {
+    "description": "Email format validation error"
+  },
+  "authPasswordRequired": "密碼不能留空。",
+  "@authPasswordRequired": {
+    "description": "Password validation error"
+  },
+  "authPasswordLength": "密碼長度必須為 6 到 15 個字元。",
+  "@authPasswordLength": {
+    "description": "Password length validation error"
+  },
+  "authAccountAlreadyExists": "此帳號已存在，請使用其他電子郵件。",
+  "@authAccountAlreadyExists": {
+    "description": "Sign-up failure when an account already exists"
+  },
+  "authWeakPassword": "此密碼過於簡單，請使用更強的密碼。",
+  "@authWeakPassword": {
+    "description": "Weak password validation returned by authentication"
+  },
+  "authInvalidCredentials": "電子郵件或密碼不正確，請再試一次。",
+  "@authInvalidCredentials": {
+    "description": "Invalid sign-in credentials message"
+  },
+  "authUnexpectedError": "發生問題，請再試一次。",
+  "@authUnexpectedError": {
+    "description": "Generic authentication failure"
+  },
+  "authSignUpFailed": "無法建立帳號，請再試一次。",
+  "@authSignUpFailed": {
+    "description": "Generic sign-up failure"
+  },
+  "authSignUpSucceeded": "帳號已建立。",
+  "@authSignUpSucceeded": {
+    "description": "Sign-up success message"
+  },
+  "authSignInSucceeded": "登入成功。",
+  "@authSignInSucceeded": {
+    "description": "Sign-in success message"
+  },
+  "authSignOutSucceeded": "已登出。",
+  "@authSignOutSucceeded": {
+    "description": "Sign-out success message"
+  },
+  "authTokenConfirmed": "驗證碼已確認。",
+  "@authTokenConfirmed": {
+    "description": "Password reset token confirmation success"
+  },
+  "authTokenInvalid": "驗證碼不正確。",
+  "@authTokenInvalid": {
+    "description": "Password reset token validation failure"
+  },
+  "homeEnableNewMovieNotificationsTitle": "接收新電影通知？",
+  "@homeEnableNewMovieNotificationsTitle": {
+    "description": "Title of the new movie notification opt-in dialog"
+  },
+  "homeEnableNewMovieNotificationsBody": "Liquid Phim 可以在背景定期檢查，並在發現新電影時通知你。為了節省電量，作業系統可能會將檢查延遲 20 分鐘以上。",
+  "@homeEnableNewMovieNotificationsBody": {
+    "description": "Explanation in the new movie notification opt-in dialog"
+  },
+  "homeEnableNotifications": "開啟通知",
+  "@homeEnableNotifications": {
+    "description": "Action that enables new movie notifications"
+  },
+  "homeDoNotEnable": "暫不開啟",
+  "@homeDoNotEnable": {
+    "description": "Action that declines new movie notifications"
+  },
+  "homeNotificationPermissionDisabled": "通知權限已關閉。你可以在手機設定中重新開啟。",
+  "@homeNotificationPermissionDisabled": {
+    "description": "Message shown when notification permission is not granted"
+  },
+  "homeLoadMoviesFailed": "無法載入電影。\n下拉以重試。",
+  "@homeLoadMoviesFailed": {
+    "description": "Home page movie loading error with retry guidance"
+  },
+  "homeRecommended": "推薦",
+  "@homeRecommended": {
+    "description": "Recommended movies filter"
+  },
+  "homeGenres": "類型",
+  "@homeGenres": {
+    "description": "Genres filter or section label"
+  },
+  "homeCountries": "國家/地區",
+  "@homeCountries": {
+    "description": "Countries filter or section label"
+  },
+  "homeYear": "年份",
+  "@homeYear": {
+    "description": "Year filter label"
+  },
+  "homeFreshMovies": "最新上線！",
+  "@homeFreshMovies": {
+    "description": "Heading for newly released movies"
+  },
+  "homeKoreanMovies": "韓國電影",
+  "@homeKoreanMovies": {
+    "description": "Heading for the Korean movie section"
+  },
+  "homeChineseMovies": "中國電影",
+  "@homeChineseMovies": {
+    "description": "Heading for the Chinese movie section"
+  },
+  "homeUsUkMovies": "歐美電影",
+  "@homeUsUkMovies": {
+    "description": "Heading for the US and UK movie section"
+  },
+  "homeWatchMovie": "觀看",
+  "@homeWatchMovie": {
+    "description": "Primary action that starts movie playback"
+  },
+  "homeInformation": "資訊",
+  "@homeInformation": {
+    "description": "Action that opens movie information"
+  },
+  "homeViewAll": "查看全部",
+  "@homeViewAll": {
+    "description": "Action that opens all items in a section"
+  },
+  "homeWhatToWatch": "今天想看什麼？",
+  "@homeWhatToWatch": {
+    "description": "Heading above movie type recommendations"
+  },
+  "homeViewMore": "查看更多",
+  "@homeViewMore": {
+    "description": "Action to show more movie recommendations"
+  },
+  "homeAppVersion": "版本：{version} ({buildNumber})",
+  "@homeAppVersion": {
+    "description": "Application version and build number",
+    "placeholders": {
+      "version": {
+        "type": "String"
+      },
+      "buildNumber": {
+        "type": "String"
+      }
+    }
+  },
+  "filterMovieType": "影片類型",
+  "@filterMovieType": {
+    "description": "Movie type filter heading"
+  },
+  "filterSeries": "影集",
+  "@filterSeries": {
+    "description": "Series movie type"
+  },
+  "filterSingleMovies": "電影",
+  "@filterSingleMovies": {
+    "description": "Single movie type"
+  },
+  "filterAnimation": "動畫",
+  "@filterAnimation": {
+    "description": "Animation movie type"
+  },
+  "filterTvShows": "電視節目",
+  "@filterTvShows": {
+    "description": "TV show movie type"
+  },
+  "filterSubtitled": "字幕",
+  "@filterSubtitled": {
+    "description": "Content with subtitles"
+  },
+  "filterVoiceOver": "旁白配音",
+  "@filterVoiceOver": {
+    "description": "Content with voice-over narration"
+  },
+  "filterDubbed": "配音",
+  "@filterDubbed": {
+    "description": "Dubbed content"
+  },
+  "filterChooseMovieType": "請選擇影片類型。",
+  "@filterChooseMovieType": {
+    "description": "Validation message when no movie type is selected"
+  },
+  "filterChooseGenre": "請選擇類型。",
+  "@filterChooseGenre": {
+    "description": "Validation message when no genre is selected"
+  },
+  "filterChooseCountry": "請選擇要篩選的國家/地區。",
+  "@filterChooseCountry": {
+    "description": "Validation message when no country is selected"
+  },
+  "filterChooseYear": "請選擇要篩選的年份。",
+  "@filterChooseYear": {
+    "description": "Validation message when no year is selected"
+  },
+  "filterLanguage": "語言",
+  "@filterLanguage": {
+    "description": "Content language filter heading"
+  },
+  "filterSortBy": "排序依據",
+  "@filterSortBy": {
+    "description": "Sort field heading"
+  },
+  "filterSortDirection": "排序方向",
+  "@filterSortDirection": {
+    "description": "Ascending or descending sort heading"
+  },
+  "filterDescending": "降冪",
+  "@filterDescending": {
+    "description": "Descending sort option"
+  },
+  "filterAscending": "升冪",
+  "@filterAscending": {
+    "description": "Ascending sort option"
+  },
+  "filterMostViewed": "觀看次數最多",
+  "@filterMostViewed": {
+    "description": "Most viewed sort option"
+  },
+  "filterNewest": "最新",
+  "@filterNewest": {
+    "description": "Newest sort option"
+  },
+  "filterReleaseYear": "上映年份",
+  "@filterReleaseYear": {
+    "description": "Release year sort option"
+  },
+  "filterApply": "套用篩選",
+  "@filterApply": {
+    "description": "Action that applies all selected filters"
+  },
+  "filterResults": "篩選結果",
+  "@filterResults": {
+    "description": "Action that applies a simple filter"
+  },
+  "searchAttentionTitle": "注意",
+  "@searchAttentionTitle": {
+    "description": "Search validation dialog title"
+  },
+  "searchEnterKeywordBeforeFiltering": "篩選電影前請先輸入關鍵字。",
+  "@searchEnterKeywordBeforeFiltering": {
+    "description": "Validation shown when filters are opened without a search keyword"
+  },
+  "searchNoResults": "找不到結果",
+  "@searchNoResults": {
+    "description": "Search empty result message"
+  },
+  "searchMovieActorHint": "搜尋電影、演員...",
+  "@searchMovieActorHint": {
+    "description": "Search input hint"
+  },
+  "searchFilterTooltip": "搜尋篩選",
+  "@searchFilterTooltip": {
+    "description": "Tooltip and title for search filters"
+  },
+  "searchStartPrompt": "輸入電影名稱開始搜尋",
+  "@searchStartPrompt": {
+    "description": "Prompt shown before the first search"
+  },
+  "searchRecent": "最近搜尋",
+  "@searchRecent": {
+    "description": "Recent search history heading"
+  },
+  "searchLoadingGenres": "正在載入類型...",
+  "@searchLoadingGenres": {
+    "description": "Loading state for genres in search filters"
+  },
+  "searchLoadingCountries": "正在載入國家/地區...",
+  "@searchLoadingCountries": {
+    "description": "Loading state for countries in search filters"
+  },
+  "searchNoMovies": "暫無電影",
+  "@searchNoMovies": {
+    "description": "Movie list empty state"
+  },
+  "searchTryDifferentFilters": "請嘗試其他篩選條件",
+  "@searchTryDifferentFilters": {
+    "description": "Guidance shown when filters return no movies"
+  },
+  "librarySignOutTitle": "要登出嗎？",
+  "@librarySignOutTitle": {
+    "description": "Sign-out confirmation dialog title"
+  },
+  "librarySignOutConfirmation": "確定要登出此帳號嗎？",
+  "@librarySignOutConfirmation": {
+    "description": "Sign-out confirmation dialog body"
+  },
+  "librarySignOut": "登出",
+  "@librarySignOut": {
+    "description": "Sign-out action and tooltip"
+  },
+  "libraryDeleteSelectedMoviesTitle": "要刪除已選擇的 {count} 部電影嗎？",
+  "@libraryDeleteSelectedMoviesTitle": {
+    "description": "Title for deleting selected movies",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "libraryDeleteHistoryMovieTitle": "要從觀看紀錄中刪除這部電影嗎？",
+  "@libraryDeleteHistoryMovieTitle": {
+    "description": "Title for deleting one history item"
+  },
+  "libraryDeleteHistoryConfirmation": "要從觀看紀錄中刪除 {count} 部電影嗎？",
+  "@libraryDeleteHistoryConfirmation": {
+    "description": "Confirmation for removing movies from watch history",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "libraryDeleteFavoriteMovieTitle": "要從收藏中移除這部電影嗎？",
+  "@libraryDeleteFavoriteMovieTitle": {
+    "description": "Title for deleting one favorite movie"
+  },
+  "libraryDeleteFavoritesConfirmation": "要從收藏中移除 {count} 部電影嗎？",
+  "@libraryDeleteFavoritesConfirmation": {
+    "description": "Confirmation for removing movies from favorites",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "libraryCancelSelection": "取消選取",
+  "@libraryCancelSelection": {
+    "description": "Tooltip that exits selection mode"
+  },
+  "libraryDeleteSelectedMovies": "刪除已選電影",
+  "@libraryDeleteSelectedMovies": {
+    "description": "Tooltip that deletes selected movies"
+  },
+  "libraryCannotResumeMovie": "目前無法繼續播放這部電影。",
+  "@libraryCannotResumeMovie": {
+    "description": "Error shown when playback cannot resume from history"
+  },
+  "libraryYourProfile": "你的個人資料",
+  "@libraryYourProfile": {
+    "description": "Profile section title"
+  },
+  "librarySignInProfileDescription": "登入後可編輯個人資料並同步觀看紀錄。",
+  "@librarySignInProfileDescription": {
+    "description": "Description shown to a signed-out user on the profile page"
+  },
+  "libraryWatchHistory": "觀看紀錄",
+  "@libraryWatchHistory": {
+    "description": "Watch history heading"
+  },
+  "libraryNoWatchHistory": "暫無觀看紀錄",
+  "@libraryNoWatchHistory": {
+    "description": "Empty watch history message"
+  },
+  "libraryFavorites": "收藏",
+  "@libraryFavorites": {
+    "description": "Favorites page title"
+  },
+  "librarySignInToSaveFavorites": "登入以儲存收藏的電影",
+  "@librarySignInToSaveFavorites": {
+    "description": "Signed-out favorites page heading"
+  },
+  "libraryFavoritesSyncDescription": "你的清單會在各裝置間同步。",
+  "@libraryFavoritesSyncDescription": {
+    "description": "Signed-out favorites page description"
+  },
+  "libraryNoFavorites": "暫無收藏電影",
+  "@libraryNoFavorites": {
+    "description": "Empty favorites message"
+  },
+  "libraryRemoveFromList": "從清單中移除",
+  "@libraryRemoveFromList": {
+    "description": "Tooltip for deleting a library movie card"
+  },
+  "libraryContinueProgress": "從 {progress}% 繼續",
+  "@libraryContinueProgress": {
+    "description": "Playback progress action on a library movie card",
+    "placeholders": {
+      "progress": {
+        "type": "int"
+      }
+    }
+  },
+  "libraryDateDayMonth": "{date}",
+  "@libraryDateDayMonth": {
+    "description": "Short month and day label for a watch history group",
+    "placeholders": {
+      "date": {
+        "type": "DateTime",
+        "format": "MMMd"
+      }
+    }
+  },
+  "libraryLoadFailed": "無法載入你的媒體庫，請再試一次。",
+  "@libraryLoadFailed": {
+    "description": "Library loading failure"
+  },
+  "libraryFavoriteUpdateFailed": "無法更新收藏，請再試一次。",
+  "@libraryFavoriteUpdateFailed": {
+    "description": "Favorite update failure"
+  },
+  "libraryFavoriteRemoveFailed": "無法移除收藏，請再試一次。",
+  "@libraryFavoriteRemoveFailed": {
+    "description": "Favorite removal failure"
+  },
+  "libraryHistorySyncLater": "你的觀看紀錄稍後會再次同步。",
+  "@libraryHistorySyncLater": {
+    "description": "Deferred watch history synchronization message"
+  },
+  "libraryHistoryDeleteFailed": "無法刪除觀看紀錄，請再試一次。",
+  "@libraryHistoryDeleteFailed": {
+    "description": "Watch history deletion failure"
+  },
+  "profileEdit": "編輯個人資料",
+  "@profileEdit": {
+    "description": "Edit profile page title"
+  },
+  "profileChangePhoto": "更換照片",
+  "@profileChangePhoto": {
+    "description": "Action for changing the profile photo"
+  },
+  "profileName": "姓名",
+  "@profileName": {
+    "description": "Display name field label"
+  },
+  "profileNameDescription": "此名稱會顯示在你的 Liquid Phim 個人資料中。",
+  "@profileNameDescription": {
+    "description": "Display name explanation"
+  },
+  "profileNameHint": "輸入顯示名稱",
+  "@profileNameHint": {
+    "description": "Display name input hint"
+  },
+  "profileClearName": "清除名稱",
+  "@profileClearName": {
+    "description": "Tooltip that clears the display name field"
+  },
+  "profileEmailDescription": "此電子郵件已連結到你的帳號，且只會顯示在這裡。",
+  "@profileEmailDescription": {
+    "description": "Email privacy explanation on the edit profile page"
+  },
+  "profileChangeAvatar": "更換大頭照",
+  "@profileChangeAvatar": {
+    "description": "Avatar action sheet heading"
+  },
+  "profileTakePhoto": "拍照",
+  "@profileTakePhoto": {
+    "description": "Camera avatar source action"
+  },
+  "profileUploadPhoto": "上傳照片",
+  "@profileUploadPhoto": {
+    "description": "Gallery avatar source action"
+  },
+  "profileViewPhoto": "查看照片",
+  "@profileViewPhoto": {
+    "description": "Action that opens the current avatar"
+  },
+  "profileAvatar": "大頭照",
+  "@profileAvatar": {
+    "description": "Full-screen profile photo page title"
+  },
+  "profileCropAvatar": "裁切大頭照",
+  "@profileCropAvatar": {
+    "description": "Image cropper title"
+  },
+  "profileAvatarUpdated": "大頭照已更新。",
+  "@profileAvatarUpdated": {
+    "description": "Avatar update success message"
+  },
+  "profileAvatarUpdateFailed": "無法更新大頭照，請再試一次。",
+  "@profileAvatarUpdateFailed": {
+    "description": "Avatar update failure message"
+  },
+  "profilePhotoOpenFailed": "無法開啟照片，請檢查照片存取權限。",
+  "@profilePhotoOpenFailed": {
+    "description": "Photo picker failure message"
+  },
+  "profileNameUpdated": "顯示名稱已更新。",
+  "@profileNameUpdated": {
+    "description": "Display name update success message"
+  },
+  "profileNameUpdateFailed": "無法更新名稱，請再試一次。",
+  "@profileNameUpdateFailed": {
+    "description": "Display name update failure message"
+  },
+  "profileNameRequired": "名稱不能留空。",
+  "@profileNameRequired": {
+    "description": "Display name required validation message"
+  },
+  "profileUpdatedProfileReadFailed": "無法讀取更新後的個人資料。",
+  "@profileUpdatedProfileReadFailed": {
+    "description": "Failure while reading the profile immediately after an update"
+  },
+  "detailCastUnavailable": "暫無演員資訊",
+  "@detailCastUnavailable": {
+    "description": "Empty cast message"
+  },
+  "detailCast": "演員",
+  "@detailCast": {
+    "description": "Cast tab or section title"
+  },
+  "detailRecommendationsLoadFailed": "無法載入推薦內容",
+  "@detailRecommendationsLoadFailed": {
+    "description": "Movie recommendations loading failure"
+  },
+  "detailNoRecommendations": "暫無推薦",
+  "@detailNoRecommendations": {
+    "description": "Empty movie recommendations message"
+  },
+  "detailEpisodeNotFound": "目前伺服器無法提供第 {episode} 集。",
+  "@detailEpisodeNotFound": {
+    "description": "Dialog message when an episode does not exist on the selected server",
+    "placeholders": {
+      "episode": {
+        "type": "int"
+      }
+    }
+  },
+  "detailNoEpisodes": "暫無可用集數",
+  "@detailNoEpisodes": {
+    "description": "Empty episode list message"
+  },
+  "detailWatchThisVersion": "觀看此版本",
+  "@detailWatchThisVersion": {
+    "description": "Action that starts a particular server or dub version"
+  },
+  "detailServer": "伺服器",
+  "@detailServer": {
+    "description": "Single movie server section label"
+  },
+  "detailServerNumber": "伺服器 {number}",
+  "@detailServerNumber": {
+    "description": "Fallback server name",
+    "placeholders": {
+      "number": {
+        "type": "int"
+      }
+    }
+  },
+  "detailEpisodeRange": "第 1–{count} 集",
+  "@detailEpisodeRange": {
+    "description": "Episode range heading",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "detailEnterEpisode": "輸入集數",
+  "@detailEnterEpisode": {
+    "description": "Episode search input hint"
+  },
+  "detailLoadMovieError": "無法載入電影",
+  "@detailLoadMovieError": {
+    "description": "Movie detail loading error title"
+  },
+  "detailEpisodesTab": "集數",
+  "@detailEpisodesTab": {
+    "description": "Episodes tab title"
+  },
+  "detailRecommendationsTab": "推薦",
+  "@detailRecommendationsTab": {
+    "description": "Recommendations tab title"
+  },
+  "detailCommentsTab": "留言",
+  "@detailCommentsTab": {
+    "description": "Comments tab title"
+  },
+  "detailInTheaters": "院線上映",
+  "@detailInTheaters": {
+    "description": "Badge for theatrical movies"
+  },
+  "detailExclusiveSubtitles": "獨家字幕",
+  "@detailExclusiveSubtitles": {
+    "description": "Badge for exclusive subtitles"
+  },
+  "detailDirectorLabel": "導演：",
+  "@detailDirectorLabel": {
+    "description": "Movie director metadata label"
+  },
+  "detailCreatedDateLabel": "新增日期：",
+  "@detailCreatedDateLabel": {
+    "description": "Movie record creation date metadata label"
+  },
+  "detailProductionYearLabel": "製作年份：",
+  "@detailProductionYearLabel": {
+    "description": "Movie production year metadata label"
+  },
+  "detailCountryLabel": "國家/地區：",
+  "@detailCountryLabel": {
+    "description": "Movie country metadata label"
+  },
+  "detailWatchLatestEpisode": "觀看最新一集",
+  "@detailWatchLatestEpisode": {
+    "description": "Action that starts the latest episode"
+  },
+  "detailWatchMovie": "觀看電影",
+  "@detailWatchMovie": {
+    "description": "Action that starts a full movie"
+  },
+  "detailIntroduction": "簡介",
+  "@detailIntroduction": {
+    "description": "Movie description section heading"
+  },
+  "detailFavorite": "收藏",
+  "@detailFavorite": {
+    "description": "Favorite movie action label"
+  },
+  "detailContent": "劇情簡介",
+  "@detailContent": {
+    "description": "Movie synopsis heading in the quick detail dialog"
+  },
+  "detailNoPlayableEpisodes": "這部影片目前沒有可播放的集數，請稍後再試。",
+  "@detailNoPlayableEpisodes": {
+    "description": "Dialog message when a movie has no playable episodes"
+  },
+  "detailDetails": "詳細資訊",
+  "@detailDetails": {
+    "description": "Movie details section or action"
+  },
+  "detailVideoQuality": "影片畫質",
+  "@detailVideoQuality": {
+    "description": "Video quality selection sheet title"
+  },
+  "detailViews": "{count} 次觀看",
+  "@detailViews": {
+    "description": "Formatted movie view count",
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "detailLikes": "{count} 個讚",
+  "@detailLikes": {
+    "description": "Formatted movie like count",
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "detailUpdatedJustNow": "剛剛更新",
+  "@detailUpdatedJustNow": {
+    "description": "Relative update time less than one minute ago"
+  },
+  "playerSubtitleServer": "字幕",
+  "@playerSubtitleServer": {
+    "description": "Fallback name for a subtitle server"
+  },
+  "playerNowPlaying": "正在播放",
+  "@playerNowPlaying": {
+    "description": "Label for the currently playing episode or server"
+  },
+  "playerNowPlayingEpisode": "正在播放：{episode}",
+  "@playerNowPlayingEpisode": {
+    "description": "Currently playing episode label",
+    "placeholders": {
+      "episode": {
+        "type": "String"
+      }
+    }
+  },
+  "playerEpisodeAndServer": "{episode} — {server}",
+  "@playerEpisodeAndServer": {
+    "description": "Now-playing subtitle containing episode and server names",
+    "placeholders": {
+      "episode": {
+        "type": "String"
+      },
+      "server": {
+        "type": "String"
+      }
+    }
+  },
+  "playerSourceUnavailable": "此伺服器沒有可播放的影片來源。",
+  "@playerSourceUnavailable": {
+    "description": "Player error when a server contains no source URL"
+  },
+  "playerSourceLoadFailed": "無法載入此影片來源。",
+  "@playerSourceLoadFailed": {
+    "description": "Player source loading failure"
+  },
+  "playerAutoplayEnabled": "已開啟自動播放",
+  "@playerAutoplayEnabled": {
+    "description": "Toast shown after enabling episode autoplay"
+  },
+  "playerAutoplayDisabled": "已關閉自動播放",
+  "@playerAutoplayDisabled": {
+    "description": "Toast shown after disabling episode autoplay"
+  },
+  "playerNoMoreEpisodes": "已經是最後一集",
+  "@playerNoMoreEpisodes": {
+    "description": "Toast shown when navigating after the final episode"
+  },
+  "playerFirstEpisode": "這是第一集",
+  "@playerFirstEpisode": {
+    "description": "Toast shown when navigating before the first episode"
+  },
+  "playerPlaybackFailed": "無法播放影片，請再試一次。",
+  "@playerPlaybackFailed": {
+    "description": "Generic video playback failure"
+  },
+  "playerPlay": "播放",
+  "playerPause": "暫停",
+  "playerPullDownToCloseComments": "下拉關閉留言",
+  "@playerPullDownToCloseComments": {
+    "description": "Accessibility label for dismissing the comments sheet"
+  },
+  "playerPlayOnTv": "在電視上播放",
+  "@playerPlayOnTv": {
+    "description": "Casting action tooltip"
+  },
+  "playerEpisodeList": "集數清單",
+  "@playerEpisodeList": {
+    "description": "Episode list button tooltip"
+  },
+  "playerVideoProgress": "影片進度",
+  "@playerVideoProgress": {
+    "description": "Accessibility label for the video seek bar"
+  },
+  "playerClose": "關閉播放器",
+  "@playerClose": {
+    "description": "Tooltip that closes the persistent player"
+  },
+  "playerContinueWatchingTitle": "繼續觀看？",
+  "@playerContinueWatchingTitle": {
+    "description": "Resume playback dialog title"
+  },
+  "playerContinueWatchingBody": "你上次看到 {episode}。要繼續觀看，還是從第 1 集重新開始？",
+  "@playerContinueWatchingBody": {
+    "description": "Resume playback dialog body",
+    "placeholders": {
+      "episode": {
+        "type": "String"
+      }
+    }
+  },
+  "playerRestartFromBeginning": "從頭開始",
+  "@playerRestartFromBeginning": {
+    "description": "Action that restarts playback from episode 1"
+  },
+  "playerContinue": "繼續",
+  "@playerContinue": {
+    "description": "Action that resumes playback from history"
+  },
+  "commentsReply": "回覆",
+  "@commentsReply": {
+    "description": "Action that replies to a comment"
+  },
+  "commentsReplyCount": "{count, plural, =0{暫無回覆} other{{count} 則回覆}}",
+  "@commentsReplyCount": {
+    "description": "Number of replies to a comment",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "commentsLoadFailedTitle": "無法載入留言",
+  "@commentsLoadFailedTitle": {
+    "description": "Comments loading error title"
+  },
+  "commentsEmptyTitle": "暫無留言",
+  "@commentsEmptyTitle": {
+    "description": "Empty comments title"
+  },
+  "commentsEmptySubtitle": "來留下第一則留言吧。",
+  "@commentsEmptySubtitle": {
+    "description": "Empty comments guidance"
+  },
+  "commentsEditHint": "編輯留言...",
+  "@commentsEditHint": {
+    "description": "Comment composer hint while editing"
+  },
+  "commentsReplyToHint": "回覆 {name}...",
+  "@commentsReplyToHint": {
+    "description": "Comment composer hint while replying to a person",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "commentsAddReplyHint": "新增回覆...",
+  "@commentsAddReplyHint": {
+    "description": "Reply composer hint"
+  },
+  "commentsComposerHint": "寫下留言...",
+  "@commentsComposerHint": {
+    "description": "Default comment composer hint"
+  },
+  "commentsEditingStatus": "正在編輯留言",
+  "@commentsEditingStatus": {
+    "description": "Comment composer editing status"
+  },
+  "commentsReplyingStatus": "正在回覆 {name}",
+  "@commentsReplyingStatus": {
+    "description": "Comment composer reply status",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "commentsWrite": "寫留言",
+  "@commentsWrite": {
+    "description": "Comment input accessibility label"
+  },
+  "commentsSend": "傳送",
+  "@commentsSend": {
+    "description": "Send comment action tooltip"
+  },
+  "commentsCloseMenu": "關閉留言選單",
+  "@commentsCloseMenu": {
+    "description": "Accessibility label for closing a comment action menu"
+  },
+  "commentsCopied": "留言已複製",
+  "@commentsCopied": {
+    "description": "Toast after copying a comment"
+  },
+  "commentsYourComment": "你的留言",
+  "@commentsYourComment": {
+    "description": "Action sheet title for the signed-in user's own comment"
+  },
+  "commentsReportReasonTitle": "為什麼要檢舉這則留言？",
+  "@commentsReportReasonTitle": {
+    "description": "Comment report reason sheet title"
+  },
+  "commentsReportSent": "檢舉已送出，謝謝。",
+  "@commentsReportSent": {
+    "description": "Toast after successfully reporting a comment"
+  },
+  "commentsDeleteTitle": "刪除留言？",
+  "@commentsDeleteTitle": {
+    "description": "Delete comment confirmation title"
+  },
+  "commentsRepliesPreserved": "回覆會保留。",
+  "@commentsRepliesPreserved": {
+    "description": "Delete comment confirmation explanation"
+  },
+  "commentsDeleteAction": "刪除留言",
+  "@commentsDeleteAction": {
+    "description": "Delete comment confirmation action"
+  },
+  "commentsSortTitle": "留言排序",
+  "@commentsSortTitle": {
+    "description": "Comment sort sheet title and tooltip"
+  },
+  "commentsPopular": "熱門",
+  "@commentsPopular": {
+    "description": "Popular comment sort option"
+  },
+  "commentsNewest": "最新",
+  "@commentsNewest": {
+    "description": "Newest comment sort option"
+  },
+  "commentsCount": "{count, plural, =0{留言} other{{count} 則留言}}",
+  "@commentsCount": {
+    "description": "Comments section count heading",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "commentsCopy": "複製留言",
+  "@commentsCopy": {
+    "description": "Comment context menu copy action"
+  },
+  "commentsEdited": "已編輯",
+  "@commentsEdited": {
+    "description": "Label for an edited comment"
+  },
+  "commentsDeleted": "留言已刪除",
+  "@commentsDeleted": {
+    "description": "Placeholder shown for a deleted comment"
+  },
+  "commentsJustNow": "剛剛",
+  "@commentsJustNow": {
+    "description": "Relative time for an event less than one minute ago"
+  },
+  "commentsMinutesAgo": "{count} 分鐘前",
+  "@commentsMinutesAgo": {
+    "description": "Relative time in minutes",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "commentsHoursAgo": "{count} 小時前",
+  "@commentsHoursAgo": {
+    "description": "Relative time in hours",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "commentsDaysAgo": "{count} 天前",
+  "@commentsDaysAgo": {
+    "description": "Relative time in days",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "commentsWeeksAgo": "{count} 週前",
+  "@commentsWeeksAgo": {
+    "description": "Relative time in weeks",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "commentsMonthsAgo": "{count} 個月前",
+  "@commentsMonthsAgo": {
+    "description": "Relative time in months",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "commentsYearsAgo": "{count} 年前",
+  "@commentsYearsAgo": {
+    "description": "Relative time in years",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "commentsSpamReason": "垃圾訊息",
+  "@commentsSpamReason": {
+    "description": "Comment report reason for spam"
+  },
+  "commentsHarassmentReason": "騷擾或辱罵",
+  "@commentsHarassmentReason": {
+    "description": "Comment report reason for harassment"
+  },
+  "commentsSpoilerReason": "電影劇透",
+  "@commentsSpoilerReason": {
+    "description": "Comment report reason for spoilers"
+  },
+  "commentsInappropriateReason": "不當內容",
+  "@commentsInappropriateReason": {
+    "description": "Comment report reason for inappropriate content"
+  },
+  "commentsOtherReason": "其他原因",
+  "@commentsOtherReason": {
+    "description": "Fallback comment report reason"
+  },
+  "commentsLoadFailed": "無法載入留言，請再試一次。",
+  "@commentsLoadFailed": {
+    "description": "Initial comments loading failure"
+  },
+  "commentsLoadMoreFailed": "無法載入更多留言。",
+  "@commentsLoadMoreFailed": {
+    "description": "Pagination failure for comments"
+  },
+  "commentsRepliesLoadFailed": "無法載入回覆。",
+  "@commentsRepliesLoadFailed": {
+    "description": "Initial replies loading failure"
+  },
+  "commentsRepliesLoadMoreFailed": "無法載入更多回覆。",
+  "@commentsRepliesLoadMoreFailed": {
+    "description": "Pagination failure for replies"
+  },
+  "commentsSendFailed": "無法傳送留言，你輸入的內容已保留。",
+  "@commentsSendFailed": {
+    "description": "Comment submission failure"
+  },
+  "commentsEditFailed": "無法編輯留言。",
+  "@commentsEditFailed": {
+    "description": "Comment editing failure"
+  },
+  "commentsDeleteFailed": "無法刪除留言。",
+  "@commentsDeleteFailed": {
+    "description": "Comment deletion failure"
+  },
+  "commentsReactionFailed": "無法更新互動。",
+  "@commentsReactionFailed": {
+    "description": "Comment reaction update failure"
+  },
+  "commentsReportFailed": "這則留言可能已被檢舉，或檢舉無法送出。",
+  "@commentsReportFailed": {
+    "description": "Comment report failure"
+  },
+  "commentsOperationInProgress": "此操作正在進行中。",
+  "@commentsOperationInProgress": {
+    "description": "Message shown when the same comment operation is already running"
+  },
+  "notificationsEmpty": "暫無新通知",
+  "@notificationsEmpty": {
+    "description": "Empty notification inbox message"
+  },
+  "notificationsRepliedToYourComment": "回覆了你的留言",
+  "@notificationsRepliedToYourComment": {
+    "description": "Action phrase in a reply notification"
+  },
+  "notificationsLikedYourComment": "對你的留言按讚",
+  "@notificationsLikedYourComment": {
+    "description": "Action phrase in a reaction notification"
+  },
+  "notificationsToday": "今天",
+  "@notificationsToday": {
+    "description": "Notification date group for today"
+  },
+  "notificationsYesterday": "昨天",
+  "@notificationsYesterday": {
+    "description": "Notification date group for yesterday"
+  },
+  "notificationsUnknownUser": "某位使用者",
+  "@notificationsUnknownUser": {
+    "description": "Fallback actor name in a notification"
+  },
+  "notificationsNewMovieTitle": "新電影",
+  "@notificationsNewMovieTitle": {
+    "description": "Notification channel and single new movie notification title"
+  },
+  "notificationsNewMoviesTitle": "{count} 部新電影",
+  "@notificationsNewMoviesTitle": {
+    "description": "Notification title for multiple new movies",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "notificationsMovieAdded": "{movieName} 剛剛加入 Liquid Phim。",
+  "@notificationsMovieAdded": {
+    "description": "Single new movie notification body",
+    "placeholders": {
+      "movieName": {
+        "type": "String"
+      }
+    }
+  },
+  "notificationsNewMovieChannelDescription": "Liquid Phim 發現新電影時傳送通知",
+  "@notificationsNewMovieChannelDescription": {
+    "description": "Android new movie notification channel description"
+  },
+  "castChooseDevice": "選擇裝置",
+  "@castChooseDevice": {
+    "description": "Casting device sheet title"
+  },
+  "castAirPlayUnavailableTitle": "無法開啟 AirPlay",
+  "@castAirPlayUnavailableTitle": {
+    "description": "AirPlay launch failure dialog title"
+  },
+  "castAirPlayUnavailableBody": "請確認你的 iPhone 與電視或 Mac 連接到同一個 Wi-Fi 網路，然後再試一次。",
+  "@castAirPlayUnavailableBody": {
+    "description": "AirPlay launch failure guidance"
+  },
+  "castVideoUnavailableTitle": "暫無可用影片",
+  "@castVideoUnavailableTitle": {
+    "description": "Casting dialog title when video is not ready"
+  },
+  "castVideoUnavailableBody": "請等待影片載入完成，再選擇 Google Cast 裝置。",
+  "@castVideoUnavailableBody": {
+    "description": "Casting guidance when video is not ready"
+  },
+  "castConnectionFailedTitle": "無法連線至 Google Cast",
+  "@castConnectionFailedTitle": {
+    "description": "Google Cast connection failure title"
+  },
+  "castConnectionFailedBody": "請檢查 Google Play 服務，並確認手機與 Chromecast 或 Google TV 連接到同一個 Wi-Fi 網路。",
+  "@castConnectionFailedBody": {
+    "description": "Google Cast connection failure guidance"
+  },
+  "castAirPlayAndBluetoothDevices": "AirPlay 與藍牙裝置",
+  "@castAirPlayAndBluetoothDevices": {
+    "description": "AirPlay route picker item title"
+  },
+  "castConnecting": "連線中...",
+  "@castConnecting": {
+    "description": "Casting device connection state"
+  },
+  "castSearching": "正在搜尋 Google Cast 裝置...",
+  "@castSearching": {
+    "description": "Casting device discovery loading state"
+  },
+  "castNoDevices": "找不到裝置",
+  "@castNoDevices": {
+    "description": "Casting device discovery empty state"
+  },
+  "castSameWifiGuidance": "請確認手機與 Chromecast 或 Google TV 連接到同一個 Wi-Fi 網路。",
+  "@castSameWifiGuidance": {
+    "description": "Casting device discovery guidance"
+  },
+  "castSearchAgain": "重新搜尋",
+  "@castSearchAgain": {
+    "description": "Action that restarts casting device discovery"
+  },
+  "castDefaultDeviceName": "Google Cast 裝置",
+  "@castDefaultDeviceName": {
+    "description": "Fallback Google Cast device name"
+  },
+  "shareMovieSubject": "在 Liquid Phim 上觀看 {movieName}",
+  "@shareMovieSubject": {
+    "description": "Movie share sheet subject",
+    "placeholders": {
+      "movieName": {
+        "type": "String"
+      }
+    }
+  },
+  "shareOpenFailed": "無法開啟分享面板。",
+  "@shareOpenFailed": {
+    "description": "Share sheet launch failure"
+  },
+  "rankingTopFavorites": "收藏電影 TOP",
+  "@rankingTopFavorites": {
+    "description": "Favorite movies ranking title"
+  },
+  "rankingTopLiquidPhim": "Liquid Phim TOP 30",
+  "@rankingTopLiquidPhim": {
+    "description": "Overall Liquid Phim ranking title"
+  },
+  "rankingTopHotMovies": "熱門電影 TOP 30",
+  "@rankingTopHotMovies": {
+    "description": "Hot single movies ranking title"
+  },
+  "rankingMostViewed": "觀看最多",
+  "@rankingMostViewed": {
+    "description": "Most viewed ranking subtitle"
+  },
+  "rankingMostLiked": "按讚最多",
+  "@rankingMostLiked": {
+    "description": "Most liked ranking subtitle"
+  },
+  "rankingEmptyLikes": "電影獲得按讚後會顯示排行榜。",
+  "@rankingEmptyLikes": {
+    "description": "Empty most-liked ranking message"
+  },
+  "rankingEmptyViews": "電影獲得觀看次數後會顯示排行榜。",
+  "@rankingEmptyViews": {
+    "description": "Empty most-viewed ranking message"
+  },
+  "rankingLoadFailed": "無法載入排行榜。",
+  "@rankingLoadFailed": {
+    "description": "Ranking loading failure"
+  },
+  "playerEpisodeNumber": "第 {number} 集",
+  "@playerEpisodeNumber": {
+    "description": "Episode number label",
+    "placeholders": {
+      "number": {
+        "type": "int"
+      }
+    }
+  },
+  "libraryMonthLabel": "{month} 月",
+  "@libraryMonthLabel": {
+    "description": "Month label",
+    "placeholders": {
+      "month": {
+        "type": "int"
+      }
+    }
+  }
+}

@@ -8,6 +8,7 @@ import 'package:movie_app/core/config/utils/animated_dialog.dart';
 import 'package:movie_app/core/config/utils/episode_map.dart';
 import 'package:movie_app/core/config/utils/sharder_text.dart';
 import 'package:movie_app/core/config/utils/show_detail_movie_dialog.dart';
+import 'package:movie_app/core/extension/build_context_extension.dart';
 import 'package:movie_app/feature/detail_movie/presentation/widgets/view_count_section.dart';
 import 'package:movie_app/feature/movie_engagement/data/movie_engagement_repository.dart';
 import 'package:stroke_text/stroke_text.dart';
@@ -68,21 +69,21 @@ class _TopMovieRankingsState extends State<TopMovieRankings> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _LikedRankingSection(
-              title: 'TOP Phim yêu thích',
+              title: context.l10n.rankingTopFavorites,
               items: data?.liked ?? const [],
               isLoading: snapshot.connectionState == ConnectionState.waiting,
               hasError: snapshot.hasError,
             ),
             const SizedBox(height: 28),
             _RankingSection(
-              title: 'TOP 30 của Liquid Phim',
+              title: context.l10n.rankingTopLiquidPhim,
               items: data?.overall ?? const [],
               isLoading: snapshot.connectionState == ConnectionState.waiting,
               hasError: snapshot.hasError,
             ),
             const SizedBox(height: 28),
             _RankingSection(
-              title: 'TOP 30 Phim Lẻ Hot',
+              title: context.l10n.rankingTopHotMovies,
               items: data?.single ?? const [],
               isLoading: snapshot.connectionState == ConnectionState.waiting,
               hasError: snapshot.hasError,
@@ -112,7 +113,7 @@ class _RankingSection extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _RankingHeader(title: title, subtitle: 'XEM NHIỀU NHẤT'),
+        _RankingHeader(title: title, subtitle: context.l10n.rankingMostViewed),
         const SizedBox(height: 14),
         SizedBox(
           height: 290,
@@ -156,7 +157,7 @@ class _LikedRankingSection extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _RankingHeader(title: title, subtitle: 'THÍCH NHIỀU NHẤT'),
+        _RankingHeader(title: title, subtitle: context.l10n.rankingMostLiked),
         const SizedBox(height: 14),
         SizedBox(
           height: 220,
@@ -165,7 +166,7 @@ class _LikedRankingSection extends StatelessWidget {
               : items.isEmpty
               ? _EmptyRanking(
                   hasError: hasError,
-                  emptyMessage: 'Bảng xếp hạng sẽ xuất hiện khi có lượt thích.',
+                  emptyMessage: context.l10n.rankingEmptyLikes,
                 )
               : ListView.separated(
                   key: PageStorageKey<String>('ranking-liked-$title'),
@@ -394,7 +395,9 @@ class _RankingMovieCard extends StatelessWidget {
                           if (movie.episodeCurrent.isNotEmpty &&
                               movie.episodeCurrent.toLowerCase() != 'full')
                             movie.episodeCurrent,
-                          '${formatCompactCount(movie.viewCount)} lượt xem',
+                          context.l10n.detailViews(
+                            formatCompactCount(movie.viewCount),
+                          ),
                         ].join(' • '),
                         style: const TextStyle(
                           color: Colors.white54,
@@ -603,7 +606,9 @@ class _LikedMovieCard extends StatelessWidget {
                   AppAutoScrollText(
                     [
                       if (movie.year > 0) '${movie.year}',
-                      '${formatCompactCount(movie.likeCount)} lượt thích',
+                      context.l10n.detailLikes(
+                        formatCompactCount(movie.likeCount),
+                      ),
                     ].join(' • '),
                     style: const TextStyle(color: Colors.white38, fontSize: 10),
                   ),
@@ -748,19 +753,18 @@ class _LikedRankingSkeleton extends StatelessWidget {
 }
 
 class _EmptyRanking extends StatelessWidget {
-  const _EmptyRanking({
-    required this.hasError,
-    this.emptyMessage = 'Bảng xếp hạng sẽ xuất hiện khi có lượt xem.',
-  });
+  const _EmptyRanking({required this.hasError, this.emptyMessage});
 
   final bool hasError;
-  final String emptyMessage;
+  final String? emptyMessage;
 
   @override
   Widget build(BuildContext context) {
     return Center(
       child: Text(
-        hasError ? 'Chưa thể tải bảng xếp hạng.' : emptyMessage,
+        hasError
+            ? context.l10n.rankingLoadFailed
+            : emptyMessage ?? context.l10n.rankingEmptyViews,
         style: const TextStyle(color: Colors.white54),
       ),
     );

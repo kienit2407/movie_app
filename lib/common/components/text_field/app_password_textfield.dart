@@ -2,12 +2,10 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
 import 'package:movie_app/core/config/themes/app_color.dart';
+import 'package:movie_app/core/extension/build_context_extension.dart';
 
 class AppPasswordTextfield extends StatefulWidget {
-  const AppPasswordTextfield({
-    super.key,
-    required this.controller
-  });
+  const AppPasswordTextfield({super.key, required this.controller});
 
   final TextEditingController controller;
   @override
@@ -18,11 +16,11 @@ class _AppPasswordTextfieldState extends State<AppPasswordTextfield> {
   final _focusedNode = FocusNode();
   bool _isFocused = false;
   bool _isHidePassword = true;
-  
-@override
+
+  @override
   void initState() {
-    _focusedNode.addListener((){
-      if(_focusedNode.hasFocus != _isFocused){
+    _focusedNode.addListener(() {
+      if (_focusedNode.hasFocus != _isFocused) {
         setState(() {
           _isFocused = _focusedNode.hasFocus;
         });
@@ -36,6 +34,7 @@ class _AppPasswordTextfieldState extends State<AppPasswordTextfield> {
     _focusedNode.dispose();
     super.dispose();
   }
+
   @override
   Widget build(BuildContext context) {
     final foscusScrope = FocusScope.of(context);
@@ -55,14 +54,17 @@ class _AppPasswordTextfieldState extends State<AppPasswordTextfield> {
             gradient: LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
-                colors: [
-                  Colors.white60.withOpacity(.3),
-                  Colors.white10.withOpacity(.1),
-              ]
+              colors: [
+                Colors.white60.withOpacity(.3),
+                Colors.white10.withOpacity(.1),
+              ],
             ),
             border: Border(
               top: BorderSide(color: Colors.white60.withOpacity(0.7), width: 1),
-              left: BorderSide(color: Colors.white60.withOpacity(0.7), width: 1)
+              left: BorderSide(
+                color: Colors.white60.withOpacity(0.7),
+                width: 1,
+              ),
             ),
           ),
           child: TextField(
@@ -72,7 +74,7 @@ class _AppPasswordTextfieldState extends State<AppPasswordTextfield> {
             obscuringCharacter: '*',
             focusNode: _focusedNode,
             style: const TextStyle(color: Colors.white),
-            cursorWidth: 1, 
+            cursorWidth: 1,
             cursorRadius: Radius.circular(10),
             decoration: InputDecoration(
               prefixIcon: const Icon(Iconsax.lock),
@@ -80,26 +82,31 @@ class _AppPasswordTextfieldState extends State<AppPasswordTextfield> {
                 duration: Duration(milliseconds: 300),
                 switchInCurve: Curves.elasticInOut,
                 transitionBuilder: (Widget child, Animation<double> animation) {
-                  return ScaleTransition(scale: animation, child: child); // Hiệu ứng scale
+                  return ScaleTransition(
+                    scale: animation,
+                    child: child,
+                  ); // Hiệu ứng scale
                 },
-                child: _isFocused ? IconButton(
-                  key: ValueKey<bool>(_isHidePassword),
-                  onPressed: (){
-                    setState(() {
-                      _isHidePassword = !_isHidePassword;
-                    });
-                  }, 
-                  icon: _isHidePassword ? 
-                  const Icon(Iconsax.eye_slash)
-                  : const Icon(Iconsax.eye)
-                ) : null,
+                child: _isFocused
+                    ? IconButton(
+                        key: ValueKey<bool>(_isHidePassword),
+                        onPressed: () {
+                          setState(() {
+                            _isHidePassword = !_isHidePassword;
+                          });
+                        },
+                        icon: _isHidePassword
+                            ? const Icon(Iconsax.eye_slash)
+                            : const Icon(Iconsax.eye),
+                      )
+                    : null,
               ),
               filled: true,
               fillColor: _isFocused
                   ? AppColor.secondColor.withOpacity(.2)
-                  :  Colors.transparent,
+                  : Colors.transparent,
               prefixIconColor: _isFocused ? AppColor.secondColor : Colors.white,
-              hintText: 'Password',
+              hintText: context.l10n.authPassword,
             ).applyDefaults(Theme.of(context).inputDecorationTheme),
           ),
         ),

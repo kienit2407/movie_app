@@ -2,8 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
 import 'package:movie_app/core/config/utils/movie_player_args.dart';
+import 'package:movie_app/core/extension/build_context_extension.dart';
 import 'package:movie_app/core/player_overlay_launcher.dart';
 import 'package:movie_app/feature/detail_movie/data/model/detail_movie_model.dart';
+
+enum _SeriesPlayAction { firstEpisode, latestEpisode }
 
 class MovieDetailActionButtons extends StatefulWidget {
   final MovieModel movie;
@@ -14,6 +17,7 @@ class MovieDetailActionButtons extends StatefulWidget {
   final ScrollController scrollController;
   final GlobalKey tabBarMarkerKey;
   final VoidCallback onScrollToTabBar;
+  final VoidCallback? onBeforePlay;
 
   const MovieDetailActionButtons({
     super.key,
@@ -25,6 +29,7 @@ class MovieDetailActionButtons extends StatefulWidget {
     required this.scrollController,
     required this.tabBarMarkerKey,
     required this.onScrollToTabBar,
+    this.onBeforePlay,
   });
 
   @override
@@ -57,6 +62,7 @@ class _MovieDetailActionButtonsState extends State<MovieDetailActionButtons> {
     bool bypassSeriesResumePrompt = false,
   }) {
     if (widget.episodes.isEmpty) return;
+    widget.onBeforePlay?.call();
     context.openMoviePlayer(
       MoviePlayerArgs(
         widget.movie.slug,
@@ -156,66 +162,112 @@ class _MovieDetailActionButtonsState extends State<MovieDetailActionButtons> {
   Widget _buildPlayButton({
     required String text,
     required VoidCallback onTap,
+    VoidCallback? onLatestEpisodeTap,
     bool isPrimary = true,
     int flex = 2,
   }) {
-    final isFullMovie = widget.movie.episode_current == 'Full';
+    final button = Container(
+      padding: const EdgeInsets.symmetric(vertical: 11),
+      decoration: BoxDecoration(
+        gradient: isPrimary
+            ? const LinearGradient(
+                colors: [
+                  Color(0xFFC77DFF),
+                  Color(0xFFFF9E9E),
+                  Color(0xFFFFD275),
+                ],
+                begin: Alignment.topRight,
+                end: Alignment.bottomLeft,
+              )
+            : null,
+        color: isPrimary ? null : Colors.white.withOpacity(0.1),
+        boxShadow: isPrimary
+            ? const [
+                BoxShadow(
+                  color: Color(0xFFC77DFF),
+                  blurRadius: 12,
+                  offset: Offset(0, 0),
+                  spreadRadius: -2,
+                ),
+              ]
+            : null,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        spacing: 5,
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(Iconsax.play_circle),
+          Text(
+            text,
+            style: TextStyle(
+              color: isPrimary ? Colors.white : Colors.white.withOpacity(0.9),
+              fontWeight: FontWeight.w600,
+              fontSize: 12,
+            ),
+          ),
+          if (onLatestEpisodeTap != null)
+            const Icon(Icons.keyboard_arrow_down_rounded, size: 18),
+        ],
+      ),
+    );
 
     return Expanded(
       flex: flex,
-      child: GestureDetector(
-        onTap: () {
-          HapticFeedback.mediumImpact();
-          onTap();
-        },
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 11),
-          decoration: BoxDecoration(
-            gradient: isPrimary
-                ? const LinearGradient(
-                    colors: [
-                      Color(0xFFC77DFF),
-                      Color(0xFFFF9E9E),
-                      Color(0xFFFFD275),
-                    ],
-                    begin: Alignment.topRight,
-                    end: Alignment.bottomLeft,
-                  )
-                : null,
-            color: isPrimary ? null : Colors.white.withOpacity(0.1),
-            boxShadow: isPrimary
-                ? const [
-                    BoxShadow(
-                      color: Color(0xFFC77DFF),
-                      blurRadius: 12,
-                      offset: Offset(0, 0),
-                      spreadRadius: -2,
-                    ),
-                  ]
-                : null,
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Row(
-            spacing: 5,
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              isFullMovie
-                  ? const Icon(Iconsax.play_circle)
-                  : const SizedBox.shrink(),
-              Text(
-                text,
-                style: TextStyle(
-                  color: isPrimary
-                      ? Colors.white
-                      : Colors.white.withOpacity(0.9),
-                  fontWeight: FontWeight.w600,
-                  fontSize: 12,
-                ),
+      child: onLatestEpisodeTap == null
+          ? GestureDetector(
+              onTap: () {
+                HapticFeedback.mediumImpact();
+                onTap();
+              },
+              child: button,
+            )
+          : PopupMenuButton<_SeriesPlayAction>(
+              tooltip: text,
+              position: PopupMenuPosition.under,
+              offset: const Offset(0, 8),
+              color: const Color(0xff242531),
+              elevation: 12,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(14),
+                side: BorderSide(color: Colors.white.withValues(alpha: .09)),
               ),
-            ],
-          ),
-        ),
-      ),
+              onOpened: HapticFeedback.mediumImpact,
+              onSelected: (action) {
+                HapticFeedback.selectionClick();
+                switch (action) {
+                  case _SeriesPlayAction.firstEpisode:
+                    onTap();
+                    break;
+                  case _SeriesPlayAction.latestEpisode:
+                    onLatestEpisodeTap();
+                    break;
+                }
+              },
+              itemBuilder: (context) => [
+                PopupMenuItem(
+                  value: _SeriesPlayAction.firstEpisode,
+                  child: Row(
+                    children: [
+                      const Icon(Iconsax.play_circle, size: 20),
+                      const SizedBox(width: 10),
+                      Text(context.l10n.detailWatchMovie),
+                    ],
+                  ),
+                ),
+                PopupMenuItem(
+                  value: _SeriesPlayAction.latestEpisode,
+                  child: Row(
+                    children: [
+                      const Icon(Iconsax.next, size: 20),
+                      const SizedBox(width: 10),
+                      Text(context.l10n.detailWatchLatestEpisode),
+                    ],
+                  ),
+                ),
+              ],
+              child: button,
+            ),
     );
   }
 
@@ -239,18 +291,13 @@ class _MovieDetailActionButtonsState extends State<MovieDetailActionButtons> {
     return Row(
       spacing: 5,
       children: [
-        if (!isFullMovie)
-          _buildPlayButton(
-            text: 'Xem tập mới',
-            onTap: () => _playLatestEpisode(),
-            flex: 1,
-          ),
         _buildPlayButton(
-          text: 'Xem phim',
+          text: context.l10n.detailWatchMovie,
           onTap: () => _playFirstEpisode(),
-          flex: isFullMovie ? 2 : 1,
+          onLatestEpisodeTap: isFullMovie ? null : _playLatestEpisode,
+          flex: 2,
         ),
-        if (isFullMovie) const SizedBox(width: 12),
+        const SizedBox(width: 12),
         Expanded(
           child: GestureDetector(
             onTap: () {
@@ -266,14 +313,14 @@ class _MovieDetailActionButtonsState extends State<MovieDetailActionButtons> {
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(color: Colors.white.withOpacity(0.7)),
               ),
-              child: const Row(
+              child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Iconsax.menu_1, color: Colors.white, size: 20),
-                  SizedBox(width: 6),
+                  const Icon(Iconsax.menu_1, color: Colors.white, size: 20),
+                  const SizedBox(width: 6),
                   Text(
-                    'Tập Phim',
-                    style: TextStyle(
+                    context.l10n.detailEpisodesTab,
+                    style: const TextStyle(
                       color: Colors.white,
                       fontWeight: FontWeight.w600,
                       fontSize: 12,

@@ -5,6 +5,7 @@ import 'package:movie_app/core/config/utils/movie_player_args.dart';
 import 'package:movie_app/core/player_overlay_controller.dart';
 import 'package:movie_app/core/player_overlay_host.dart';
 import 'package:movie_app/feature/detail_movie/data/model/detail_movie_model.dart';
+import 'package:movie_app/l10n/app_localizations.dart';
 import 'package:video_player/video_player.dart';
 
 void main() {
@@ -129,6 +130,9 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp.router(
+          locale: const Locale('vi'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           routeInformationProvider: router.routeInformationProvider,
           routeInformationParser: router.routeInformationParser,
           routerDelegate: router.routerDelegate,

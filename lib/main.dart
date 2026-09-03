@@ -13,10 +13,12 @@ import 'package:movie_app/common/models/watch_progress_model.dart';
 import 'package:movie_app/common/models/watch_history_entry.dart';
 import 'package:movie_app/common/components/internet_status_banner.dart';
 import 'package:movie_app/common/bloc/AuthWithSocial/auth_with_social_cubit.dart';
+import 'package:movie_app/common/bloc/localization.dart';
 import 'package:movie_app/core/config/routes/app_router.dart';
 import 'package:movie_app/core/config/di/service_locator.dart';
 import 'package:movie_app/core/config/network/init_supabase.dart';
 import 'package:movie_app/core/config/themes/app_theme.dart';
+import 'package:movie_app/core/enum/language_enum.dart';
 import 'package:movie_app/core/player_overlay_host.dart';
 import 'package:movie_app/core/player_overlay_controller.dart';
 import 'package:movie_app/core/movie_sharing/movie_deep_link_service.dart';
@@ -32,6 +34,8 @@ import 'package:movie_app/feature/auth/presentation/reset_password/bloc/reset_pa
 import 'package:movie_app/feature/auth/presentation/sign_in/bloc/sign_in_cubit.dart';
 import 'package:movie_app/feature/auth/presentation/sign_up/bloc/sign_up_cubit.dart';
 import 'package:movie_app/feature/auth/presentation/session/auth_session_cubit.dart';
+import 'package:movie_app/feature/auth/data/saved_account_store.dart';
+import 'package:movie_app/feature/auth/presentation/session/saved_accounts_cubit.dart';
 import 'package:movie_app/feature/detail_movie/presentation/bloc/player_cubit.dart';
 import 'package:movie_app/feature/home/domain/usecase/get_country_movie.dart';
 import 'package:movie_app/feature/home/domain/usecase/get_movies_by_filter_usecase.dart';
@@ -51,6 +55,7 @@ import 'package:movie_app/feature/library/data/user_library_repository.dart';
 import 'package:movie_app/feature/library/presentation/cubit/user_library_cubit.dart';
 import 'package:movie_app/feature/movie_pagination/presentation/bloc/fetch_fillter_cubit.dart';
 import 'package:movie_app/feature/search/presentation/bloc/search_cubit.dart';
+import 'package:movie_app/l10n/app_localizations.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:workmanager/workmanager.dart';
 
@@ -156,6 +161,10 @@ class MovieApp extends StatelessWidget {
             ),
           ),
           BlocProvider(create: (context) => AuthSessionCubit()),
+          BlocProvider(create: (context) => LocalizationCubit()),
+          BlocProvider(
+            create: (context) => SavedAccountsCubit(store: SavedAccountStore()),
+          ),
           BlocProvider(
             create: (context) =>
                 UserLibraryCubit(repository: sl<UserLibraryRepository>()),
@@ -196,43 +205,52 @@ class MovieApp extends StatelessWidget {
           BlocProvider(create: (context) => sl<SearchCubit>()),
           BlocProvider(create: (context) => sl<PlayerCubit>()),
         ],
-        child: GestureDetector(
-          onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
-          child: MaterialApp.router(
-            routeInformationProvider: router.routeInformationProvider,
-            routeInformationParser: router.routeInformationParser,
-            routerDelegate: router.routerDelegate,
-            backButtonDispatcher: playerOverlayBackButtonDispatcher,
-            theme: AppTheme.appTheme,
-            debugShowCheckedModeBanner: false,
-            builder: (context, child) {
-              return Overlay(
-                initialEntries: [
-                  OverlayEntry(
-                    builder: (_) {
-                      return Stack(
-                        fit: StackFit.expand,
-                        children: [
-                          // ==========================
-                          // APP THẬT
-                          // ==========================
-                          PlayerOverlayHost(
-                            router: router,
-                            child: child ?? const SizedBox.shrink(),
-                          ),
-                          const InternetStatusBanner(),
+        child: BlocBuilder<LocalizationCubit, Language>(
+          builder: (context, language) => GestureDetector(
+            onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
+            child: MaterialApp.router(
+              locale: language.locale,
+              localizationsDelegates: AppLocalizations.localizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              onGenerateTitle: (context) =>
+                  AppLocalizations.of(context).appTitle,
+              routeInformationProvider: router.routeInformationProvider,
+              routeInformationParser: router.routeInformationParser,
+              routerDelegate: router.routerDelegate,
+              backButtonDispatcher: playerOverlayBackButtonDispatcher,
+              theme: AppTheme.appTheme,
+              debugShowCheckedModeBanner: false,
+              builder: (context, child) {
+                return Overlay(
+                  initialEntries: [
+                    OverlayEntry(
+                      builder: (_) {
+                        return Stack(
+                          fit: StackFit.expand,
+                          children: [
+                            // ==========================
+                            // APP THẬT
+                            // ==========================
+                            PlayerOverlayHost(
+                              router: router,
+                              child: child ?? const SizedBox.shrink(),
+                            ),
+                            const InternetStatusBanner(),
 
-                          // ==========================
-                          // SPLASH PHỦ LÊN APP
-                          // ==========================
-                          const Positioned.fill(child: StartupSplashOverlay()),
-                        ],
-                      );
-                    },
-                  ),
-                ],
-              );
-            },
+                            // ==========================
+                            // SPLASH PHỦ LÊN APP
+                            // ==========================
+                            const Positioned.fill(
+                              child: StartupSplashOverlay(),
+                            ),
+                          ],
+                        );
+                      },
+                    ),
+                  ],
+                );
+              },
+            ),
           ),
         ),
       ),

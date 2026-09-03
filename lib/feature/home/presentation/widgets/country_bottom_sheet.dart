@@ -6,6 +6,7 @@ import 'package:iconsax_flutter/iconsax_flutter.dart';
 import 'package:movie_app/common/components/alert_dialog/app_alert_dialog.dart';
 import 'package:movie_app/common/helpers/navigation/app_navigation.dart';
 import 'package:movie_app/core/config/themes/app_color.dart';
+import 'package:movie_app/core/extension/build_context_extension.dart';
 import 'package:movie_app/core/config/utils/animated_dialog.dart';
 import 'package:movie_app/core/config/utils/shimmer_movie_genre.dart';
 import 'package:movie_app/feature/home/domain/entities/country_movie_entity.dart';
@@ -48,8 +49,8 @@ class _CountryBottomSheetState extends State<CountryBottomSheet> {
       showAnimatedDialog(
         context: context,
         dialog: AppAlertDialog(
-          content: "Chọn quốc gia để lọc!",
-          title: 'Cảnh báo!',
+          content: context.l10n.filterChooseCountry,
+          title: context.l10n.commonWarningTitle,
         ),
       );
       return;
@@ -98,7 +99,7 @@ class _CountryBottomSheetState extends State<CountryBottomSheet> {
                     children: [
                       Icon(Iconsax.global_copy),
                       Text(
-                        'Quốc gia',
+                        context.l10n.homeCountries,
                         style: TextStyle(fontWeight: FontWeight.w700),
                       ),
                     ],
@@ -144,18 +145,18 @@ class _CountryBottomSheetState extends State<CountryBottomSheet> {
                       child: Container(
                         height: 50,
                         alignment: Alignment.center,
-                        child: const Row(
+                        child: Row(
                           spacing: 10,
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Text(
-                              'Lọc kết quả',
-                              style: TextStyle(
+                              context.l10n.filterResults,
+                              style: const TextStyle(
                                 fontWeight: FontWeight.w600,
                                 fontSize: 12,
                               ),
                             ),
-                            Icon(Iconsax.arrow_right_1_copy, size: 16),
+                            const Icon(Iconsax.arrow_right_1_copy, size: 16),
                           ],
                         ),
                       ),

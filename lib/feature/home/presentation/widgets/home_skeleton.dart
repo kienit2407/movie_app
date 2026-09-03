@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:skeletonizer/skeletonizer.dart';
+import 'package:movie_app/core/extension/build_context_extension.dart';
 
 class HomeSkeleton extends StatelessWidget {
   const HomeSkeleton({super.key});
@@ -89,17 +90,17 @@ class HomeSkeleton extends StatelessWidget {
               const SizedBox(height: 16),
 
               // 4. Info pills
-              const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 20),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
                 child: Wrap(
                   alignment: WrapAlignment.center,
                   spacing: 10,
                   runSpacing: 8,
                   children: [
-                    _PillFake('iMdB 8.8'),
-                    _PillFake('HD'),
-                    _PillFake('2025'),
-                    _PillFake('120 phút'),
+                    const _PillFake('iMdB 8.8'),
+                    const _PillFake('HD'),
+                    const _PillFake('2025'),
+                    _PillFake(context.l10n.commonDurationHoursMinutes(2, 0)),
                   ],
                 ),
               ),
@@ -146,7 +147,7 @@ class HomeSkeleton extends StatelessWidget {
                               borderRadius: BorderRadius.circular(12),
                             ),
                           ),
-                          child: const Text('Xem phim'),
+                          child: Text(context.l10n.homeWatchMovie),
                         ),
                       ),
                     ),
@@ -162,7 +163,7 @@ class HomeSkeleton extends StatelessWidget {
                               borderRadius: BorderRadius.circular(12),
                             ),
                           ),
-                          child: const Text('Thông tin'),
+                          child: Text(context.l10n.homeInformation),
                         ),
                       ),
                     ),
@@ -173,19 +174,19 @@ class HomeSkeleton extends StatelessWidget {
               const SizedBox(height: 28),
 
               // 7. Section preview list
-              const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 16),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: Row(
                   children: [
                     Text(
-                      'Phim Hàn Quốc',
-                      style: TextStyle(
+                      context.l10n.homeKoreanMovies,
+                      style: const TextStyle(
                         fontSize: 19,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                    Spacer(),
-                    Text('Xem tất cả'),
+                    const Spacer(),
+                    Text(context.l10n.homeViewAll),
                   ],
                 ),
               ),

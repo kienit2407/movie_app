@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
 import 'package:movie_app/core/config/utils/movie_player_args.dart';
 import 'package:movie_app/core/config/utils/support_rotate_screen.dart';
+import 'package:movie_app/core/extension/build_context_extension.dart';
 import 'package:movie_app/core/player_overlay_controller.dart';
 import 'package:movie_app/feature/detail_movie/presentation/pages/movie_player_page.dart';
 import 'package:video_player/video_player.dart';
@@ -511,17 +512,23 @@ class _MiniPlayerChrome extends StatelessWidget {
       child: ValueListenableBuilder<VideoPlayerController?>(
         valueListenable: controller.playbackController,
         builder: (context, playback, _) {
-          if (playback == null) return _buildSurface(value: null);
+          if (playback == null) {
+            return _buildSurface(context: context, value: null);
+          }
           return ValueListenableBuilder<VideoPlayerValue>(
             valueListenable: playback,
-            builder: (context, value, _) => _buildSurface(value: value),
+            builder: (context, value, _) =>
+                _buildSurface(context: context, value: value),
           );
         },
       ),
     );
   }
 
-  Widget _buildSurface({required VideoPlayerValue? value}) {
+  Widget _buildSurface({
+    required BuildContext context,
+    required VideoPlayerValue? value,
+  }) {
     final loading = value == null || !value.isInitialized || value.isBuffering;
     final canDrag =
         value != null &&
@@ -550,7 +557,9 @@ class _MiniPlayerChrome extends StatelessWidget {
               if (!loading)
                 Center(
                   child: IconButton(
-                    tooltip: value.isPlaying ? 'Tạm dừng' : 'Phát',
+                    tooltip: value.isPlaying
+                        ? context.l10n.playerPause
+                        : context.l10n.playerPlay,
                     onPressed: () {
                       unawaited(controller.togglePlayback());
                     },
@@ -573,7 +582,7 @@ class _MiniPlayerChrome extends StatelessWidget {
                 top: 6,
                 right: 6,
                 child: IconButton(
-                  tooltip: 'Đóng trình phát',
+                  tooltip: context.l10n.playerClose,
                   onPressed: controller.close,
                   style: IconButton.styleFrom(
                     backgroundColor: Colors.black45,

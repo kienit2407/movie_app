@@ -33,6 +33,16 @@ class AppTheme {
     // textTheme: TextTheme() //<- theme cho text
     fontFamily: 'Inter',
     fontFamilyFallback: const [
+      'Noto Sans CJK SC',
+      'Noto Sans CJK TC',
+      'Noto Sans CJK JP',
+      'Noto Sans CJK KR',
+      'Noto Sans Thai',
+      'PingFang SC',
+      'PingFang TC',
+      'Hiragino Sans',
+      'Apple SD Gothic Neo',
+      'Thonburi',
       'Apple Color Emoji',
       'Noto Color Emoji',
       'Segoe UI Emoji',

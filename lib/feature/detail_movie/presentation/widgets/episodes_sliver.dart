@@ -6,6 +6,8 @@ import 'package:movie_app/core/config/utils/animated_dialog.dart';
 import 'package:movie_app/core/config/utils/cover_map.dart';
 import 'package:movie_app/core/config/utils/movie_player_args.dart';
 import 'package:movie_app/core/player_overlay_launcher.dart';
+import 'package:movie_app/core/extension/build_context_extension.dart';
+import 'package:movie_app/core/extension/filter_localization_extension.dart';
 import 'package:movie_app/feature/detail_movie/data/model/detail_movie_model.dart';
 
 class EpisodesSliver extends StatefulWidget {
@@ -64,6 +66,7 @@ class _EpisodesSliverState extends State<EpisodesSliver> {
     required int serverIndex,
     required int episodeIndex,
     required String link,
+    bool bypassSeriesResumePrompt = false,
   }) {
     context.openMoviePlayer(
       MoviePlayerArgs(
@@ -76,6 +79,7 @@ class _EpisodesSliverState extends State<EpisodesSliver> {
         widget.episodes,
         widget.movie,
         initialServerIndex: serverIndex,
+        bypassSeriesResumePrompt: bypassSeriesResumePrompt,
       ),
     );
   }
@@ -91,9 +95,9 @@ class _EpisodesSliverState extends State<EpisodesSliver> {
       showAnimatedDialog(
         context: context,
         dialog: AppAlertDialog(
-          title: 'Chú ý',
-          content: 'Không tìm thấy tập $epNum trên server hiện tại.',
-          buttonTitle: 'Đóng',
+          title: context.l10n.commonNoticeTitle,
+          content: context.l10n.detailEpisodeNotFound(epNum),
+          buttonTitle: context.l10n.commonClose,
         ),
       );
       return;
@@ -110,19 +114,20 @@ class _EpisodesSliverState extends State<EpisodesSliver> {
       serverIndex: _selectedServerIndex,
       episodeIndex: episodeIndex,
       link: link,
+      bypassSeriesResumePrompt: true,
     );
   }
 
   @override
   Widget build(BuildContext context) {
     if (widget.episodes.isEmpty) {
-      return const SliverToBoxAdapter(
+      return SliverToBoxAdapter(
         child: SizedBox(
           height: 100,
           child: Center(
             child: Text(
-              'Chưa có tập phim nào',
-              style: TextStyle(color: Colors.white54),
+              context.l10n.detailNoEpisodes,
+              style: const TextStyle(color: Colors.white54),
             ),
           ),
         ),
@@ -217,7 +222,7 @@ class _EpisodesSliverState extends State<EpisodesSliver> {
                                   ),
                                   const SizedBox(width: 4),
                                   Text(
-                                    serverName['title'],
+                                    context.serverLabel(serverName['title']),
                                     style: const TextStyle(
                                       fontSize: 10,
                                       fontWeight: FontWeight.w600,
@@ -247,9 +252,9 @@ class _EpisodesSliverState extends State<EpisodesSliver> {
                                   color: Colors.white,
                                   borderRadius: BorderRadius.circular(4),
                                 ),
-                                child: const Text(
-                                  'Xem bản này',
-                                  style: TextStyle(
+                                child: Text(
+                                  context.l10n.detailWatchThisVersion,
+                                  style: const TextStyle(
                                     fontSize: 9,
                                     color: Colors.black,
                                     fontWeight: FontWeight.bold,
@@ -316,7 +321,7 @@ class _EpisodesSliverState extends State<EpisodesSliver> {
                     ),
                     child: Center(
                       child: Text(
-                        serverInfo['title'],
+                        context.serverLabel(serverInfo['title']),
                         style: TextStyle(
                           color: isSelected ? Colors.black : Colors.white,
                           fontSize: 12,
@@ -346,7 +351,9 @@ class _EpisodesSliverState extends State<EpisodesSliver> {
                 Expanded(
                   flex: 1,
                   child: Text(
-                    isSingle ? 'Server' : ' Tập 1 - ${itemsToShow.length}',
+                    isSingle
+                        ? context.l10n.detailServer
+                        : context.l10n.detailEpisodeRange(itemsToShow.length),
                     style: const TextStyle(color: Colors.white70, fontSize: 12),
                   ),
                 ),
@@ -370,12 +377,12 @@ class _EpisodesSliverState extends State<EpisodesSliver> {
                         fontSize: 11,
                         height: 1.0,
                       ),
-                      decoration: const InputDecoration(
+                      decoration: InputDecoration(
                         isDense: true,
                         filled: true,
                         fillColor: Colors.transparent,
-                        hintText: 'Nhập tập',
-                        hintStyle: TextStyle(
+                        hintText: context.l10n.detailEnterEpisode,
+                        hintStyle: const TextStyle(
                           color: Colors.white30,
                           fontSize: 10,
                           height: 1.0,
@@ -383,7 +390,7 @@ class _EpisodesSliverState extends State<EpisodesSliver> {
                         border: InputBorder.none,
                         enabledBorder: InputBorder.none,
                         focusedBorder: InputBorder.none,
-                        prefixIcon: Padding(
+                        prefixIcon: const Padding(
                           padding: EdgeInsets.only(left: 6, right: 6),
                           child: Icon(
                             Icons.search,
@@ -391,11 +398,11 @@ class _EpisodesSliverState extends State<EpisodesSliver> {
                             size: 16,
                           ),
                         ),
-                        prefixIconConstraints: BoxConstraints(
+                        prefixIconConstraints: const BoxConstraints(
                           minWidth: 28,
                           minHeight: 32,
                         ),
-                        contentPadding: EdgeInsets.symmetric(vertical: 0),
+                        contentPadding: const EdgeInsets.symmetric(vertical: 0),
                         alignLabelWithHint: true,
                       ),
                     ),

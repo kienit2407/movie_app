@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:movie_app/core/config/themes/app_color.dart';
+import 'package:movie_app/core/extension/build_context_extension.dart';
 
 class MovieDescription extends StatefulWidget {
   final String content;
@@ -45,7 +46,7 @@ class _MovieDescriptionState extends State<MovieDescription> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Giới thiệu',
+          context.l10n.detailIntroduction,
           style: TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.w600,
@@ -79,7 +80,9 @@ class _MovieDescriptionState extends State<MovieDescription> {
                 });
               },
               child: Text(
-                _isExpanded ? 'Thu gọn' : 'Xem thêm',
+                _isExpanded
+                    ? context.l10n.commonCollapse
+                    : context.l10n.commonSeeMore,
                 style: const TextStyle(
                   color: AppColor.secondColor,
                   fontWeight: FontWeight.bold,

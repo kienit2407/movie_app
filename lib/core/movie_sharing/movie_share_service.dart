@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:movie_app/common/components/app_toast.dart';
+import 'package:movie_app/core/extension/build_context_extension.dart';
 import 'package:share_plus/share_plus.dart';
 
 class MovieShareService {
@@ -30,7 +31,7 @@ class MovieShareService {
       await SharePlus.instance.share(
         ShareParams(
           title: movieName,
-          subject: 'Xem $movieName trên Liquid Phim',
+          subject: context.l10n.shareMovieSubject(movieName),
           uri: link,
           sharePositionOrigin: origin,
         ),
@@ -42,6 +43,6 @@ class MovieShareService {
     }
 
     if (!context.mounted) return;
-    AppToast.show(context, 'Không thể mở bảng chia sẻ.');
+    AppToast.show(context, context.l10n.shareOpenFailed);
   }
 }

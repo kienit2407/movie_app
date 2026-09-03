@@ -26,6 +26,8 @@ import 'package:movie_app/core/config/utils/show_detail_movie_dialog.dart';
 import 'package:movie_app/core/player_overlay_launcher.dart';
 import 'package:movie_app/core/player_overlay_controller.dart';
 import 'package:movie_app/core/movie_sharing/movie_share_service.dart';
+import 'package:movie_app/core/extension/build_context_extension.dart';
+import 'package:movie_app/core/extension/filter_localization_extension.dart';
 import 'package:movie_app/feature/detail_movie/data/model/detail_movie_model.dart';
 import 'package:movie_app/feature/detail_movie/domain/usecase/get_detail_movie_usecase.dart';
 import 'package:movie_app/feature/detail_movie/presentation/bloc/detail_movie_cubit.dart';
@@ -96,13 +98,13 @@ class _CastSliver extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (actors.isEmpty) {
-      return const SliverToBoxAdapter(
+      return SliverToBoxAdapter(
         child: SizedBox(
           height: 100,
           child: Center(
             child: Text(
-              'Không có thông tin diễn viên',
-              style: TextStyle(color: Colors.white54),
+              context.l10n.detailCastUnavailable,
+              style: const TextStyle(color: Colors.white54),
             ),
           ),
         ),
@@ -141,9 +143,9 @@ class _CastSliver extends StatelessWidget {
                   ),
                 ),
               ),
-              const Text(
-                'Diễn viên',
-                style: TextStyle(color: Colors.grey, fontSize: 12),
+              Text(
+                context.l10n.detailCast,
+                style: const TextStyle(color: Colors.grey, fontSize: 12),
               ),
             ],
           ),
@@ -187,12 +189,12 @@ class _RecommendationsSliverState extends State<_RecommendationsSliver> {
       width: double.infinity,
       // padding: const EdgeInsets.all(8.0),
       // margin: const EdgeInsets.only(bottom: 100, top: 100),
-      child: const Row(
+      child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          CircularProgressIndicator.adaptive(),
-          SizedBox(width: 8),
-          Text('Loading'),
+          const CircularProgressIndicator.adaptive(),
+          const SizedBox(width: 8),
+          Text(context.l10n.commonLoading),
         ],
       ),
     );
@@ -252,13 +254,13 @@ class _RecommendationsSliverState extends State<_RecommendationsSliver> {
           );
         }
         if (state is FetchFillterFailure) {
-          return const SliverToBoxAdapter(
+          return SliverToBoxAdapter(
             child: SizedBox(
               height: 100,
               child: Center(
                 child: Text(
-                  'Không thể tải đề xuất',
-                  style: TextStyle(color: Colors.white54),
+                  context.l10n.detailRecommendationsLoadFailed,
+                  style: const TextStyle(color: Colors.white54),
                 ),
               ),
             ),
@@ -267,13 +269,13 @@ class _RecommendationsSliverState extends State<_RecommendationsSliver> {
         if (state is FetchFillterLoaded) {
           final movies = state.items;
           if (movies.isEmpty) {
-            return const SliverToBoxAdapter(
+            return SliverToBoxAdapter(
               child: SizedBox(
                 height: 100,
                 child: Center(
                   child: Text(
-                    'Không có đề xuất',
-                    style: TextStyle(color: Colors.white54),
+                    context.l10n.detailNoRecommendations,
+                    style: const TextStyle(color: Colors.white54),
                   ),
                 ),
               ),
@@ -387,9 +389,9 @@ class _EpisodesSliverState extends State<_EpisodesSliver> {
       showAnimatedDialog(
         context: context,
         dialog: AppAlertDialog(
-          title: 'Chú ý',
-          content: 'Không tìm thấy tập $epNum trên server hiện tại.',
-          buttonTitle: 'Đóng',
+          title: context.l10n.commonNoticeTitle,
+          content: context.l10n.detailEpisodeNotFound(epNum),
+          buttonTitle: context.l10n.commonClose,
         ),
       );
       return;
@@ -413,6 +415,7 @@ class _EpisodesSliverState extends State<_EpisodesSliver> {
         widget.episodes,
         widget.movie,
         initialServerIndex: _selectedServerIndex,
+        bypassSeriesResumePrompt: true,
       ),
     );
   }
@@ -420,13 +423,13 @@ class _EpisodesSliverState extends State<_EpisodesSliver> {
   @override
   Widget build(BuildContext context) {
     if (widget.episodes.isEmpty) {
-      return const SliverToBoxAdapter(
+      return SliverToBoxAdapter(
         child: SizedBox(
           height: 100,
           child: Center(
             child: Text(
-              'Chưa có tập phim nào',
-              style: TextStyle(color: Colors.white54),
+              context.l10n.detailNoEpisodes,
+              style: const TextStyle(color: Colors.white54),
             ),
           ),
         ),
@@ -534,7 +537,7 @@ class _EpisodesSliverState extends State<_EpisodesSliver> {
                                   ),
                                   const SizedBox(width: 4),
                                   Text(
-                                    serverName['title'],
+                                    context.serverLabel(serverName['title']),
                                     style: const TextStyle(
                                       fontSize: 10,
                                       fontWeight: FontWeight.w600,
@@ -564,9 +567,9 @@ class _EpisodesSliverState extends State<_EpisodesSliver> {
                                   color: Colors.white,
                                   borderRadius: BorderRadius.circular(4),
                                 ),
-                                child: const Text(
-                                  'Xem bản này',
-                                  style: TextStyle(
+                                child: Text(
+                                  context.l10n.detailWatchThisVersion,
+                                  style: const TextStyle(
                                     fontSize: 9,
                                     color: Colors.black,
                                     fontWeight: FontWeight.bold,
@@ -651,7 +654,7 @@ class _EpisodesSliverState extends State<_EpisodesSliver> {
                     ),
                     child: Center(
                       child: Text(
-                        serverInfo['title'],
+                        context.serverLabel(serverInfo['title']),
                         style: TextStyle(
                           color: isSelected ? Colors.black : Colors.white,
                           fontSize: 12,
@@ -682,7 +685,9 @@ class _EpisodesSliverState extends State<_EpisodesSliver> {
                 Expanded(
                   flex: 1,
                   child: Text(
-                    isSingle ? 'Server' : ' Tập 1 - ${itemsToShow.length}',
+                    isSingle
+                        ? context.l10n.detailServer
+                        : context.l10n.detailEpisodeRange(itemsToShow.length),
                     style: const TextStyle(color: Colors.white70, fontSize: 12),
                   ),
                 ),
@@ -710,7 +715,7 @@ class _EpisodesSliverState extends State<_EpisodesSliver> {
                         isDense: true,
                         filled: true,
                         fillColor: Colors.transparent,
-                        hintText: 'Nhập tập',
+                        hintText: context.l10n.detailEnterEpisode,
                         hintStyle: const TextStyle(
                           color: Colors.white30,
                           fontSize: 10,
@@ -1416,10 +1421,10 @@ class _MovieDetailPageContentState extends State<_MovieDetailPageContent>
               } else if (state is DetailMovieLoading) {
                 return _buildLoadingSkeleton();
               }
-              return const Center(
+              return Center(
                 child: Text(
-                  "Lỗi tải phim",
-                  style: TextStyle(color: Colors.white),
+                  context.l10n.detailLoadMovieError,
+                  style: const TextStyle(color: Colors.white),
                 ),
               );
             },
@@ -1522,10 +1527,10 @@ class _MovieDetailPageContentState extends State<_MovieDetailPageContent>
               ),
               indicatorSize: TabBarIndicatorSize.label,
               tabs: [
-                Tab(text: 'Tập phim'),
-                Tab(text: 'Diễn viên'),
-                Tab(text: 'Đề xuất'),
-                Tab(text: 'Bình luận'),
+                Tab(text: context.l10n.detailEpisodesTab),
+                Tab(text: context.l10n.detailCast),
+                Tab(text: context.l10n.detailRecommendationsTab),
+                Tab(text: context.l10n.detailCommentsTab),
               ],
             ),
             key: _tabBarKey, // <<< thêm dòng này
@@ -1759,7 +1764,7 @@ class _MovieDetailPageContentState extends State<_MovieDetailPageContent>
           _buildInforChip(
             child: Text(
               (movie.episode_current == 'Full')
-                  ? movie.time.toFormatEpisode()
+                  ? movie.time.toFormatEpisode(context.l10n)
                   : movie.time,
               style: const TextStyle(
                 fontSize: 10,
@@ -1772,9 +1777,9 @@ class _MovieDetailPageContentState extends State<_MovieDetailPageContent>
           _buildInforChip(
             isGadient: true,
             borderColor: Colors.transparent,
-            child: const Text(
-              'Chiếu Rạp',
-              style: TextStyle(
+            child: Text(
+              context.l10n.detailInTheaters,
+              style: const TextStyle(
                 fontSize: 10,
                 fontWeight: FontWeight.w600,
                 color: Colors.white,
@@ -1784,9 +1789,9 @@ class _MovieDetailPageContentState extends State<_MovieDetailPageContent>
         if (movie.sub_docquyen == true)
           _buildInforChip(
             isGadient: true,
-            child: const Text(
-              'Sub Độc Quyền',
-              style: TextStyle(
+            child: Text(
+              context.l10n.detailExclusiveSubtitles,
+              style: const TextStyle(
                 fontSize: 10,
                 fontWeight: FontWeight.w600,
                 color: Colors.white,
@@ -1879,14 +1884,14 @@ class _MovieDetailPageContentState extends State<_MovieDetailPageContent>
   }
 
   Widget _buildExtraInfor(MovieModel movie) {
-    String directorName = 'Đang cập nhật';
+    String directorName = context.l10n.commonUpdating;
     if (movie.director != null && movie.director!.isNotEmpty) {
       directorName = movie.director!.map((d) => d.toString()).join(', ');
     }
     final dateValue = movie.created?.time;
 
-    final releaseDate = DateFormat(
-      'dd/MM/yyyy',
+    final releaseDate = DateFormat.yMd(
+      Localizations.localeOf(context).toLanguageTag(),
     ).format(dateValue ?? DateTime.now());
     return Container(
       height: 300,
@@ -2089,16 +2094,26 @@ class _MovieDetailPageContentState extends State<_MovieDetailPageContent>
                           mainAxisSize: MainAxisSize.min,
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            _buildBullet(directorName, 'Đạo diễn:'),
+                            _buildBullet(
+                              directorName,
+                              context.l10n.detailDirectorLabel,
+                            ),
                             const SizedBox(height: 8),
-                            _buildBullet(releaseDate, 'Ngày tạo:'),
+                            _buildBullet(
+                              releaseDate,
+                              context.l10n.detailCreatedDateLabel,
+                            ),
                             const SizedBox(height: 8),
                             _buildBullet(
                               movie.year.toString(),
-                              'Năm sản xuất:',
+                              context.l10n.detailProductionYearLabel,
                             ),
                             const SizedBox(height: 8),
-                            _buildBullet(movie.country[0].name, 'Quốc gia:'),
+                            if (movie.country.isNotEmpty)
+                              _buildBullet(
+                                movie.country[0].name,
+                                context.l10n.detailCountryLabel,
+                              ),
                           ],
                         ),
                       ),
@@ -2312,80 +2327,122 @@ class _MovieDetailPageContentState extends State<_MovieDetailPageContent>
     Widget buildPlayButton({
       required String text,
       required VoidCallback onTap,
+      VoidCallback? onLatestEpisodeTap,
       bool isPrimary = true,
       int flex = 2,
     }) {
+      final button = Container(
+        padding: const EdgeInsets.symmetric(vertical: 11),
+        decoration: BoxDecoration(
+          gradient: isPrimary
+              ? const LinearGradient(
+                  colors: [
+                    Color(0xFFC77DFF),
+                    Color(0xFFFF9E9E),
+                    Color(0xFFFFD275),
+                  ],
+                  begin: Alignment.topRight,
+                  end: Alignment.bottomLeft,
+                )
+              : null,
+          color: isPrimary ? null : Colors.white.withOpacity(0.1),
+          boxShadow: isPrimary
+              ? const [
+                  BoxShadow(
+                    color: Color(0xFFC77DFF),
+                    blurRadius: 12,
+                    offset: Offset(0, 0),
+                    spreadRadius: -2,
+                  ),
+                ]
+              : null,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
+          spacing: 5,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Iconsax.play_circle),
+            Text(
+              text,
+              style: TextStyle(
+                color: isPrimary ? Colors.white : Colors.white.withOpacity(0.9),
+                fontWeight: FontWeight.w600,
+                fontSize: 12,
+              ),
+            ),
+            if (onLatestEpisodeTap != null)
+              const Icon(Icons.keyboard_arrow_down_rounded, size: 18),
+          ],
+        ),
+      );
+
       return Expanded(
         flex: flex,
-        child: GestureDetector(
-          onTap: () {
-            HapticFeedback.mediumImpact();
-            onTap();
-          },
-          child: Container(
-            padding: const EdgeInsets.symmetric(vertical: 11),
-            decoration: BoxDecoration(
-              gradient: isPrimary
-                  ? const LinearGradient(
-                      colors: [
-                        Color(0xFFC77DFF),
-                        Color(0xFFFF9E9E),
-                        Color(0xFFFFD275),
-                      ],
-                      begin: Alignment.topRight,
-                      end: Alignment.bottomLeft,
-                    )
-                  : null,
-              color: isPrimary ? null : Colors.white.withOpacity(0.1),
-              boxShadow: isPrimary
-                  ? const [
-                      BoxShadow(
-                        color: Color(0xFFC77DFF),
-                        blurRadius: 12,
-                        offset: Offset(0, 0),
-                        spreadRadius: -2,
-                      ),
-                    ]
-                  : null,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Row(
-              spacing: 5,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                isFullMovie ? Icon(Iconsax.play_circle) : SizedBox.shrink(),
-                Text(
-                  text,
-                  style: TextStyle(
-                    color: isPrimary
-                        ? Colors.white
-                        : Colors.white.withOpacity(0.9),
-                    fontWeight: FontWeight.w600,
-                    fontSize: 12,
-                  ),
+        child: onLatestEpisodeTap == null
+            ? GestureDetector(
+                onTap: () {
+                  HapticFeedback.mediumImpact();
+                  onTap();
+                },
+                child: button,
+              )
+            : PopupMenuButton<bool>(
+                tooltip: text,
+                position: PopupMenuPosition.under,
+                offset: const Offset(0, 8),
+                color: const Color(0xff242531),
+                elevation: 12,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  side: BorderSide(color: Colors.white.withValues(alpha: .09)),
                 ),
-              ],
-            ),
-          ),
-        ),
+                onOpened: HapticFeedback.mediumImpact,
+                onSelected: (latestEpisode) {
+                  HapticFeedback.selectionClick();
+                  if (latestEpisode) {
+                    onLatestEpisodeTap();
+                  } else {
+                    onTap();
+                  }
+                },
+                itemBuilder: (context) => [
+                  PopupMenuItem(
+                    value: false,
+                    child: Row(
+                      children: [
+                        const Icon(Iconsax.play_circle, size: 20),
+                        const SizedBox(width: 10),
+                        Text(context.l10n.detailWatchMovie),
+                      ],
+                    ),
+                  ),
+                  PopupMenuItem(
+                    value: true,
+                    child: Row(
+                      children: [
+                        const Icon(Iconsax.next, size: 20),
+                        const SizedBox(width: 10),
+                        Text(context.l10n.detailWatchLatestEpisode),
+                      ],
+                    ),
+                  ),
+                ],
+                child: button,
+              ),
       );
     }
 
     return Row(
       spacing: 5,
       children: [
-        if (!isFullMovie)
-          buildPlayButton(
-            text: 'Xem tập mới',
-            onTap: () => playLatestEpisode(),
-            flex: 1,
-          ),
         buildPlayButton(
-          text: 'Xem phim',
+          text: context.l10n.detailWatchMovie,
           onTap: () => playFirstEpisode(),
-          flex: isFullMovie ? 2 : 1,
+          onLatestEpisodeTap: isFullMovie ? null : playLatestEpisode,
+          flex: 2,
         ),
-        if (isFullMovie) const SizedBox(width: 12),
+        const SizedBox(width: 12),
         Expanded(
           child: GestureDetector(
             onTap: () {
@@ -2401,14 +2458,14 @@ class _MovieDetailPageContentState extends State<_MovieDetailPageContent>
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(color: Colors.white.withOpacity(0.7)),
               ),
-              child: const Row(
+              child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Iconsax.menu_1, color: Colors.white, size: 20),
-                  SizedBox(width: 6),
+                  const Icon(Iconsax.menu_1, color: Colors.white, size: 20),
+                  const SizedBox(width: 6),
                   Text(
-                    'Tập Phim',
-                    style: TextStyle(
+                    context.l10n.detailEpisodesTab,
+                    style: const TextStyle(
                       color: Colors.white,
                       fontWeight: FontWeight.w600,
                       fontSize: 12,
@@ -2461,7 +2518,7 @@ class _MovieDetailPageContentState extends State<_MovieDetailPageContent>
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Giới thiệu',
+          context.l10n.detailIntroduction,
           style: TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.w600,
@@ -2495,7 +2552,9 @@ class _MovieDetailPageContentState extends State<_MovieDetailPageContent>
                 });
               },
               child: Text(
-                _isDescriptionExpanded ? 'Thu gọn' : 'Xem thêm',
+                _isDescriptionExpanded
+                    ? context.l10n.commonCollapse
+                    : context.l10n.commonSeeMore,
                 style: TextStyle(
                   color: AppColor.secondColor,
                   fontWeight: FontWeight.bold,
@@ -2829,7 +2888,7 @@ class _FavoriteButtonState extends State<_FavoriteButton>
                     const SizedBox(height: 2),
 
                     Text(
-                      'Yêu thích',
+                      context.l10n.detailFavorite,
                       key: ValueKey('favorite_text_${movie.slug}'),
                       style: TextStyle(
                         fontSize: 10,

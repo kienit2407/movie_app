@@ -12,6 +12,7 @@ import 'package:movie_app/common/helpers/static_data.dart';
 import 'package:movie_app/core/config/routes/app_router.dart';
 import 'package:movie_app/core/config/themes/app_color.dart';
 import 'package:movie_app/core/config/utils/sharder_text.dart';
+import 'package:movie_app/core/extension/build_context_extension.dart';
 import 'package:movie_app/feature/home/notification/comment_notification.dart';
 import 'package:movie_app/feature/home/notification/new_movie_inbox.dart';
 
@@ -139,9 +140,9 @@ class _NotificationsPageState extends State<NotificationsPage> {
         duration: duration,
         curve: Curves.easeOut,
         opacity: _showSmallTitle ? 1 : 0,
-        child: const Text(
-          'Thông báo',
-          style: TextStyle(
+        child: Text(
+          context.l10n.navNotifications,
+          style: const TextStyle(
             fontWeight: FontWeight.w600,
             fontSize: 17,
             color: Colors.white,
@@ -157,8 +158,8 @@ class _NotificationsPageState extends State<NotificationsPage> {
       child: Padding(
         key: _largeTitleKey,
         padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-        child: const SharderText(
-          gradient: LinearGradient(
+        child: SharderText(
+          gradient: const LinearGradient(
             colors: [
               Colors.black,
               Colors.black,
@@ -169,8 +170,8 @@ class _NotificationsPageState extends State<NotificationsPage> {
             end: Alignment.centerLeft,
           ),
           child: Text(
-            'Thông báo',
-            style: TextStyle(
+            context.l10n.navNotifications,
+            style: const TextStyle(
               fontSize: 34,
               fontWeight: FontWeight.bold,
               fontFamily: 'Inter',
@@ -183,28 +184,28 @@ class _NotificationsPageState extends State<NotificationsPage> {
 
   Widget _buildList(NewMovieInboxState state) {
     if (state.isLoading) {
-      return const SliverFillRemaining(
+      return SliverFillRemaining(
         hasScrollBody: false,
         child: Center(child: CircularProgressIndicator.adaptive()),
       );
     }
 
     if (state.items.isEmpty && state.commentItems.isEmpty) {
-      return const SliverFillRemaining(
+      return SliverFillRemaining(
         hasScrollBody: false,
         child: Center(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(
+              const Icon(
                 Icons.notifications_none_rounded,
                 color: Colors.white38,
                 size: 58,
               ),
-              SizedBox(height: 12),
+              const SizedBox(height: 12),
               Text(
-                'Chưa có thông báo mới',
-                style: TextStyle(color: Colors.white70),
+                context.l10n.notificationsEmpty,
+                style: const TextStyle(color: Colors.white70),
               ),
             ],
           ),
@@ -240,7 +241,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
                 key: entry.key,
                 padding: const EdgeInsets.fromLTRB(4, 14, 4, 10),
                 child: Text(
-                  _dateLabel(date),
+                  _dateLabel(context, date),
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: 17,
@@ -281,8 +282,8 @@ class _CommentNotificationTile extends StatelessWidget {
         ? Duration.zero
         : const Duration(milliseconds: 120);
     final action = item.type == CommentNotificationType.reply
-        ? 'đã trả lời bình luận của bạn'
-        : 'đã thích bình luận của bạn';
+        ? context.l10n.notificationsRepliedToYourComment
+        : context.l10n.notificationsLikedYourComment;
 
     return Card(
       color: Colors.white.withValues(alpha: .055),
@@ -588,11 +589,13 @@ List<_NotificationGroup> _groupByDay(List<_NotificationFeedItem> items) {
     ..sort((a, b) => b.date.compareTo(a.date));
 }
 
-String _dateLabel(DateTime date) {
+String _dateLabel(BuildContext context, DateTime date) {
   final now = DateTime.now();
   final today = DateTime(now.year, now.month, now.day);
   final difference = today.difference(date).inDays;
-  if (difference == 0) return 'Hôm nay';
-  if (difference == 1) return 'Hôm qua';
-  return DateFormat('dd/MM/yyyy').format(date);
+  if (difference == 0) return context.l10n.notificationsToday;
+  if (difference == 1) return context.l10n.notificationsYesterday;
+  return DateFormat.yMd(
+    Localizations.localeOf(context).toLanguageTag(),
+  ).format(date);
 }

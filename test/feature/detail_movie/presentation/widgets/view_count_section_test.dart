@@ -3,13 +3,14 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:movie_app/feature/detail_movie/data/model/detail_movie_model.dart';
 import 'package:movie_app/feature/detail_movie/presentation/widgets/view_count_section.dart';
 import 'package:movie_app/feature/movie_engagement/data/movie_engagement_repository.dart';
+import '../../../../helpers/localized_test_app.dart';
 
 void main() {
   testWidgets('shows API views and Supabase likes with compact formatting', (
     tester,
   ) async {
     await tester.pumpWidget(
-      MaterialApp(
+      localizedTestApp(
         home: Scaffold(
           body: ViewCountSection(
             movie: _movie,

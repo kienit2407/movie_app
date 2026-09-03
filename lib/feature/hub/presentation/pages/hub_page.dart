@@ -7,6 +7,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
 import 'package:movie_app/core/config/themes/app_color.dart';
+import 'package:movie_app/core/extension/build_context_extension.dart';
 import 'package:movie_app/feature/library/presentation/cubit/user_library_cubit.dart';
 
 class HubPage extends StatelessWidget {
@@ -111,10 +112,11 @@ class _FloatingBlurHubBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final reduceMotion = MediaQuery.disableAnimationsOf(context);
+    final l10n = context.l10n;
 
     return SafeArea(
       top: false,
-      minimum: const EdgeInsets.fromLTRB(14, 0, 14, 10),
+      minimum: const EdgeInsets.fromLTRB(14, 0, 14, -10),
       child: SizedBox(
         height: 66,
         child: ClipRRect(
@@ -186,10 +188,11 @@ class _FloatingBlurHubBar extends StatelessWidget {
                               selected: selectedIndex == 0,
                               icon: Image.asset(
                                 'assets/images/home.png',
-                                width: 20,
-                                height: 20,
+                                width: 22,
+                                height: 22,
                                 fit: BoxFit.contain,
                                 filterQuality: FilterQuality.high,
+                                gaplessPlayback: true,
                                 color: Colors.white54,
                                 colorBlendMode: BlendMode.srcIn,
                               ),
@@ -199,10 +202,12 @@ class _FloatingBlurHubBar extends StatelessWidget {
                                 height: 22,
                                 fit: BoxFit.contain,
                                 filterQuality: FilterQuality.high,
+                                gaplessPlayback: true,
                               ),
-                              semanticLabel: 'Trang chủ',
+                              semanticLabel: l10n.navHome,
                               onTap: () => onSelected(0),
                               reduceMotion: reduceMotion,
+                              animateIcon: false,
                             ),
 
                             /// SEARCH
@@ -213,7 +218,7 @@ class _FloatingBlurHubBar extends StatelessWidget {
                                 Iconsax.search_normal_1_copy,
                                 weight: 8,
                               ),
-                              semanticLabel: 'Tìm kiếm',
+                              semanticLabel: l10n.navSearch,
                               onTap: () => onSelected(1),
                               reduceMotion: reduceMotion,
                             ),
@@ -226,7 +231,7 @@ class _FloatingBlurHubBar extends StatelessWidget {
                                 CupertinoIcons.heart_fill,
                                 size: 25,
                               ),
-                              semanticLabel: 'Yêu thích',
+                              semanticLabel: l10n.navFavorites,
                               onTap: () => onSelected(2),
                               reduceMotion: reduceMotion,
                             ),
@@ -235,6 +240,7 @@ class _FloatingBlurHubBar extends StatelessWidget {
                             _HubAvatarTabButton(
                               selected: selectedIndex == 3,
                               avatarUrl: avatarUrl,
+                              semanticLabel: l10n.navProfile,
                               onTap: () => onSelected(3),
                               reduceMotion: reduceMotion,
                             ),
@@ -265,6 +271,7 @@ class _HubTabButton extends StatelessWidget {
     required this.semanticLabel,
     required this.onTap,
     required this.reduceMotion,
+    this.animateIcon = true,
   });
 
   final bool selected;
@@ -273,6 +280,7 @@ class _HubTabButton extends StatelessWidget {
   final String semanticLabel;
   final VoidCallback onTap;
   final bool reduceMotion;
+  final bool animateIcon;
 
   @override
   Widget build(BuildContext context) {
@@ -289,31 +297,58 @@ class _HubTabButton extends StatelessWidget {
             splashFactory: NoSplash.splashFactory,
             highlightColor: Colors.white.withValues(alpha: 0.08),
             child: Center(
-              child: AnimatedScale(
-                duration: Duration(milliseconds: reduceMotion ? 70 : 180),
-                curve: Curves.easeOutBack,
-                scale: selected ? 1.08 : 1,
-                child: AnimatedSwitcher(
-                  duration: Duration(milliseconds: reduceMotion ? 70 : 170),
-                  switchInCurve: Curves.easeOut,
-                  switchOutCurve: Curves.easeIn,
-                  child: KeyedSubtree(
-                    key: ValueKey(selected),
-                    child: ExcludeSemantics(
-                      child: IconTheme.merge(
-                        data: IconThemeData(
-                          size: 24,
-                          color: selected ? Colors.white : Colors.white54,
+              child: animateIcon
+                  ? AnimatedScale(
+                      duration: Duration(milliseconds: reduceMotion ? 70 : 180),
+                      curve: Curves.easeOutBack,
+                      scale: selected ? 1.08 : 1,
+                      child: AnimatedSwitcher(
+                        duration: Duration(
+                          milliseconds: reduceMotion ? 70 : 170,
                         ),
-                        child: selected ? activeIcon ?? icon : icon,
+                        switchInCurve: Curves.easeOut,
+                        switchOutCurve: Curves.easeIn,
+                        child: KeyedSubtree(
+                          key: ValueKey(selected),
+                          child: _ThemedHubIcon(
+                            selected: selected,
+                            child: selected ? activeIcon ?? icon : icon,
+                          ),
+                        ),
+                      ),
+                    )
+                  : SizedBox.square(
+                      dimension: 24,
+                      child: Center(
+                        child: _ThemedHubIcon(
+                          selected: selected,
+                          child: selected ? activeIcon ?? icon : icon,
+                        ),
                       ),
                     ),
-                  ),
-                ),
-              ),
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _ThemedHubIcon extends StatelessWidget {
+  const _ThemedHubIcon({required this.selected, required this.child});
+
+  final bool selected;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return ExcludeSemantics(
+      child: IconTheme.merge(
+        data: IconThemeData(
+          size: 24,
+          color: selected ? Colors.white : Colors.white54,
+        ),
+        child: child,
       ),
     );
   }
@@ -323,12 +358,14 @@ class _HubAvatarTabButton extends StatelessWidget {
   const _HubAvatarTabButton({
     required this.selected,
     required this.avatarUrl,
+    required this.semanticLabel,
     required this.onTap,
     required this.reduceMotion,
   });
 
   final bool selected;
   final String avatarUrl;
+  final String semanticLabel;
   final VoidCallback onTap;
   final bool reduceMotion;
 
@@ -338,7 +375,7 @@ class _HubAvatarTabButton extends StatelessWidget {
       child: Semantics(
         button: true,
         selected: selected,
-        label: 'Hồ sơ',
+        label: semanticLabel,
         child: Material(
           color: Colors.transparent,
           child: InkWell(

@@ -5,6 +5,8 @@ import 'package:lottie/lottie.dart';
 import 'package:movie_app/core/config/utils/cover_map.dart';
 import 'package:movie_app/feature/detail_movie/data/model/detail_movie_model.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
+import 'package:movie_app/core/extension/build_context_extension.dart';
+import 'package:movie_app/core/extension/filter_localization_extension.dart';
 
 class EpisodeDrawer extends StatefulWidget {
   final MovieModel movie;
@@ -130,7 +132,12 @@ class EpisodeDrawerState extends State<EpisodeDrawer> {
               Expanded(
                 flex: 1,
                 child: Text(
-                  'Tập 1 - ${widget.episodes[widget.selectedServerIndex].server_data.length}',
+                  context.l10n.detailEpisodeRange(
+                    widget
+                        .episodes[widget.selectedServerIndex]
+                        .server_data
+                        .length,
+                  ),
                   style: const TextStyle(
                     color: Color(0xff707070),
                     fontSize: 12,
@@ -158,7 +165,7 @@ class EpisodeDrawerState extends State<EpisodeDrawer> {
                       isDense: true,
                       filled: true,
                       fillColor: Colors.transparent,
-                      hintText: 'Nhập tập',
+                      hintText: context.l10n.detailEnterEpisode,
                       hintStyle: const TextStyle(
                         color: Color(0xff9E9E9E),
                         fontSize: 12,
@@ -343,7 +350,9 @@ class EpisodeDrawerState extends State<EpisodeDrawer> {
                 ),
                 child: Center(
                   child: Text(
-                    serverInfo['title'] ?? 'Server ${index + 1}',
+                    context.serverLabel(serverInfo['title']).isNotEmpty
+                        ? context.serverLabel(serverInfo['title'])
+                        : context.l10n.detailServerNumber(index + 1),
                     style: TextStyle(
                       color: isSelected ? Colors.black : Colors.white,
                       fontSize: 12,
@@ -444,7 +453,7 @@ class EpisodeDrawerState extends State<EpisodeDrawer> {
                                 ),
                                 const SizedBox(width: 4),
                                 Text(
-                                  serverName['title'],
+                                  context.serverLabel(serverName['title']),
                                   style: TextStyle(
                                     fontSize: 10,
                                     fontWeight: FontWeight.w600,
@@ -481,8 +490,8 @@ class EpisodeDrawerState extends State<EpisodeDrawer> {
                                 children: [
                                   Text(
                                     isPlaying && isCurrentServer
-                                        ? 'Đang phát'
-                                        : 'Xem bản này',
+                                        ? context.l10n.playerNowPlaying
+                                        : context.l10n.detailWatchThisVersion,
                                     style: TextStyle(
                                       fontSize: 9,
                                       color: Colors.black,

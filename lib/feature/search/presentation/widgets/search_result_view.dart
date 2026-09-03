@@ -8,6 +8,7 @@ import 'package:movie_app/common/helpers/navigation/app_navigation.dart';
 import 'package:movie_app/core/config/utils/animated_dialog.dart';
 import 'package:movie_app/core/config/utils/episode_map.dart';
 import 'package:movie_app/core/config/utils/show_detail_movie_dialog.dart';
+import 'package:movie_app/core/extension/build_context_extension.dart';
 import 'package:movie_app/feature/detail_movie/data/model/detail_movie_model.dart';
 import 'package:movie_app/feature/detail_movie/presentation/pages/movie_detail_page.dart';
 
@@ -48,10 +49,10 @@ class _SearchResultViewState extends State<SearchResultView> {
   @override
   Widget build(BuildContext context) {
     if (widget.movies.isEmpty) {
-      return const Center(
+      return Center(
         child: Text(
-          'Không tìm thấy kết quả nào',
-          style: TextStyle(color: Colors.white),
+          context.l10n.searchNoResults,
+          style: const TextStyle(color: Colors.white),
         ),
       );
     }
@@ -119,8 +120,8 @@ class _SearchResultViewState extends State<SearchResultView> {
       padding: const EdgeInsets.only(top: 16, bottom: 120),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
-        children: const [
-          SizedBox(
+        children: [
+          const SizedBox(
             width: 18,
             height: 18,
             child: CupertinoActivityIndicator(
@@ -128,8 +129,11 @@ class _SearchResultViewState extends State<SearchResultView> {
               color: Colors.grey, // Màu sắc của loading
             ),
           ),
-          SizedBox(width: 10),
-          Text('Loading...', style: TextStyle(color: Colors.white70)),
+          const SizedBox(width: 10),
+          Text(
+            context.l10n.commonLoading,
+            style: const TextStyle(color: Colors.white70),
+          ),
         ],
       ),
     );

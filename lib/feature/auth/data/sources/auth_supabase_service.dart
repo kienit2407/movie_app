@@ -13,7 +13,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 abstract class AuthService {
   Future<Either> signUp(SignUpReq signUpReq);
   Future<Either> signIn(SignInReq signInReq);
-  Future<Either> signInWithGoogle();
+  Future<Either> signInWithGoogle({bool forceAccountPicker = false});
   Future<Either> signInWithFaceBook();
   Future<Either> sendReqResetPassword(String email);
   Future<Either> signOut();
@@ -103,7 +103,7 @@ class AuthSupabaseServiceImpl implements AuthService {
   }
 
   @override
-  Future<Either> signInWithGoogle() async {
+  Future<Either> signInWithGoogle({bool forceAccountPicker = false}) async {
     try {
       final webClientId = dotenv.env['WEB_CLIENT_ID'];
       final iosClientId =
@@ -130,6 +130,10 @@ class AuthSupabaseServiceImpl implements AuthService {
             : null,
         serverClientId: webClientId, //<- để lấy idtoken
       );
+
+      if (forceAccountPicker) {
+        await googleSignin.signOut();
+      }
 
       final googleAccount = await googleSignin
           .authenticate(); //<- mở trình đăng nhập, để cho người dùng uỷ quyền, và gửi đi để yêu cầu token

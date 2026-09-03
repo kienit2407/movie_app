@@ -1,0 +1,1475 @@
+{
+  "@@locale": "th",
+  "appTitle": "Liquid Phim",
+  "@appTitle": {
+    "description": "Application name"
+  },
+  "appTagline": "ดูหนังได้ทุกที่ ทุกเวลา",
+  "@appTagline": {
+    "description": "Tagline displayed on the splash or branding screen"
+  },
+  "commonAgree": "ตกลง",
+  "@commonAgree": {
+    "description": "Generic confirmation action"
+  },
+  "commonCancel": "ยกเลิก",
+  "@commonCancel": {
+    "description": "Generic cancel action"
+  },
+  "commonClose": "ปิด",
+  "@commonClose": {
+    "description": "Generic close action or tooltip"
+  },
+  "commonDone": "เสร็จสิ้น",
+  "@commonDone": {
+    "description": "Generic done action"
+  },
+  "commonSave": "บันทึก",
+  "@commonSave": {
+    "description": "Generic save action"
+  },
+  "commonDelete": "ลบ",
+  "@commonDelete": {
+    "description": "Generic delete action"
+  },
+  "commonEdit": "แก้ไข",
+  "@commonEdit": {
+    "description": "Generic edit action"
+  },
+  "commonReport": "รายงาน",
+  "@commonReport": {
+    "description": "Generic report action"
+  },
+  "commonRetry": "ลองอีกครั้ง",
+  "@commonRetry": {
+    "description": "Generic retry action"
+  },
+  "commonReset": "รีเซ็ต",
+  "@commonReset": {
+    "description": "Generic reset action"
+  },
+  "commonAll": "ทั้งหมด",
+  "@commonAll": {
+    "description": "Option representing all available values"
+  },
+  "commonSeeMore": "ดูเพิ่มเติม",
+  "@commonSeeMore": {
+    "description": "Action that expands content"
+  },
+  "commonCollapse": "ย่อ",
+  "@commonCollapse": {
+    "description": "Action that collapses content"
+  },
+  "commonLoading": "กำลังโหลด...",
+  "@commonLoading": {
+    "description": "Generic loading state"
+  },
+  "commonUpdating": "กำลังอัปเดต",
+  "@commonUpdating": {
+    "description": "Fallback text while movie information is being updated"
+  },
+  "commonUnderstood": "เข้าใจแล้ว",
+  "@commonUnderstood": {
+    "description": "Acknowledgement action in an informational dialog"
+  },
+  "commonNoData": "ไม่มีข้อมูล",
+  "@commonNoData": {
+    "description": "Generic empty data state"
+  },
+  "commonNotAvailable": "ไม่มีข้อมูล",
+  "@commonNotAvailable": {
+    "description": "Fallback value when information is unavailable"
+  },
+  "commonWarningTitle": "คำเตือน",
+  "@commonWarningTitle": {
+    "description": "Generic warning dialog title"
+  },
+  "commonNoticeTitle": "แจ้งเตือน",
+  "@commonNoticeTitle": {
+    "description": "Generic informational dialog title"
+  },
+  "commonCongratulationsTitle": "ยินดีด้วย!",
+  "@commonCongratulationsTitle": {
+    "description": "Generic success dialog title"
+  },
+  "commonBack": "ย้อนกลับ",
+  "@commonBack": {
+    "description": "Generic back navigation tooltip"
+  },
+  "commonGoHome": "ไปหน้าหลัก",
+  "@commonGoHome": {
+    "description": "Action on the router error page that navigates home"
+  },
+  "commonSelectedCount": "{count, plural, =0{ยังไม่ได้เลือก} other{เลือกแล้ว {count} รายการ}}",
+  "@commonSelectedCount": {
+    "description": "Number of selected list items",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "commonErrorWithDetails": "ข้อผิดพลาด: {error}",
+  "@commonErrorWithDetails": {
+    "description": "Generic error containing technical details",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "commonDurationHoursMinutes": "{hours} ชั่วโมง {minutes} นาที",
+  "@commonDurationHoursMinutes": {
+    "description": "Movie duration containing hours and minutes",
+    "placeholders": {
+      "hours": {
+        "type": "int"
+      },
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "settingsLanguage": "ภาษา",
+  "@settingsLanguage": {
+    "description": "Application language setting title"
+  },
+  "settingsLanguageSystem": "ใช้ภาษาของอุปกรณ์",
+  "@settingsLanguageSystem": {
+    "description": "Option that follows the operating system language"
+  },
+  "settingsLanguageVietnamese": "Tiếng Việt",
+  "@settingsLanguageVietnamese": {
+    "description": "Vietnamese language option written in its native name"
+  },
+  "settingsLanguageEnglish": "English",
+  "@settingsLanguageEnglish": {
+    "description": "English language option written in its native name"
+  },
+  "settingsLanguageJapanese": "日本語",
+  "@settingsLanguageJapanese": {
+    "description": "Japanese language option written in its native name"
+  },
+  "settingsLanguageThai": "ไทย",
+  "@settingsLanguageThai": {
+    "description": "Thai language option written in its native name"
+  },
+  "settingsLanguageKorean": "한국어",
+  "@settingsLanguageKorean": {
+    "description": "Korean language option written in its native name"
+  },
+  "settingsLanguageChineseSimplified": "简体中文",
+  "@settingsLanguageChineseSimplified": {
+    "description": "Simplified Chinese language option written in its native name"
+  },
+  "settingsLanguageChineseTraditional": "繁體中文",
+  "@settingsLanguageChineseTraditional": {
+    "description": "Traditional Chinese language option written in its native name"
+  },
+  "settingsTitle": "การตั้งค่า",
+  "@settingsTitle": {
+    "description": "Settings page title and settings button tooltip"
+  },
+  "settingsGeneralSection": "ทั่วไป",
+  "@settingsGeneralSection": {
+    "description": "General settings section heading"
+  },
+  "settingsAppLanguage": "ภาษาของแอป",
+  "@settingsAppLanguage": {
+    "description": "App language row and language picker title"
+  },
+  "settingsAccountSection": "บัญชี",
+  "@settingsAccountSection": {
+    "description": "Account settings section heading"
+  },
+  "settingsSwitchAccount": "สลับบัญชี",
+  "@settingsSwitchAccount": {
+    "description": "Switch account row and bottom sheet title"
+  },
+  "settingsAddAccount": "เพิ่มบัญชี",
+  "@settingsAddAccount": {
+    "description": "Action that starts sign-in for another account"
+  },
+  "settingsAccountSwitchFailed": "ไม่สามารถสลับบัญชีได้ โปรดลงชื่อเข้าใช้บัญชีนั้นอีกครั้ง",
+  "@settingsAccountSwitchFailed": {
+    "description": "Error shown when a saved account session cannot be restored"
+  },
+  "settingsSignOutFailed": "ไม่สามารถออกจากระบบได้ โปรดลองอีกครั้ง",
+  "@settingsSignOutFailed": {
+    "description": "Error shown when signing out fails"
+  },
+  "navHome": "หน้าหลัก",
+  "@navHome": {
+    "description": "Home tab accessibility label"
+  },
+  "navSearch": "ค้นหา",
+  "@navSearch": {
+    "description": "Search tab accessibility label"
+  },
+  "navFavorites": "รายการโปรด",
+  "@navFavorites": {
+    "description": "Favorites tab accessibility label"
+  },
+  "navProfile": "โปรไฟล์",
+  "@navProfile": {
+    "description": "Profile tab accessibility label"
+  },
+  "navNotifications": "การแจ้งเตือน",
+  "@navNotifications": {
+    "description": "Notifications page title and tooltip"
+  },
+  "internetOffline": "ไม่มีการเชื่อมต่ออินเทอร์เน็ต",
+  "@internetOffline": {
+    "description": "Banner shown while the device is offline"
+  },
+  "internetBackOnline": "กลับมาออนไลน์แล้ว",
+  "@internetBackOnline": {
+    "description": "Banner shown when Internet access returns"
+  },
+  "authJoinMember": "เข้าร่วมเป็นสมาชิก",
+  "@authJoinMember": {
+    "description": "Action inviting a signed-out user to authenticate"
+  },
+  "authSignInTitle": "ลงชื่อเข้าใช้ Liquid Phim",
+  "@authSignInTitle": {
+    "description": "Sign-in page heading"
+  },
+  "authSignIn": "ลงชื่อเข้าใช้",
+  "@authSignIn": {
+    "description": "Sign-in action"
+  },
+  "authSignInFailed": "ลงชื่อเข้าใช้ไม่สำเร็จ โปรดลองอีกครั้ง",
+  "@authSignInFailed": {
+    "description": "Fallback sign-in failure message"
+  },
+  "authSignInToComment": "ลงชื่อเข้าใช้เพื่อแสดงความคิดเห็นและมีส่วนร่วมกับชุมชน",
+  "@authSignInToComment": {
+    "description": "Sign-in benefit shown when authentication is required for comments"
+  },
+  "authGoogleSyncDescription": "ดำเนินการต่อด้วย Google เพื่อซิงค์บัญชีและเข้าร่วมชุมชน",
+  "@authGoogleSyncDescription": {
+    "description": "Description of Google sign-in benefits"
+  },
+  "authGoogleConsent": "เมื่อดำเนินการต่อ คุณยอมรับการใช้บัญชี Google ของคุณกับ Liquid Phim",
+  "@authGoogleConsent": {
+    "description": "Consent copy below the Google sign-in action"
+  },
+  "authContinueWithGoogle": "ดำเนินการต่อด้วย Google",
+  "@authContinueWithGoogle": {
+    "description": "Google sign-in action"
+  },
+  "authGoogleSignInFailed": "ไม่สามารถลงชื่อเข้าใช้ด้วย Google ได้ โปรดลองอีกครั้ง",
+  "@authGoogleSignInFailed": {
+    "description": "Google sign-in failure message"
+  },
+  "authGoogleSignInCheckFailed": "ไม่สามารถลงชื่อเข้าใช้ด้วย Google ได้ โปรดตรวจสอบการเชื่อมต่อแล้วลองอีกครั้ง",
+  "@authGoogleSignInCheckFailed": {
+    "description": "Google sign-in failure message that asks the user to check and retry"
+  },
+  "authSessionUpdateFailed": "ไม่สามารถอัปเดตเซสชันการลงชื่อเข้าใช้ได้",
+  "@authSessionUpdateFailed": {
+    "description": "Authentication session refresh failure"
+  },
+  "authLoginRequired": "คุณต้องลงชื่อเข้าใช้",
+  "@authLoginRequired": {
+    "description": "Message shown when a signed-in user is required"
+  },
+  "authLoginRequiredForAction": "คุณต้องลงชื่อเข้าใช้เพื่อดำเนินการนี้",
+  "@authLoginRequiredForAction": {
+    "description": "Message shown when an action requires authentication"
+  },
+  "authEmail": "อีเมล",
+  "@authEmail": {
+    "description": "Email field label or hint"
+  },
+  "authPassword": "รหัสผ่าน",
+  "@authPassword": {
+    "description": "Password field label or hint"
+  },
+  "authFullName": "ชื่อ-นามสกุล",
+  "@authFullName": {
+    "description": "Full name field label or hint"
+  },
+  "authForgotPassword": "ลืมรหัสผ่าน?",
+  "@authForgotPassword": {
+    "description": "Forgot password action"
+  },
+  "authOrContinueWith": "หรือดำเนินการต่อด้วย",
+  "@authOrContinueWith": {
+    "description": "Separator before social sign-in options"
+  },
+  "authAlreadyHaveAccount": "มีบัญชีอยู่แล้ว?",
+  "@authAlreadyHaveAccount": {
+    "description": "Prompt on the sign-up page"
+  },
+  "authFullNameRequired": "กรุณากรอกชื่อ-นามสกุล",
+  "@authFullNameRequired": {
+    "description": "Full name validation error"
+  },
+  "authFullNameLength": "ชื่อ-นามสกุลต้องมีความยาว 3 ถึง 15 ตัวอักษร",
+  "@authFullNameLength": {
+    "description": "Full name length validation error"
+  },
+  "authEmailRequired": "กรุณากรอกอีเมล",
+  "@authEmailRequired": {
+    "description": "Email validation error"
+  },
+  "authEmailInvalid": "กรุณากรอกอีเมลที่ถูกต้อง",
+  "@authEmailInvalid": {
+    "description": "Email format validation error"
+  },
+  "authPasswordRequired": "กรุณากรอกรหัสผ่าน",
+  "@authPasswordRequired": {
+    "description": "Password validation error"
+  },
+  "authPasswordLength": "รหัสผ่านต้องมีความยาว 6 ถึง 15 ตัวอักษร",
+  "@authPasswordLength": {
+    "description": "Password length validation error"
+  },
+  "authAccountAlreadyExists": "มีบัญชีนี้อยู่แล้ว โปรดใช้อีเมลอื่น",
+  "@authAccountAlreadyExists": {
+    "description": "Sign-up failure when an account already exists"
+  },
+  "authWeakPassword": "รหัสผ่านนี้ไม่ปลอดภัยเพียงพอ โปรดใช้รหัสผ่านที่แข็งแรงขึ้น",
+  "@authWeakPassword": {
+    "description": "Weak password validation returned by authentication"
+  },
+  "authInvalidCredentials": "อีเมลหรือรหัสผ่านไม่ถูกต้อง โปรดลองอีกครั้ง",
+  "@authInvalidCredentials": {
+    "description": "Invalid sign-in credentials message"
+  },
+  "authUnexpectedError": "เกิดข้อผิดพลาด โปรดลองอีกครั้ง",
+  "@authUnexpectedError": {
+    "description": "Generic authentication failure"
+  },
+  "authSignUpFailed": "ไม่สามารถสร้างบัญชีได้ โปรดลองอีกครั้ง",
+  "@authSignUpFailed": {
+    "description": "Generic sign-up failure"
+  },
+  "authSignUpSucceeded": "สร้างบัญชีเรียบร้อยแล้ว",
+  "@authSignUpSucceeded": {
+    "description": "Sign-up success message"
+  },
+  "authSignInSucceeded": "ลงชื่อเข้าใช้สำเร็จ",
+  "@authSignInSucceeded": {
+    "description": "Sign-in success message"
+  },
+  "authSignOutSucceeded": "ออกจากระบบสำเร็จ",
+  "@authSignOutSucceeded": {
+    "description": "Sign-out success message"
+  },
+  "authTokenConfirmed": "ยืนยันรหัสเรียบร้อยแล้ว",
+  "@authTokenConfirmed": {
+    "description": "Password reset token confirmation success"
+  },
+  "authTokenInvalid": "รหัสยืนยันไม่ถูกต้อง",
+  "@authTokenInvalid": {
+    "description": "Password reset token validation failure"
+  },
+  "homeEnableNewMovieNotificationsTitle": "ต้องการรับการแจ้งเตือนหนังใหม่หรือไม่?",
+  "@homeEnableNewMovieNotificationsTitle": {
+    "description": "Title of the new movie notification opt-in dialog"
+  },
+  "homeEnableNewMovieNotificationsBody": "Liquid Phim สามารถตรวจสอบเป็นระยะในเบื้องหลังและแจ้งเตือนเมื่อพบหนังใหม่ ระบบปฏิบัติการอาจหน่วงการตรวจสอบเกิน 20 นาทีเพื่อประหยัดแบตเตอรี่",
+  "@homeEnableNewMovieNotificationsBody": {
+    "description": "Explanation in the new movie notification opt-in dialog"
+  },
+  "homeEnableNotifications": "เปิดการแจ้งเตือน",
+  "@homeEnableNotifications": {
+    "description": "Action that enables new movie notifications"
+  },
+  "homeDoNotEnable": "ไว้ภายหลัง",
+  "@homeDoNotEnable": {
+    "description": "Action that declines new movie notifications"
+  },
+  "homeNotificationPermissionDisabled": "สิทธิ์การแจ้งเตือนถูกปิดอยู่ คุณสามารถเปิดอีกครั้งได้ในการตั้งค่าโทรศัพท์",
+  "@homeNotificationPermissionDisabled": {
+    "description": "Message shown when notification permission is not granted"
+  },
+  "homeLoadMoviesFailed": "ไม่สามารถโหลดหนังได้\nลากลงเพื่อลองอีกครั้ง",
+  "@homeLoadMoviesFailed": {
+    "description": "Home page movie loading error with retry guidance"
+  },
+  "homeRecommended": "แนะนำ",
+  "@homeRecommended": {
+    "description": "Recommended movies filter"
+  },
+  "homeGenres": "ประเภท",
+  "@homeGenres": {
+    "description": "Genres filter or section label"
+  },
+  "homeCountries": "ประเทศ",
+  "@homeCountries": {
+    "description": "Countries filter or section label"
+  },
+  "homeYear": "ปี",
+  "@homeYear": {
+    "description": "Year filter label"
+  },
+  "homeFreshMovies": "หนังมาใหม่!",
+  "@homeFreshMovies": {
+    "description": "Heading for newly released movies"
+  },
+  "homeKoreanMovies": "หนังเกาหลี",
+  "@homeKoreanMovies": {
+    "description": "Heading for the Korean movie section"
+  },
+  "homeChineseMovies": "หนังจีน",
+  "@homeChineseMovies": {
+    "description": "Heading for the Chinese movie section"
+  },
+  "homeUsUkMovies": "หนังสหรัฐฯ และอังกฤษ",
+  "@homeUsUkMovies": {
+    "description": "Heading for the US and UK movie section"
+  },
+  "homeWatchMovie": "รับชม",
+  "@homeWatchMovie": {
+    "description": "Primary action that starts movie playback"
+  },
+  "homeInformation": "ข้อมูล",
+  "@homeInformation": {
+    "description": "Action that opens movie information"
+  },
+  "homeViewAll": "ดูทั้งหมด",
+  "@homeViewAll": {
+    "description": "Action that opens all items in a section"
+  },
+  "homeWhatToWatch": "วันนี้อยากดูอะไร?",
+  "@homeWhatToWatch": {
+    "description": "Heading above movie type recommendations"
+  },
+  "homeViewMore": "ดูเพิ่มเติม",
+  "@homeViewMore": {
+    "description": "Action to show more movie recommendations"
+  },
+  "homeAppVersion": "เวอร์ชัน: {version} ({buildNumber})",
+  "@homeAppVersion": {
+    "description": "Application version and build number",
+    "placeholders": {
+      "version": {
+        "type": "String"
+      },
+      "buildNumber": {
+        "type": "String"
+      }
+    }
+  },
+  "filterMovieType": "ประเภทเนื้อหา",
+  "@filterMovieType": {
+    "description": "Movie type filter heading"
+  },
+  "filterSeries": "ซีรีส์",
+  "@filterSeries": {
+    "description": "Series movie type"
+  },
+  "filterSingleMovies": "ภาพยนตร์",
+  "@filterSingleMovies": {
+    "description": "Single movie type"
+  },
+  "filterAnimation": "แอนิเมชัน",
+  "@filterAnimation": {
+    "description": "Animation movie type"
+  },
+  "filterTvShows": "รายการทีวี",
+  "@filterTvShows": {
+    "description": "TV show movie type"
+  },
+  "filterSubtitled": "ซับไตเติล",
+  "@filterSubtitled": {
+    "description": "Content with subtitles"
+  },
+  "filterVoiceOver": "พากย์บรรยาย",
+  "@filterVoiceOver": {
+    "description": "Content with voice-over narration"
+  },
+  "filterDubbed": "พากย์เสียง",
+  "@filterDubbed": {
+    "description": "Dubbed content"
+  },
+  "filterChooseMovieType": "โปรดเลือกประเภทเนื้อหา",
+  "@filterChooseMovieType": {
+    "description": "Validation message when no movie type is selected"
+  },
+  "filterChooseGenre": "โปรดเลือกประเภท",
+  "@filterChooseGenre": {
+    "description": "Validation message when no genre is selected"
+  },
+  "filterChooseCountry": "เลือกประเทศที่ต้องการกรอง",
+  "@filterChooseCountry": {
+    "description": "Validation message when no country is selected"
+  },
+  "filterChooseYear": "เลือกปีที่ต้องการกรอง",
+  "@filterChooseYear": {
+    "description": "Validation message when no year is selected"
+  },
+  "filterLanguage": "ภาษา",
+  "@filterLanguage": {
+    "description": "Content language filter heading"
+  },
+  "filterSortBy": "เรียงตาม",
+  "@filterSortBy": {
+    "description": "Sort field heading"
+  },
+  "filterSortDirection": "ทิศทางการเรียง",
+  "@filterSortDirection": {
+    "description": "Ascending or descending sort heading"
+  },
+  "filterDescending": "มากไปน้อย",
+  "@filterDescending": {
+    "description": "Descending sort option"
+  },
+  "filterAscending": "น้อยไปมาก",
+  "@filterAscending": {
+    "description": "Ascending sort option"
+  },
+  "filterMostViewed": "ยอดชมสูงสุด",
+  "@filterMostViewed": {
+    "description": "Most viewed sort option"
+  },
+  "filterNewest": "ใหม่ล่าสุด",
+  "@filterNewest": {
+    "description": "Newest sort option"
+  },
+  "filterReleaseYear": "ปีที่ออกฉาย",
+  "@filterReleaseYear": {
+    "description": "Release year sort option"
+  },
+  "filterApply": "ใช้ตัวกรอง",
+  "@filterApply": {
+    "description": "Action that applies all selected filters"
+  },
+  "filterResults": "ผลการกรอง",
+  "@filterResults": {
+    "description": "Action that applies a simple filter"
+  },
+  "searchAttentionTitle": "โปรดทราบ",
+  "@searchAttentionTitle": {
+    "description": "Search validation dialog title"
+  },
+  "searchEnterKeywordBeforeFiltering": "กรุณากรอกคำค้นก่อนกรองหนัง",
+  "@searchEnterKeywordBeforeFiltering": {
+    "description": "Validation shown when filters are opened without a search keyword"
+  },
+  "searchNoResults": "ไม่พบผลลัพธ์",
+  "@searchNoResults": {
+    "description": "Search empty result message"
+  },
+  "searchMovieActorHint": "ค้นหาหนัง นักแสดง...",
+  "@searchMovieActorHint": {
+    "description": "Search input hint"
+  },
+  "searchFilterTooltip": "ตัวกรองการค้นหา",
+  "@searchFilterTooltip": {
+    "description": "Tooltip and title for search filters"
+  },
+  "searchStartPrompt": "กรอกชื่อหนังเพื่อเริ่มค้นหา",
+  "@searchStartPrompt": {
+    "description": "Prompt shown before the first search"
+  },
+  "searchRecent": "การค้นหาล่าสุด",
+  "@searchRecent": {
+    "description": "Recent search history heading"
+  },
+  "searchLoadingGenres": "กำลังโหลดประเภท...",
+  "@searchLoadingGenres": {
+    "description": "Loading state for genres in search filters"
+  },
+  "searchLoadingCountries": "กำลังโหลดประเทศ...",
+  "@searchLoadingCountries": {
+    "description": "Loading state for countries in search filters"
+  },
+  "searchNoMovies": "ไม่มีหนัง",
+  "@searchNoMovies": {
+    "description": "Movie list empty state"
+  },
+  "searchTryDifferentFilters": "ลองใช้ตัวกรองอื่น",
+  "@searchTryDifferentFilters": {
+    "description": "Guidance shown when filters return no movies"
+  },
+  "librarySignOutTitle": "ออกจากระบบหรือไม่?",
+  "@librarySignOutTitle": {
+    "description": "Sign-out confirmation dialog title"
+  },
+  "librarySignOutConfirmation": "คุณแน่ใจหรือไม่ว่าต้องการออกจากบัญชีนี้?",
+  "@librarySignOutConfirmation": {
+    "description": "Sign-out confirmation dialog body"
+  },
+  "librarySignOut": "ออกจากระบบ",
+  "@librarySignOut": {
+    "description": "Sign-out action and tooltip"
+  },
+  "libraryDeleteSelectedMoviesTitle": "ลบหนังที่เลือก {count} เรื่องหรือไม่?",
+  "@libraryDeleteSelectedMoviesTitle": {
+    "description": "Title for deleting selected movies",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "libraryDeleteHistoryMovieTitle": "ลบหนังเรื่องนี้ออกจากประวัติหรือไม่?",
+  "@libraryDeleteHistoryMovieTitle": {
+    "description": "Title for deleting one history item"
+  },
+  "libraryDeleteHistoryConfirmation": "ลบหนัง {count} เรื่องออกจากประวัติการรับชมหรือไม่?",
+  "@libraryDeleteHistoryConfirmation": {
+    "description": "Confirmation for removing movies from watch history",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "libraryDeleteFavoriteMovieTitle": "นำหนังเรื่องนี้ออกจากรายการโปรดหรือไม่?",
+  "@libraryDeleteFavoriteMovieTitle": {
+    "description": "Title for deleting one favorite movie"
+  },
+  "libraryDeleteFavoritesConfirmation": "นำหนัง {count} เรื่องออกจากรายการโปรดหรือไม่?",
+  "@libraryDeleteFavoritesConfirmation": {
+    "description": "Confirmation for removing movies from favorites",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "libraryCancelSelection": "ยกเลิกการเลือก",
+  "@libraryCancelSelection": {
+    "description": "Tooltip that exits selection mode"
+  },
+  "libraryDeleteSelectedMovies": "ลบหนังที่เลือก",
+  "@libraryDeleteSelectedMovies": {
+    "description": "Tooltip that deletes selected movies"
+  },
+  "libraryCannotResumeMovie": "ไม่สามารถเล่นหนังเรื่องนี้ต่อได้ในขณะนี้",
+  "@libraryCannotResumeMovie": {
+    "description": "Error shown when playback cannot resume from history"
+  },
+  "libraryYourProfile": "โปรไฟล์ของคุณ",
+  "@libraryYourProfile": {
+    "description": "Profile section title"
+  },
+  "librarySignInProfileDescription": "ลงชื่อเข้าใช้เพื่อแก้ไขโปรไฟล์และซิงค์ประวัติการรับชม",
+  "@librarySignInProfileDescription": {
+    "description": "Description shown to a signed-out user on the profile page"
+  },
+  "libraryWatchHistory": "ประวัติการรับชม",
+  "@libraryWatchHistory": {
+    "description": "Watch history heading"
+  },
+  "libraryNoWatchHistory": "ยังไม่มีประวัติการรับชม",
+  "@libraryNoWatchHistory": {
+    "description": "Empty watch history message"
+  },
+  "libraryFavorites": "รายการโปรด",
+  "@libraryFavorites": {
+    "description": "Favorites page title"
+  },
+  "librarySignInToSaveFavorites": "ลงชื่อเข้าใช้เพื่อบันทึกหนังโปรด",
+  "@librarySignInToSaveFavorites": {
+    "description": "Signed-out favorites page heading"
+  },
+  "libraryFavoritesSyncDescription": "รายการของคุณจะซิงค์ระหว่างอุปกรณ์ต่าง ๆ",
+  "@libraryFavoritesSyncDescription": {
+    "description": "Signed-out favorites page description"
+  },
+  "libraryNoFavorites": "ยังไม่มีหนังในรายการโปรด",
+  "@libraryNoFavorites": {
+    "description": "Empty favorites message"
+  },
+  "libraryRemoveFromList": "นำออกจากรายการ",
+  "@libraryRemoveFromList": {
+    "description": "Tooltip for deleting a library movie card"
+  },
+  "libraryContinueProgress": "ดูต่อจาก {progress}%",
+  "@libraryContinueProgress": {
+    "description": "Playback progress action on a library movie card",
+    "placeholders": {
+      "progress": {
+        "type": "int"
+      }
+    }
+  },
+  "libraryDateDayMonth": "{date}",
+  "@libraryDateDayMonth": {
+    "description": "Short month and day label for a watch history group",
+    "placeholders": {
+      "date": {
+        "type": "DateTime",
+        "format": "MMMd"
+      }
+    }
+  },
+  "libraryLoadFailed": "ไม่สามารถโหลดคลังของคุณได้ โปรดลองอีกครั้ง",
+  "@libraryLoadFailed": {
+    "description": "Library loading failure"
+  },
+  "libraryFavoriteUpdateFailed": "ไม่สามารถอัปเดตรายการโปรดได้ โปรดลองอีกครั้ง",
+  "@libraryFavoriteUpdateFailed": {
+    "description": "Favorite update failure"
+  },
+  "libraryFavoriteRemoveFailed": "ไม่สามารถนำออกจากรายการโปรดได้ โปรดลองอีกครั้ง",
+  "@libraryFavoriteRemoveFailed": {
+    "description": "Favorite removal failure"
+  },
+  "libraryHistorySyncLater": "ประวัติของคุณจะซิงค์อีกครั้งในภายหลัง",
+  "@libraryHistorySyncLater": {
+    "description": "Deferred watch history synchronization message"
+  },
+  "libraryHistoryDeleteFailed": "ไม่สามารถลบประวัติการรับชมได้ โปรดลองอีกครั้ง",
+  "@libraryHistoryDeleteFailed": {
+    "description": "Watch history deletion failure"
+  },
+  "profileEdit": "แก้ไขโปรไฟล์",
+  "@profileEdit": {
+    "description": "Edit profile page title"
+  },
+  "profileChangePhoto": "เปลี่ยนรูป",
+  "@profileChangePhoto": {
+    "description": "Action for changing the profile photo"
+  },
+  "profileName": "ชื่อ",
+  "@profileName": {
+    "description": "Display name field label"
+  },
+  "profileNameDescription": "ชื่อนี้จะแสดงบนโปรไฟล์ Liquid Phim ของคุณ",
+  "@profileNameDescription": {
+    "description": "Display name explanation"
+  },
+  "profileNameHint": "กรอกชื่อที่แสดง",
+  "@profileNameHint": {
+    "description": "Display name input hint"
+  },
+  "profileClearName": "ล้างชื่อ",
+  "@profileClearName": {
+    "description": "Tooltip that clears the display name field"
+  },
+  "profileEmailDescription": "อีเมลนี้เชื่อมโยงกับบัญชีของคุณและจะแสดงเฉพาะที่นี่",
+  "@profileEmailDescription": {
+    "description": "Email privacy explanation on the edit profile page"
+  },
+  "profileChangeAvatar": "เปลี่ยนรูปโปรไฟล์",
+  "@profileChangeAvatar": {
+    "description": "Avatar action sheet heading"
+  },
+  "profileTakePhoto": "ถ่ายรูป",
+  "@profileTakePhoto": {
+    "description": "Camera avatar source action"
+  },
+  "profileUploadPhoto": "อัปโหลดรูป",
+  "@profileUploadPhoto": {
+    "description": "Gallery avatar source action"
+  },
+  "profileViewPhoto": "ดูรูป",
+  "@profileViewPhoto": {
+    "description": "Action that opens the current avatar"
+  },
+  "profileAvatar": "รูปโปรไฟล์",
+  "@profileAvatar": {
+    "description": "Full-screen profile photo page title"
+  },
+  "profileCropAvatar": "ครอปรูปโปรไฟล์",
+  "@profileCropAvatar": {
+    "description": "Image cropper title"
+  },
+  "profileAvatarUpdated": "อัปเดตรูปโปรไฟล์แล้ว",
+  "@profileAvatarUpdated": {
+    "description": "Avatar update success message"
+  },
+  "profileAvatarUpdateFailed": "ไม่สามารถอัปเดตรูปโปรไฟล์ได้ โปรดลองอีกครั้ง",
+  "@profileAvatarUpdateFailed": {
+    "description": "Avatar update failure message"
+  },
+  "profilePhotoOpenFailed": "ไม่สามารถเปิดรูปได้ โปรดตรวจสอบสิทธิ์การเข้าถึงรูปภาพ",
+  "@profilePhotoOpenFailed": {
+    "description": "Photo picker failure message"
+  },
+  "profileNameUpdated": "อัปเดตชื่อที่แสดงแล้ว",
+  "@profileNameUpdated": {
+    "description": "Display name update success message"
+  },
+  "profileNameUpdateFailed": "ไม่สามารถอัปเดตชื่อได้ โปรดลองอีกครั้ง",
+  "@profileNameUpdateFailed": {
+    "description": "Display name update failure message"
+  },
+  "profileNameRequired": "กรุณากรอกชื่อ",
+  "@profileNameRequired": {
+    "description": "Display name required validation message"
+  },
+  "profileUpdatedProfileReadFailed": "ไม่สามารถอ่านโปรไฟล์ที่อัปเดตแล้วได้",
+  "@profileUpdatedProfileReadFailed": {
+    "description": "Failure while reading the profile immediately after an update"
+  },
+  "detailCastUnavailable": "ไม่มีข้อมูลนักแสดง",
+  "@detailCastUnavailable": {
+    "description": "Empty cast message"
+  },
+  "detailCast": "นักแสดง",
+  "@detailCast": {
+    "description": "Cast tab or section title"
+  },
+  "detailRecommendationsLoadFailed": "ไม่สามารถโหลดรายการแนะนำได้",
+  "@detailRecommendationsLoadFailed": {
+    "description": "Movie recommendations loading failure"
+  },
+  "detailNoRecommendations": "ไม่มีรายการแนะนำ",
+  "@detailNoRecommendations": {
+    "description": "Empty movie recommendations message"
+  },
+  "detailEpisodeNotFound": "ตอนที่ {episode} ไม่มีในเซิร์ฟเวอร์ปัจจุบัน",
+  "@detailEpisodeNotFound": {
+    "description": "Dialog message when an episode does not exist on the selected server",
+    "placeholders": {
+      "episode": {
+        "type": "int"
+      }
+    }
+  },
+  "detailNoEpisodes": "ไม่มีตอนที่พร้อมใช้งาน",
+  "@detailNoEpisodes": {
+    "description": "Empty episode list message"
+  },
+  "detailWatchThisVersion": "ดูเวอร์ชันนี้",
+  "@detailWatchThisVersion": {
+    "description": "Action that starts a particular server or dub version"
+  },
+  "detailServer": "เซิร์ฟเวอร์",
+  "@detailServer": {
+    "description": "Single movie server section label"
+  },
+  "detailServerNumber": "เซิร์ฟเวอร์ {number}",
+  "@detailServerNumber": {
+    "description": "Fallback server name",
+    "placeholders": {
+      "number": {
+        "type": "int"
+      }
+    }
+  },
+  "detailEpisodeRange": "ตอนที่ 1–{count}",
+  "@detailEpisodeRange": {
+    "description": "Episode range heading",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "detailEnterEpisode": "กรอกเลขตอน",
+  "@detailEnterEpisode": {
+    "description": "Episode search input hint"
+  },
+  "detailLoadMovieError": "ไม่สามารถโหลดหนังได้",
+  "@detailLoadMovieError": {
+    "description": "Movie detail loading error title"
+  },
+  "detailEpisodesTab": "ตอน",
+  "@detailEpisodesTab": {
+    "description": "Episodes tab title"
+  },
+  "detailRecommendationsTab": "แนะนำ",
+  "@detailRecommendationsTab": {
+    "description": "Recommendations tab title"
+  },
+  "detailCommentsTab": "ความคิดเห็น",
+  "@detailCommentsTab": {
+    "description": "Comments tab title"
+  },
+  "detailInTheaters": "เข้าฉายในโรง",
+  "@detailInTheaters": {
+    "description": "Badge for theatrical movies"
+  },
+  "detailExclusiveSubtitles": "ซับไตเติลพิเศษ",
+  "@detailExclusiveSubtitles": {
+    "description": "Badge for exclusive subtitles"
+  },
+  "detailDirectorLabel": "ผู้กำกับ:",
+  "@detailDirectorLabel": {
+    "description": "Movie director metadata label"
+  },
+  "detailCreatedDateLabel": "เพิ่มเมื่อ:",
+  "@detailCreatedDateLabel": {
+    "description": "Movie record creation date metadata label"
+  },
+  "detailProductionYearLabel": "ปีที่ผลิต:",
+  "@detailProductionYearLabel": {
+    "description": "Movie production year metadata label"
+  },
+  "detailCountryLabel": "ประเทศ:",
+  "@detailCountryLabel": {
+    "description": "Movie country metadata label"
+  },
+  "detailWatchLatestEpisode": "ดูตอนล่าสุด",
+  "@detailWatchLatestEpisode": {
+    "description": "Action that starts the latest episode"
+  },
+  "detailWatchMovie": "ดูหนัง",
+  "@detailWatchMovie": {
+    "description": "Action that starts a full movie"
+  },
+  "detailIntroduction": "ภาพรวม",
+  "@detailIntroduction": {
+    "description": "Movie description section heading"
+  },
+  "detailFavorite": "รายการโปรด",
+  "@detailFavorite": {
+    "description": "Favorite movie action label"
+  },
+  "detailContent": "เรื่องย่อ",
+  "@detailContent": {
+    "description": "Movie synopsis heading in the quick detail dialog"
+  },
+  "detailNoPlayableEpisodes": "หนังเรื่องนี้ยังไม่มีตอนที่สามารถเล่นได้ โปรดลองอีกครั้งภายหลัง",
+  "@detailNoPlayableEpisodes": {
+    "description": "Dialog message when a movie has no playable episodes"
+  },
+  "detailDetails": "รายละเอียด",
+  "@detailDetails": {
+    "description": "Movie details section or action"
+  },
+  "detailVideoQuality": "คุณภาพวิดีโอ",
+  "@detailVideoQuality": {
+    "description": "Video quality selection sheet title"
+  },
+  "detailViews": "รับชม {count} ครั้ง",
+  "@detailViews": {
+    "description": "Formatted movie view count",
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "detailLikes": "ถูกใจ {count} ครั้ง",
+  "@detailLikes": {
+    "description": "Formatted movie like count",
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "detailUpdatedJustNow": "อัปเดตเมื่อสักครู่",
+  "@detailUpdatedJustNow": {
+    "description": "Relative update time less than one minute ago"
+  },
+  "playerSubtitleServer": "ซับไตเติล",
+  "@playerSubtitleServer": {
+    "description": "Fallback name for a subtitle server"
+  },
+  "playerNowPlaying": "กำลังเล่น",
+  "@playerNowPlaying": {
+    "description": "Label for the currently playing episode or server"
+  },
+  "playerNowPlayingEpisode": "กำลังเล่น: {episode}",
+  "@playerNowPlayingEpisode": {
+    "description": "Currently playing episode label",
+    "placeholders": {
+      "episode": {
+        "type": "String"
+      }
+    }
+  },
+  "playerEpisodeAndServer": "{episode} — {server}",
+  "@playerEpisodeAndServer": {
+    "description": "Now-playing subtitle containing episode and server names",
+    "placeholders": {
+      "episode": {
+        "type": "String"
+      },
+      "server": {
+        "type": "String"
+      }
+    }
+  },
+  "playerSourceUnavailable": "เซิร์ฟเวอร์นี้ไม่มีแหล่งวิดีโอที่เล่นได้",
+  "@playerSourceUnavailable": {
+    "description": "Player error when a server contains no source URL"
+  },
+  "playerSourceLoadFailed": "ไม่สามารถโหลดแหล่งวิดีโอนี้ได้",
+  "@playerSourceLoadFailed": {
+    "description": "Player source loading failure"
+  },
+  "playerAutoplayEnabled": "เปิดเล่นอัตโนมัติแล้ว",
+  "@playerAutoplayEnabled": {
+    "description": "Toast shown after enabling episode autoplay"
+  },
+  "playerAutoplayDisabled": "ปิดเล่นอัตโนมัติแล้ว",
+  "@playerAutoplayDisabled": {
+    "description": "Toast shown after disabling episode autoplay"
+  },
+  "playerNoMoreEpisodes": "ถึงตอนสุดท้ายแล้ว",
+  "@playerNoMoreEpisodes": {
+    "description": "Toast shown when navigating after the final episode"
+  },
+  "playerFirstEpisode": "นี่คือตอนแรก",
+  "@playerFirstEpisode": {
+    "description": "Toast shown when navigating before the first episode"
+  },
+  "playerPlaybackFailed": "ไม่สามารถเล่นวิดีโอได้ โปรดลองอีกครั้ง",
+  "@playerPlaybackFailed": {
+    "description": "Generic video playback failure"
+  },
+  "playerPlay": "เล่น",
+  "playerPause": "หยุดชั่วคราว",
+  "playerPullDownToCloseComments": "ลากลงเพื่อปิดความคิดเห็น",
+  "@playerPullDownToCloseComments": {
+    "description": "Accessibility label for dismissing the comments sheet"
+  },
+  "playerPlayOnTv": "เล่นบนทีวี",
+  "@playerPlayOnTv": {
+    "description": "Casting action tooltip"
+  },
+  "playerEpisodeList": "รายการตอน",
+  "@playerEpisodeList": {
+    "description": "Episode list button tooltip"
+  },
+  "playerVideoProgress": "ความคืบหน้าวิดีโอ",
+  "@playerVideoProgress": {
+    "description": "Accessibility label for the video seek bar"
+  },
+  "playerClose": "ปิดโปรแกรมเล่น",
+  "@playerClose": {
+    "description": "Tooltip that closes the persistent player"
+  },
+  "playerContinueWatchingTitle": "ดูต่อหรือไม่?",
+  "@playerContinueWatchingTitle": {
+    "description": "Resume playback dialog title"
+  },
+  "playerContinueWatchingBody": "คุณกำลังดู {episode} ต้องการดูต่อหรือเริ่มใหม่จากตอนที่ 1?",
+  "@playerContinueWatchingBody": {
+    "description": "Resume playback dialog body",
+    "placeholders": {
+      "episode": {
+        "type": "String"
+      }
+    }
+  },
+  "playerRestartFromBeginning": "เริ่มใหม่ตั้งแต่ต้น",
+  "@playerRestartFromBeginning": {
+    "description": "Action that restarts playback from episode 1"
+  },
+  "playerContinue": "ดูต่อ",
+  "@playerContinue": {
+    "description": "Action that resumes playback from history"
+  },
+  "commentsReply": "ตอบกลับ",
+  "@commentsReply": {
+    "description": "Action that replies to a comment"
+  },
+  "commentsReplyCount": "{count, plural, =0{ยังไม่มีคำตอบกลับ} other{{count} คำตอบกลับ}}",
+  "@commentsReplyCount": {
+    "description": "Number of replies to a comment",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "commentsLoadFailedTitle": "ไม่สามารถโหลดความคิดเห็นได้",
+  "@commentsLoadFailedTitle": {
+    "description": "Comments loading error title"
+  },
+  "commentsEmptyTitle": "ยังไม่มีความคิดเห็น",
+  "@commentsEmptyTitle": {
+    "description": "Empty comments title"
+  },
+  "commentsEmptySubtitle": "เป็นคนแรกที่แชร์ความคิดเห็นของคุณ",
+  "@commentsEmptySubtitle": {
+    "description": "Empty comments guidance"
+  },
+  "commentsEditHint": "แก้ไขความคิดเห็น...",
+  "@commentsEditHint": {
+    "description": "Comment composer hint while editing"
+  },
+  "commentsReplyToHint": "ตอบกลับ {name}...",
+  "@commentsReplyToHint": {
+    "description": "Comment composer hint while replying to a person",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "commentsAddReplyHint": "เพิ่มคำตอบกลับ...",
+  "@commentsAddReplyHint": {
+    "description": "Reply composer hint"
+  },
+  "commentsComposerHint": "เขียนความคิดเห็น...",
+  "@commentsComposerHint": {
+    "description": "Default comment composer hint"
+  },
+  "commentsEditingStatus": "กำลังแก้ไขความคิดเห็น",
+  "@commentsEditingStatus": {
+    "description": "Comment composer editing status"
+  },
+  "commentsReplyingStatus": "กำลังตอบกลับ {name}",
+  "@commentsReplyingStatus": {
+    "description": "Comment composer reply status",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "commentsWrite": "เขียนความคิดเห็น",
+  "@commentsWrite": {
+    "description": "Comment input accessibility label"
+  },
+  "commentsSend": "ส่ง",
+  "@commentsSend": {
+    "description": "Send comment action tooltip"
+  },
+  "commentsCloseMenu": "ปิดเมนูความคิดเห็น",
+  "@commentsCloseMenu": {
+    "description": "Accessibility label for closing a comment action menu"
+  },
+  "commentsCopied": "คัดลอกความคิดเห็นแล้ว",
+  "@commentsCopied": {
+    "description": "Toast after copying a comment"
+  },
+  "commentsYourComment": "ความคิดเห็นของคุณ",
+  "@commentsYourComment": {
+    "description": "Action sheet title for the signed-in user's own comment"
+  },
+  "commentsReportReasonTitle": "เหตุใดคุณจึงรายงานความคิดเห็นนี้?",
+  "@commentsReportReasonTitle": {
+    "description": "Comment report reason sheet title"
+  },
+  "commentsReportSent": "ส่งรายงานแล้ว ขอบคุณ",
+  "@commentsReportSent": {
+    "description": "Toast after successfully reporting a comment"
+  },
+  "commentsDeleteTitle": "ลบความคิดเห็นหรือไม่?",
+  "@commentsDeleteTitle": {
+    "description": "Delete comment confirmation title"
+  },
+  "commentsRepliesPreserved": "คำตอบกลับจะยังคงอยู่",
+  "@commentsRepliesPreserved": {
+    "description": "Delete comment confirmation explanation"
+  },
+  "commentsDeleteAction": "ลบความคิดเห็น",
+  "@commentsDeleteAction": {
+    "description": "Delete comment confirmation action"
+  },
+  "commentsSortTitle": "เรียงความคิดเห็น",
+  "@commentsSortTitle": {
+    "description": "Comment sort sheet title and tooltip"
+  },
+  "commentsPopular": "ยอดนิยม",
+  "@commentsPopular": {
+    "description": "Popular comment sort option"
+  },
+  "commentsNewest": "ใหม่ล่าสุด",
+  "@commentsNewest": {
+    "description": "Newest comment sort option"
+  },
+  "commentsCount": "{count, plural, =0{ความคิดเห็น} other{{count} ความคิดเห็น}}",
+  "@commentsCount": {
+    "description": "Comments section count heading",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "commentsCopy": "คัดลอกความคิดเห็น",
+  "@commentsCopy": {
+    "description": "Comment context menu copy action"
+  },
+  "commentsEdited": "แก้ไขแล้ว",
+  "@commentsEdited": {
+    "description": "Label for an edited comment"
+  },
+  "commentsDeleted": "ความคิดเห็นถูกลบแล้ว",
+  "@commentsDeleted": {
+    "description": "Placeholder shown for a deleted comment"
+  },
+  "commentsJustNow": "เมื่อสักครู่",
+  "@commentsJustNow": {
+    "description": "Relative time for an event less than one minute ago"
+  },
+  "commentsMinutesAgo": "{count} นาทีที่แล้ว",
+  "@commentsMinutesAgo": {
+    "description": "Relative time in minutes",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "commentsHoursAgo": "{count} ชั่วโมงที่แล้ว",
+  "@commentsHoursAgo": {
+    "description": "Relative time in hours",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "commentsDaysAgo": "{count} วันที่แล้ว",
+  "@commentsDaysAgo": {
+    "description": "Relative time in days",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "commentsWeeksAgo": "{count} สัปดาห์ที่แล้ว",
+  "@commentsWeeksAgo": {
+    "description": "Relative time in weeks",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "commentsMonthsAgo": "{count} เดือนที่แล้ว",
+  "@commentsMonthsAgo": {
+    "description": "Relative time in months",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "commentsYearsAgo": "{count} ปีที่แล้ว",
+  "@commentsYearsAgo": {
+    "description": "Relative time in years",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "commentsSpamReason": "สแปม",
+  "@commentsSpamReason": {
+    "description": "Comment report reason for spam"
+  },
+  "commentsHarassmentReason": "คุกคามหรือกลั่นแกล้ง",
+  "@commentsHarassmentReason": {
+    "description": "Comment report reason for harassment"
+  },
+  "commentsSpoilerReason": "สปอยล์หนัง",
+  "@commentsSpoilerReason": {
+    "description": "Comment report reason for spoilers"
+  },
+  "commentsInappropriateReason": "เนื้อหาไม่เหมาะสม",
+  "@commentsInappropriateReason": {
+    "description": "Comment report reason for inappropriate content"
+  },
+  "commentsOtherReason": "เหตุผลอื่น",
+  "@commentsOtherReason": {
+    "description": "Fallback comment report reason"
+  },
+  "commentsLoadFailed": "ไม่สามารถโหลดความคิดเห็นได้ โปรดลองอีกครั้ง",
+  "@commentsLoadFailed": {
+    "description": "Initial comments loading failure"
+  },
+  "commentsLoadMoreFailed": "ไม่สามารถโหลดความคิดเห็นเพิ่มเติมได้",
+  "@commentsLoadMoreFailed": {
+    "description": "Pagination failure for comments"
+  },
+  "commentsRepliesLoadFailed": "ไม่สามารถโหลดคำตอบกลับได้",
+  "@commentsRepliesLoadFailed": {
+    "description": "Initial replies loading failure"
+  },
+  "commentsRepliesLoadMoreFailed": "ไม่สามารถโหลดคำตอบกลับเพิ่มเติมได้",
+  "@commentsRepliesLoadMoreFailed": {
+    "description": "Pagination failure for replies"
+  },
+  "commentsSendFailed": "ไม่สามารถส่งความคิดเห็นได้ ข้อความของคุณยังถูกเก็บไว้",
+  "@commentsSendFailed": {
+    "description": "Comment submission failure"
+  },
+  "commentsEditFailed": "ไม่สามารถแก้ไขความคิดเห็นได้",
+  "@commentsEditFailed": {
+    "description": "Comment editing failure"
+  },
+  "commentsDeleteFailed": "ไม่สามารถลบความคิดเห็นได้",
+  "@commentsDeleteFailed": {
+    "description": "Comment deletion failure"
+  },
+  "commentsReactionFailed": "ไม่สามารถอัปเดตการโต้ตอบได้",
+  "@commentsReactionFailed": {
+    "description": "Comment reaction update failure"
+  },
+  "commentsReportFailed": "ความคิดเห็นนี้อาจถูกรายงานแล้ว หรือไม่สามารถส่งรายงานได้",
+  "@commentsReportFailed": {
+    "description": "Comment report failure"
+  },
+  "commentsOperationInProgress": "การดำเนินการนี้กำลังทำงานอยู่แล้ว",
+  "@commentsOperationInProgress": {
+    "description": "Message shown when the same comment operation is already running"
+  },
+  "notificationsEmpty": "ไม่มีการแจ้งเตือนใหม่",
+  "@notificationsEmpty": {
+    "description": "Empty notification inbox message"
+  },
+  "notificationsRepliedToYourComment": "ตอบกลับความคิดเห็นของคุณ",
+  "@notificationsRepliedToYourComment": {
+    "description": "Action phrase in a reply notification"
+  },
+  "notificationsLikedYourComment": "ถูกใจความคิดเห็นของคุณ",
+  "@notificationsLikedYourComment": {
+    "description": "Action phrase in a reaction notification"
+  },
+  "notificationsToday": "วันนี้",
+  "@notificationsToday": {
+    "description": "Notification date group for today"
+  },
+  "notificationsYesterday": "เมื่อวาน",
+  "@notificationsYesterday": {
+    "description": "Notification date group for yesterday"
+  },
+  "notificationsUnknownUser": "ใครบางคน",
+  "@notificationsUnknownUser": {
+    "description": "Fallback actor name in a notification"
+  },
+  "notificationsNewMovieTitle": "หนังใหม่",
+  "@notificationsNewMovieTitle": {
+    "description": "Notification channel and single new movie notification title"
+  },
+  "notificationsNewMoviesTitle": "หนังใหม่ {count} เรื่อง",
+  "@notificationsNewMoviesTitle": {
+    "description": "Notification title for multiple new movies",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "notificationsMovieAdded": "เพิ่ม {movieName} ลงใน Liquid Phim แล้ว",
+  "@notificationsMovieAdded": {
+    "description": "Single new movie notification body",
+    "placeholders": {
+      "movieName": {
+        "type": "String"
+      }
+    }
+  },
+  "notificationsNewMovieChannelDescription": "การแจ้งเตือนเมื่อ Liquid Phim พบหนังใหม่",
+  "@notificationsNewMovieChannelDescription": {
+    "description": "Android new movie notification channel description"
+  },
+  "castChooseDevice": "เลือกอุปกรณ์",
+  "@castChooseDevice": {
+    "description": "Casting device sheet title"
+  },
+  "castAirPlayUnavailableTitle": "ไม่สามารถเปิด AirPlay ได้",
+  "@castAirPlayUnavailableTitle": {
+    "description": "AirPlay launch failure dialog title"
+  },
+  "castAirPlayUnavailableBody": "ตรวจสอบว่า iPhone และทีวีหรือ Mac อยู่บนเครือข่าย Wi-Fi เดียวกัน แล้วลองอีกครั้ง",
+  "@castAirPlayUnavailableBody": {
+    "description": "AirPlay launch failure guidance"
+  },
+  "castVideoUnavailableTitle": "ไม่มีวิดีโอที่พร้อมใช้งาน",
+  "@castVideoUnavailableTitle": {
+    "description": "Casting dialog title when video is not ready"
+  },
+  "castVideoUnavailableBody": "รอให้วิดีโอโหลดเสร็จ แล้วเลือกอุปกรณ์ Google Cast",
+  "@castVideoUnavailableBody": {
+    "description": "Casting guidance when video is not ready"
+  },
+  "castConnectionFailedTitle": "ไม่สามารถเชื่อมต่อ Google Cast ได้",
+  "@castConnectionFailedTitle": {
+    "description": "Google Cast connection failure title"
+  },
+  "castConnectionFailedBody": "ตรวจสอบ Google Play services และตรวจสอบว่าโทรศัพท์กับ Chromecast หรือ Google TV อยู่บนเครือข่าย Wi-Fi เดียวกัน",
+  "@castConnectionFailedBody": {
+    "description": "Google Cast connection failure guidance"
+  },
+  "castAirPlayAndBluetoothDevices": "อุปกรณ์ AirPlay และ Bluetooth",
+  "@castAirPlayAndBluetoothDevices": {
+    "description": "AirPlay route picker item title"
+  },
+  "castConnecting": "กำลังเชื่อมต่อ...",
+  "@castConnecting": {
+    "description": "Casting device connection state"
+  },
+  "castSearching": "กำลังค้นหาอุปกรณ์ Google Cast...",
+  "@castSearching": {
+    "description": "Casting device discovery loading state"
+  },
+  "castNoDevices": "ไม่พบอุปกรณ์",
+  "@castNoDevices": {
+    "description": "Casting device discovery empty state"
+  },
+  "castSameWifiGuidance": "ตรวจสอบว่าโทรศัพท์กับ Chromecast หรือ Google TV อยู่บนเครือข่าย Wi-Fi เดียวกัน",
+  "@castSameWifiGuidance": {
+    "description": "Casting device discovery guidance"
+  },
+  "castSearchAgain": "ค้นหาอีกครั้ง",
+  "@castSearchAgain": {
+    "description": "Action that restarts casting device discovery"
+  },
+  "castDefaultDeviceName": "อุปกรณ์ Google Cast",
+  "@castDefaultDeviceName": {
+    "description": "Fallback Google Cast device name"
+  },
+  "shareMovieSubject": "ดู {movieName} บน Liquid Phim",
+  "@shareMovieSubject": {
+    "description": "Movie share sheet subject",
+    "placeholders": {
+      "movieName": {
+        "type": "String"
+      }
+    }
+  },
+  "shareOpenFailed": "ไม่สามารถเปิดหน้าต่างแชร์ได้",
+  "@shareOpenFailed": {
+    "description": "Share sheet launch failure"
+  },
+  "rankingTopFavorites": "อันดับหนังโปรด",
+  "@rankingTopFavorites": {
+    "description": "Favorite movies ranking title"
+  },
+  "rankingTopLiquidPhim": "Liquid Phim TOP 30",
+  "@rankingTopLiquidPhim": {
+    "description": "Overall Liquid Phim ranking title"
+  },
+  "rankingTopHotMovies": "TOP 30 หนังยอดนิยม",
+  "@rankingTopHotMovies": {
+    "description": "Hot single movies ranking title"
+  },
+  "rankingMostViewed": "รับชมมากที่สุด",
+  "@rankingMostViewed": {
+    "description": "Most viewed ranking subtitle"
+  },
+  "rankingMostLiked": "ถูกใจมากที่สุด",
+  "@rankingMostLiked": {
+    "description": "Most liked ranking subtitle"
+  },
+  "rankingEmptyLikes": "อันดับจะแสดงเมื่อมีผู้กดถูกใจหนัง",
+  "@rankingEmptyLikes": {
+    "description": "Empty most-liked ranking message"
+  },
+  "rankingEmptyViews": "อันดับจะแสดงเมื่อมีผู้รับชมหนัง",
+  "@rankingEmptyViews": {
+    "description": "Empty most-viewed ranking message"
+  },
+  "rankingLoadFailed": "ไม่สามารถโหลดอันดับได้",
+  "@rankingLoadFailed": {
+    "description": "Ranking loading failure"
+  },
+  "playerEpisodeNumber": "ตอนที่ {number}",
+  "@playerEpisodeNumber": {
+    "description": "Episode number label",
+    "placeholders": {
+      "number": {
+        "type": "int"
+      }
+    }
+  },
+  "libraryMonthLabel": "เดือน {month}",
+  "@libraryMonthLabel": {
+    "description": "Month label",
+    "placeholders": {
+      "month": {
+        "type": "int"
+      }
+    }
+  }
+}

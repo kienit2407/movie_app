@@ -5,6 +5,8 @@ import 'package:iconsax_flutter/iconsax_flutter.dart';
 import 'package:movie_app/common/helpers/navigation/app_navigation.dart';
 import 'package:movie_app/common/helpers/sort_map.dart';
 import 'package:movie_app/core/config/utils/list_gadient.dart';
+import 'package:movie_app/core/extension/build_context_extension.dart';
+import 'package:movie_app/core/extension/filter_localization_extension.dart';
 import 'package:movie_app/feature/home/domain/entities/fillterType.dart';
 import 'package:movie_app/feature/home/domain/entities/fillter_genre_movie_req.dart';
 import 'package:movie_app/feature/movie_pagination/presentation/pages/all_movie_page.dart';
@@ -76,7 +78,7 @@ class _MovieSectionWithScrollState extends State<MovieSectionWithScroll> {
             Padding(
               padding: EdgeInsets.only(left: 20.w),
               child: Text(
-                'Bạn muốn xem gì hôm nay?',
+                context.l10n.homeWhatToWatch,
                 style: TextStyle(fontSize: 18.sp, fontWeight: FontWeight.w600),
               ),
             ),
@@ -103,7 +105,7 @@ class _MovieSectionWithScrollState extends State<MovieSectionWithScroll> {
                     child: _movieThemeItem(
                       ListGadient.listGadient[index %
                           ListGadient.listGadient.length],
-                      sortMovie.values.single,
+                      context.movieTypeLabel(sortMovie.keys.single),
                       _themeImageBySlug[sortMovie.keys.single] ??
                           'assets/images/hoat_hinh.png',
                     ),
@@ -244,7 +246,7 @@ class _MovieSectionWithScrollState extends State<MovieSectionWithScroll> {
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
                       Text(
-                        'Xem Thêm',
+                        context.l10n.homeViewMore,
                         style: TextStyle(
                           color: Colors.white.withOpacity(.8),
                           fontWeight: FontWeight.w500,

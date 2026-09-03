@@ -8,16 +8,25 @@ import 'package:movie_app/common/bloc/AuthWithSocial/auth_with_social_state.dart
 import 'package:movie_app/common/components/orther/app_option.dart';
 import 'package:movie_app/core/config/assets/app_image.dart';
 import 'package:movie_app/core/config/routes/app_router.dart';
+import 'package:movie_app/core/extension/build_context_extension.dart';
 import 'package:movie_app/feature/auth/presentation/session/auth_session_cubit.dart';
 
 enum SignInPresentation { page, sheet }
 
 class SignInPage extends StatefulWidget {
-  const SignInPage({super.key, this.presentation = SignInPresentation.page});
+  const SignInPage({
+    super.key,
+    this.presentation = SignInPresentation.page,
+    this.forceGoogleAccountPicker = false,
+  });
 
   final SignInPresentation presentation;
+  final bool forceGoogleAccountPicker;
 
-  static Future<bool> showSheet(BuildContext context) async {
+  static Future<bool> showSheet(
+    BuildContext context, {
+    bool forceGoogleAccountPicker = false,
+  }) async {
     final result = await showModalBottomSheet<bool>(
       context: context,
       useRootNavigator: true,
@@ -31,7 +40,10 @@ class SignInPage extends StatefulWidget {
       ),
       builder: (_) => BlocProvider.value(
         value: context.read<AuthWithSocialCubit>(),
-        child: const SignInPage(presentation: SignInPresentation.sheet),
+        child: SignInPage(
+          presentation: SignInPresentation.sheet,
+          forceGoogleAccountPicker: forceGoogleAccountPicker,
+        ),
       ),
     );
     return result == true;
@@ -58,8 +70,7 @@ class _SignInPageState extends State<SignInPage> {
       listener: (context, state) {
         if (state is AuthWithSocialFailure) {
           setState(() {
-            _errorMessage =
-                state.messages ?? 'Đăng nhập chưa thành công. Hãy thử lại.';
+            _errorMessage = context.l10n.authGoogleSignInFailed;
           });
         }
         if (state is AuthWithSocialSuccessfull) {
@@ -81,7 +92,9 @@ class _SignInPageState extends State<SignInPage> {
           onClose: () => Navigator.of(context).maybePop(false),
           onGooglePressed: () {
             setState(() => _errorMessage = null);
-            context.read<AuthWithSocialCubit>().signInWithGoogle();
+            context.read<AuthWithSocialCubit>().signInWithGoogle(
+              forceAccountPicker: widget.forceGoogleAccountPicker,
+            );
           },
         );
       },
@@ -159,10 +172,10 @@ class _SignInContent extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 26),
-                    const Text(
-                      'Đăng nhập Liquid Phim',
+                    Text(
+                      context.l10n.authSignInTitle,
                       textAlign: TextAlign.center,
-                      style: TextStyle(
+                      style: const TextStyle(
                         color: Colors.white,
                         fontSize: 25,
                         fontWeight: FontWeight.w800,
@@ -172,8 +185,8 @@ class _SignInContent extends StatelessWidget {
                     const SizedBox(height: 10),
                     Text(
                       isSheet
-                          ? 'Đăng nhập để bình luận và tương tác cùng mọi người.'
-                          : 'Tiếp tục với Google để đồng bộ tài khoản và tham gia cộng đồng.',
+                          ? context.l10n.authSignInToComment
+                          : context.l10n.authGoogleSyncDescription,
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         color: Colors.white.withValues(alpha: 0.66),
@@ -219,7 +232,7 @@ class _SignInContent extends StatelessWidget {
                             ),
                     ),
                     Text(
-                      'Bằng việc tiếp tục, bạn đồng ý sử dụng tài khoản Google cho Liquid Phim.',
+                      context.l10n.authGoogleConsent,
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         color: Colors.white.withValues(alpha: 0.38),
@@ -261,7 +274,7 @@ class _Header extends StatelessWidget {
           Align(
             alignment: Alignment.centerRight,
             child: IconButton(
-              tooltip: 'Đóng',
+              tooltip: context.l10n.commonClose,
               onPressed: onClose,
               icon: const Icon(Icons.close_rounded, color: Colors.white),
             ),
@@ -273,7 +286,7 @@ class _Header extends StatelessWidget {
     return Align(
       alignment: Alignment.centerLeft,
       child: IconButton.filledTonal(
-        tooltip: 'Quay lại',
+        tooltip: context.l10n.commonBack,
         onPressed: onClose,
         style: IconButton.styleFrom(
           backgroundColor: Colors.white.withValues(alpha: 0.08),

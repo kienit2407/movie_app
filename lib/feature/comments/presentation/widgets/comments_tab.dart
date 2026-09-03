@@ -9,6 +9,7 @@ import 'package:iconsax_flutter/iconsax_flutter.dart';
 import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 import 'package:movie_app/common/components/app_toast.dart';
 import 'package:movie_app/core/config/themes/app_color.dart';
+import 'package:movie_app/core/extension/build_context_extension.dart';
 import 'package:movie_app/feature/auth/presentation/session/auth_session_cubit.dart';
 import 'package:movie_app/feature/auth/presentation/sign_in/pages/sign_in.dart';
 import 'package:movie_app/feature/comments/domain/entities/comment.dart';
@@ -181,7 +182,10 @@ class _CommentsTabState extends State<CommentsTab> with WidgetsBindingObserver {
           !identical(previous.pendingCommentIds, current.pendingCommentIds) ||
           previous.draftAfterFailure != current.draftAfterFailure,
       listener: (context, state) {
-        AppToast.show(context, state.errorMessage!);
+        AppToast.show(
+          context,
+          _localizedCommentError(context, state.errorMessage!),
+        );
       },
       builder: (context, state) {
         return VisibilityDetector(
@@ -523,7 +527,7 @@ class _CommentsTabState extends State<CommentsTab> with WidgetsBindingObserver {
           child: Row(
             children: [
               IconButton(
-                tooltip: 'Quay lại bình luận',
+                tooltip: context.l10n.commonBack,
                 onPressed: () {
                   _cancelComposerMode();
                   _collapsedReplyIds.clear();
@@ -535,9 +539,9 @@ class _CommentsTabState extends State<CommentsTab> with WidgetsBindingObserver {
                   size: 20,
                 ),
               ),
-              const Text(
-                'Trả lời',
-                style: TextStyle(
+              Text(
+                context.l10n.commentsReply,
+                style: const TextStyle(
                   color: Colors.white,
                   fontSize: 20,
                   fontWeight: FontWeight.w800,
@@ -545,7 +549,7 @@ class _CommentsTabState extends State<CommentsTab> with WidgetsBindingObserver {
               ),
               const Spacer(),
               Text(
-                '${root.replyCount} phản hồi',
+                context.l10n.commentsReplyCount(root.replyCount),
                 style: const TextStyle(color: Colors.white54, fontSize: 12),
               ),
               const SizedBox(width: 16),
@@ -694,16 +698,16 @@ class _CommentsTabState extends State<CommentsTab> with WidgetsBindingObserver {
     if (state.status == CommentsStatus.failure) {
       return _CenteredMessage(
         icon: Icons.cloud_off_rounded,
-        title: 'Chưa tải được bình luận',
-        actionLabel: 'Thử lại',
+        title: context.l10n.commentsLoadFailedTitle,
+        actionLabel: context.l10n.commonRetry,
         onAction: context.read<CommentsCubit>().retry,
       );
     }
     if (state.comments.isEmpty) {
-      return const _CenteredMessage(
+      return _CenteredMessage(
         icon: Iconsax.message_copy,
-        title: 'Chưa có bình luận',
-        subtitle: 'Hãy là người đầu tiên chia sẻ cảm nhận.',
+        title: context.l10n.commentsEmptyTitle,
+        subtitle: context.l10n.commentsEmptySubtitle,
       );
     }
 
@@ -774,12 +778,12 @@ class _CommentsTabState extends State<CommentsTab> with WidgetsBindingObserver {
   Widget _buildComposer(CommentsState state) {
     final session = context.watch<AuthSessionCubit>().state;
     final hint = _editing != null
-        ? 'Chỉnh sửa bình luận...'
+        ? context.l10n.commentsEditHint
         : _replyingTo != null
-        ? 'Trả lời ${_replyingTo!.authorName}...'
+        ? context.l10n.commentsReplyToHint(_replyingTo!.authorName)
         : state.isThreadOpen
-        ? 'Thêm phản hồi...'
-        : 'Bình luận...';
+        ? context.l10n.commentsAddReplyHint
+        : context.l10n.commentsComposerHint;
 
     return DecoratedBox(
       decoration: const BoxDecoration(
@@ -799,8 +803,10 @@ class _CommentsTabState extends State<CommentsTab> with WidgetsBindingObserver {
                     Expanded(
                       child: Text(
                         _editing != null
-                            ? 'Đang chỉnh sửa bình luận'
-                            : 'Đang trả lời ${_replyingTo!.authorName}',
+                            ? context.l10n.commentsEditingStatus
+                            : context.l10n.commentsReplyingStatus(
+                                _replyingTo!.authorName,
+                              ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
@@ -810,7 +816,7 @@ class _CommentsTabState extends State<CommentsTab> with WidgetsBindingObserver {
                       ),
                     ),
                     IconButton(
-                      tooltip: 'Hủy',
+                      tooltip: context.l10n.commonCancel,
                       visualDensity: VisualDensity.compact,
                       onPressed: _cancelComposerMode,
                       icon: const Icon(
@@ -880,7 +886,7 @@ class _CommentsTabState extends State<CommentsTab> with WidgetsBindingObserver {
                           Positioned.fill(
                             child: Semantics(
                               button: true,
-                              label: 'Viết bình luận',
+                              label: context.l10n.commentsWrite,
                               child: GestureDetector(
                                 behavior: HitTestBehavior.opaque,
                                 onTap: _focusComposer,
@@ -913,7 +919,9 @@ class _CommentsTabState extends State<CommentsTab> with WidgetsBindingObserver {
                       final enabled =
                           value.text.trim().isNotEmpty && !_isSubmitting;
                       return IconButton.filled(
-                        tooltip: _editing == null ? 'Gửi' : 'Lưu',
+                        tooltip: _editing == null
+                            ? context.l10n.commentsSend
+                            : context.l10n.commonSave,
                         onPressed: enabled ? _submit : null,
                         style: IconButton.styleFrom(
                           backgroundColor: enabled
@@ -1076,7 +1084,7 @@ class _CommentsTabState extends State<CommentsTab> with WidgetsBindingObserver {
       useRootNavigator: true,
 
       barrierDismissible: true,
-      barrierLabel: 'Đóng menu bình luận',
+      barrierLabel: context.l10n.commentsCloseMenu,
       barrierColor: Colors.transparent,
 
       transitionDuration: const Duration(milliseconds: 180),
@@ -1111,7 +1119,7 @@ class _CommentsTabState extends State<CommentsTab> with WidgetsBindingObserver {
 
     AppToast.show(
       context,
-      'Đã sao chép bình luận',
+      context.l10n.commentsCopied,
       duration: const Duration(seconds: 2),
     );
   }
@@ -1123,21 +1131,21 @@ class _CommentsTabState extends State<CommentsTab> with WidgetsBindingObserver {
     if (!mounted) return;
 
     final action = await _showActionPicker(
-      title: isOwner ? 'Bình luận của bạn' : comment.authorName,
+      title: isOwner ? context.l10n.commentsYourComment : comment.authorName,
       actions: isOwner
-          ? const [
-              _MenuAction('edit', 'Chỉnh sửa', Icons.edit_rounded),
+          ? [
+              _MenuAction('edit', context.l10n.commonEdit, Icons.edit_rounded),
               _MenuAction(
                 'delete',
-                'Xóa',
+                context.l10n.commonDelete,
                 Icons.delete_outline_rounded,
                 destructive: true,
               ),
             ]
-          : const [
+          : [
               _MenuAction(
                 'report',
-                'Báo cáo',
+                context.l10n.commonReport,
                 Icons.flag_outlined,
                 destructive: true,
               ),
@@ -1164,12 +1172,12 @@ class _CommentsTabState extends State<CommentsTab> with WidgetsBindingObserver {
 
   Future<void> _showReportReasons(Comment comment) async {
     final action = await _showActionPicker(
-      title: 'Vì sao bạn báo cáo bình luận này?',
+      title: context.l10n.commentsReportReasonTitle,
       actions: CommentReportReason.values
           .map(
             (reason) => _MenuAction(
               reason.databaseValue,
-              reason.label,
+              _reportReasonLabel(context, reason),
               Icons.flag_outlined,
             ),
           )
@@ -1181,18 +1189,18 @@ class _CommentsTabState extends State<CommentsTab> with WidgetsBindingObserver {
     );
     final sent = await context.read<CommentsCubit>().report(comment, reason);
     if (sent && mounted) {
-      AppToast.show(context, 'Đã gửi báo cáo. Cảm ơn bạn.');
+      AppToast.show(context, context.l10n.commentsReportSent);
     }
   }
 
   Future<bool> _confirmDelete() async {
     final result = await _showActionPicker(
-      title: 'Xóa bình luận?',
-      message: 'Các phản hồi vẫn được giữ lại.',
-      actions: const [
+      title: context.l10n.commentsDeleteTitle,
+      message: context.l10n.commentsRepliesPreserved,
+      actions: [
         _MenuAction(
           'confirm',
-          'Xóa bình luận',
+          context.l10n.commentsDeleteAction,
           Icons.delete_outline_rounded,
           destructive: true,
         ),
@@ -1203,18 +1211,18 @@ class _CommentsTabState extends State<CommentsTab> with WidgetsBindingObserver {
 
   Future<void> _showSortPicker(CommentSort currentSort) async {
     final action = await _showActionPicker(
-      title: 'Sắp xếp bình luận',
+      title: context.l10n.commentsSortTitle,
       actions: [
         _MenuAction(
           CommentSort.popular.name,
-          'Phổ biến',
+          context.l10n.commentsPopular,
           currentSort == CommentSort.popular
               ? Icons.check_rounded
               : Icons.local_fire_department_outlined,
         ),
         _MenuAction(
           CommentSort.newest.name,
-          'Mới nhất',
+          context.l10n.commentsNewest,
           currentSort == CommentSort.newest
               ? Icons.check_rounded
               : Icons.schedule_rounded,
@@ -1240,7 +1248,7 @@ class _CommentsTabState extends State<CommentsTab> with WidgetsBindingObserver {
         context: context,
         title: title,
         message: message,
-        cancelLabel: 'Hủy',
+        cancelLabel: context.l10n.commonCancel,
         actions: actions
             .map(
               (action) => GlassActionSheetAction(
@@ -1289,7 +1297,7 @@ class _CommentsHeader extends StatelessWidget {
       child: Row(
         children: [
           Text(
-            'Bình luận  $count',
+            context.l10n.commentsCount(count),
             style: const TextStyle(
               color: Colors.white,
               fontSize: 18,
@@ -1322,13 +1330,13 @@ class _CommentsHeader extends StatelessWidget {
                 _glassSortItem(
                   sort: CommentSort.popular,
                   currentSort: sort,
-                  label: 'Phổ biến',
+                  label: context.l10n.commentsPopular,
                   icon: Icons.local_fire_department_outlined,
                 ),
                 _glassSortItem(
                   sort: CommentSort.newest,
                   currentSort: sort,
-                  label: 'Mới nhất',
+                  label: context.l10n.commentsNewest,
                   icon: Icons.schedule_rounded,
                 ),
               ],
@@ -1384,7 +1392,9 @@ class _SortTrigger extends StatelessWidget {
           const SizedBox(width: 6),
 
           Text(
-            sort == CommentSort.popular ? 'Phổ biến' : 'Mới nhất',
+            sort == CommentSort.popular
+                ? context.l10n.commentsPopular
+                : context.l10n.commentsNewest,
             style: const TextStyle(color: Colors.white70, fontSize: 12),
           ),
         ],
@@ -1393,7 +1403,7 @@ class _SortTrigger extends StatelessWidget {
 
     return Semantics(
       button: true,
-      label: 'Sắp xếp bình luận',
+      label: context.l10n.commentsSortTitle,
       child: onTap == null
           ? content
           : Material(
@@ -1483,7 +1493,7 @@ class _CommentCopyOverlay extends StatelessWidget {
                                       children: [
                                         Text(
                                           '${comment.authorName} · '
-                                          '${_relativeTime(comment.createdAt)}',
+                                          '${_relativeTime(context, comment.createdAt)}',
                                           maxLines: 1,
                                           overflow: TextOverflow.ellipsis,
                                           style: const TextStyle(
@@ -1547,23 +1557,23 @@ class _CommentCopyOverlay extends StatelessWidget {
                             onTap: () {
                               Navigator.of(context).pop(true);
                             },
-                            child: const Padding(
-                              padding: EdgeInsets.symmetric(
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(
                                 horizontal: 18,
                                 vertical: 15,
                               ),
                               child: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  Icon(
+                                  const Icon(
                                     Icons.copy_rounded,
                                     color: Colors.white,
                                     size: 21,
                                   ),
-                                  SizedBox(width: 10),
+                                  const SizedBox(width: 10),
                                   Text(
-                                    'Sao chép bình luận',
-                                    style: TextStyle(
+                                    context.l10n.commentsCopy,
+                                    style: const TextStyle(
                                       color: Colors.white,
                                       fontSize: 14,
                                       fontWeight: FontWeight.w600,
@@ -1597,7 +1607,7 @@ class _AndroidSortMenu extends StatelessWidget {
   Widget build(BuildContext context) {
     return PopupMenuButton<CommentSort>(
       // initialValue: sort,
-      tooltip: 'Sắp xếp bình luận',
+      tooltip: context.l10n.commentsSortTitle,
 
       // Hiện menu phía dưới nút
       position: PopupMenuPosition.under,
@@ -1634,13 +1644,13 @@ class _AndroidSortMenu extends StatelessWidget {
         _buildItem(
           value: CommentSort.popular,
           current: sort,
-          label: 'Phổ biến',
+          label: context.l10n.commentsPopular,
           icon: Icons.local_fire_department_outlined,
         ),
         _buildItem(
           value: CommentSort.newest,
           current: sort,
-          label: 'Mới nhất',
+          label: context.l10n.commentsNewest,
           icon: Icons.schedule_rounded,
         ),
       ],
@@ -1771,7 +1781,7 @@ class CommentTile extends StatelessWidget {
                         children: [
                           Expanded(
                             child: Text(
-                              '${comment.authorName} · ${_relativeTime(comment.createdAt)}',
+                              '${comment.authorName} · ${_relativeTime(context, comment.createdAt)}',
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: const TextStyle(
@@ -1797,11 +1807,11 @@ class CommentTile extends StatelessWidget {
                       ),
                       _ExpandableCommentText(comment: comment),
                       if (comment.wasEdited)
-                        const Padding(
-                          padding: EdgeInsets.only(top: 4),
+                        Padding(
+                          padding: const EdgeInsets.only(top: 4),
                           child: Text(
-                            'Đã chỉnh sửa',
-                            style: TextStyle(
+                            context.l10n.commentsEdited,
+                            style: const TextStyle(
                               color: Colors.white38,
                               fontSize: 11,
                             ),
@@ -1840,9 +1850,9 @@ class CommentTile extends StatelessWidget {
                                 ),
                               ),
                               icon: const Icon(Iconsax.message_copy, size: 19),
-                              label: const Text(
-                                'Trả lời',
-                                style: TextStyle(fontSize: 12),
+                              label: Text(
+                                context.l10n.commentsReply,
+                                style: const TextStyle(fontSize: 12),
                               ),
                             ),
                           ],
@@ -1862,7 +1872,9 @@ class CommentTile extends StatelessWidget {
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               Text(
-                                '${comment.replyCount} phản hồi',
+                                context.l10n.commentsReplyCount(
+                                  comment.replyCount,
+                                ),
                                 style: const TextStyle(
                                   fontWeight: FontWeight.w700,
                                 ),
@@ -1932,7 +1944,7 @@ class _ExpandableCommentTextState extends State<_ExpandableCommentText> {
           ),
 
         if (comment.isDeleted)
-          const TextSpan(text: 'Bình luận đã bị xóa')
+          TextSpan(text: context.l10n.commentsDeleted)
         else
           ..._commentBodySpans(comment.body, emojiFontSize: 18),
       ],
@@ -1983,7 +1995,9 @@ class _ExpandableCommentTextState extends State<_ExpandableCommentText> {
                       foregroundColor: AppColor.secondColor,
                     ),
                     child: Text(
-                      _isExpanded ? 'Thu gọn' : 'Xem thêm',
+                      _isExpanded
+                          ? context.l10n.commonCollapse
+                          : context.l10n.commonSeeMore,
                       style: const TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
@@ -2488,9 +2502,9 @@ class _BlurActionSheet extends StatelessWidget {
                     width: double.infinity,
                     child: TextButton(
                       onPressed: () => Navigator.of(context).pop(),
-                      child: const Text(
-                        'Hủy',
-                        style: TextStyle(color: Colors.white70),
+                      child: Text(
+                        context.l10n.commonCancel,
+                        style: const TextStyle(color: Colors.white70),
                       ),
                     ),
                   ),
@@ -2610,19 +2624,55 @@ class _CenteredMessage extends StatelessWidget {
   }
 }
 
-String _relativeTime(DateTime dateTime) {
+String _relativeTime(BuildContext context, DateTime dateTime) {
   final difference = DateTime.now().difference(dateTime);
-  if (difference.inMinutes < 1) return 'vừa xong';
-  if (difference.inHours < 1) return '${difference.inMinutes} phút trước';
-  if (difference.inDays < 1) return '${difference.inHours} giờ trước';
-  if (difference.inDays < 7) return '${difference.inDays} ngày trước';
+  if (difference.inMinutes < 1) return context.l10n.commentsJustNow;
+  if (difference.inHours < 1) {
+    return context.l10n.commentsMinutesAgo(difference.inMinutes);
+  }
+  if (difference.inDays < 1) {
+    return context.l10n.commentsHoursAgo(difference.inHours);
+  }
+  if (difference.inDays < 7) {
+    return context.l10n.commentsDaysAgo(difference.inDays);
+  }
   if (difference.inDays < 30) {
-    return '${(difference.inDays / 7).floor()} tuần trước';
+    return context.l10n.commentsWeeksAgo((difference.inDays / 7).floor());
   }
   if (difference.inDays < 365) {
-    return '${(difference.inDays / 30).floor()} tháng trước';
+    return context.l10n.commentsMonthsAgo((difference.inDays / 30).floor());
   }
-  return '${(difference.inDays / 365).floor()} năm trước';
+  return context.l10n.commentsYearsAgo((difference.inDays / 365).floor());
+}
+
+String _reportReasonLabel(BuildContext context, CommentReportReason reason) {
+  return switch (reason) {
+    CommentReportReason.spam => context.l10n.commentsSpamReason,
+    CommentReportReason.harassment => context.l10n.commentsHarassmentReason,
+    CommentReportReason.spoiler => context.l10n.commentsSpoilerReason,
+    CommentReportReason.inappropriate =>
+      context.l10n.commentsInappropriateReason,
+    CommentReportReason.other => context.l10n.commentsOtherReason,
+  };
+}
+
+String _localizedCommentError(BuildContext context, String error) {
+  return switch (error) {
+    'Không tải được bình luận. Hãy thử lại.' => context.l10n.commentsLoadFailed,
+    'Chưa tải thêm được bình luận.' => context.l10n.commentsLoadMoreFailed,
+    'Không tải được phần trả lời.' => context.l10n.commentsRepliesLoadFailed,
+    'Chưa tải thêm được phần trả lời.' =>
+      context.l10n.commentsRepliesLoadMoreFailed,
+    'Chưa gửi được bình luận. Nội dung vẫn được giữ lại.' =>
+      context.l10n.commentsSendFailed,
+    'Không thể chỉnh sửa bình luận.' => context.l10n.commentsEditFailed,
+    'Không thể xóa bình luận.' => context.l10n.commentsDeleteFailed,
+    'Không thể cập nhật cảm xúc.' => context.l10n.commentsReactionFailed,
+    'Bình luận này đã được báo cáo hoặc chưa thể gửi.' =>
+      context.l10n.commentsReportFailed,
+    'Thao tác này đang được xử lý.' => context.l10n.commentsOperationInProgress,
+    _ => context.l10n.commentsLoadFailed,
+  };
 }
 
 class _EmojiComposerController extends TextEditingController {

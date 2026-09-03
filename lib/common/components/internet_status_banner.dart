@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
+import 'package:movie_app/core/extension/build_context_extension.dart';
 
 class InternetStatusBanner extends StatefulWidget {
   const InternetStatusBanner({super.key, this.connectivity});
@@ -72,6 +73,9 @@ class _InternetStatusBannerState extends State<InternetStatusBanner> {
 
   @override
   Widget build(BuildContext context) {
+    final statusText = _online
+        ? context.l10n.internetBackOnline
+        : context.l10n.internetOffline;
     final reduceMotion =
         MediaQuery.maybeOf(context)?.disableAnimations ?? false;
     final duration = reduceMotion
@@ -92,7 +96,7 @@ class _InternetStatusBannerState extends State<InternetStatusBanner> {
             duration: duration,
             child: Semantics(
               liveRegion: true,
-              label: _online ? 'Quay lại trực tuyến' : 'Không có Internet',
+              label: statusText,
               child: DecoratedBox(
                 decoration: BoxDecoration(
                   color: _online
@@ -122,7 +126,7 @@ class _InternetStatusBannerState extends State<InternetStatusBanner> {
                       ),
                       const SizedBox(width: 9),
                       Text(
-                        _online ? 'Quay lại trực tuyến' : 'Không có Internet',
+                        statusText,
                         style: const TextStyle(
                           color: Colors.white,
                           fontSize: 14,

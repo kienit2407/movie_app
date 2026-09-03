@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:movie_app/core/config/themes/app_color.dart';
+import 'package:movie_app/core/extension/build_context_extension.dart';
 
 class DisplayNameEditorPage extends StatefulWidget {
   const DisplayNameEditorPage({super.key, required this.initialName});
@@ -65,7 +66,10 @@ class _DisplayNameEditorPageState extends State<DisplayNameEditorPage> {
                 TextButton(
                   onPressed: () => Navigator.pop(context),
                   style: TextButton.styleFrom(foregroundColor: Colors.white70),
-                  child: const Text('Hủy', style: TextStyle(fontSize: 16)),
+                  child: Text(
+                    context.l10n.commonCancel,
+                    style: const TextStyle(fontSize: 16),
+                  ),
                 ),
                 const Spacer(),
                 ValueListenableBuilder<TextEditingValue>(
@@ -76,9 +80,9 @@ class _DisplayNameEditorPageState extends State<DisplayNameEditorPage> {
                       foregroundColor: AppColor.thirdColor,
                       disabledForegroundColor: Colors.white24,
                     ),
-                    child: const Text(
-                      'Lưu',
-                      style: TextStyle(
+                    child: Text(
+                      context.l10n.commonSave,
+                      style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w700,
                       ),
@@ -93,18 +97,18 @@ class _DisplayNameEditorPageState extends State<DisplayNameEditorPage> {
             child: ListView(
               padding: const EdgeInsets.fromLTRB(24, 34, 24, 28),
               children: [
-                const Text(
-                  'Tên',
-                  style: TextStyle(
+                Text(
+                  context.l10n.profileName,
+                  style: const TextStyle(
                     color: Colors.white,
                     fontSize: 30,
                     fontWeight: FontWeight.w800,
                   ),
                 ),
                 const SizedBox(height: 12),
-                const Text(
-                  'Tên này sẽ hiển thị trên hồ sơ Liquid Phim của bạn.',
-                  style: TextStyle(
+                Text(
+                  context.l10n.profileNameDescription,
+                  style: const TextStyle(
                     color: Colors.white54,
                     fontSize: 15,
                     height: 1.45,
@@ -126,7 +130,7 @@ class _DisplayNameEditorPageState extends State<DisplayNameEditorPage> {
                     decoration: InputDecoration(
                       filled: true,
                       fillColor: Colors.white.withValues(alpha: .075),
-                      hintText: 'Nhập tên hiển thị',
+                      hintText: context.l10n.profileNameHint,
                       hintStyle: const TextStyle(color: Colors.white38),
                       counterText: '',
                       contentPadding: const EdgeInsets.symmetric(
@@ -136,7 +140,7 @@ class _DisplayNameEditorPageState extends State<DisplayNameEditorPage> {
                       suffixIcon: value.text.isEmpty
                           ? null
                           : IconButton(
-                              tooltip: 'Xóa tên',
+                              tooltip: context.l10n.profileClearName,
                               onPressed: _controller.clear,
                               icon: const Icon(
                                 Icons.cancel_rounded,

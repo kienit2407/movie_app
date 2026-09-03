@@ -6,6 +6,7 @@ import 'package:iconsax_flutter/iconsax_flutter.dart';
 import 'package:movie_app/common/components/alert_dialog/app_alert_dialog.dart';
 import 'package:movie_app/core/config/utils/movie_player_args.dart';
 import 'package:movie_app/core/player_overlay_controller.dart';
+import 'package:movie_app/core/extension/build_context_extension.dart';
 import 'package:movie_app/feature/library/data/user_library_repository.dart';
 import 'package:movie_app/feature/library/presentation/cubit/user_library_cubit.dart';
 
@@ -60,12 +61,13 @@ Future<void> _promptForSeriesResume(
     useRootNavigator: true,
     builder: (dialogContext) => AppAlertDialog(
       icon: const Icon(Iconsax.video_play, color: Colors.white, size: 30),
-      title: 'Tiếp tục xem?',
-      content:
-          'Bạn đang xem ${history.lastEpisodeName ?? 'tập ${target.episodeIndex + 1}'}. '
-          'Bạn muốn xem tiếp tập này hay xem lại từ tập 1?',
-      cancelButtonTitle: 'Xem lại từ đầu',
-      buttonTitle: 'Xem tiếp',
+      title: context.l10n.playerContinueWatchingTitle,
+      content: context.l10n.playerContinueWatchingBody(
+        history.lastEpisodeName ??
+            context.l10n.playerEpisodeNumber(target.episodeIndex + 1),
+      ),
+      cancelButtonTitle: context.l10n.playerRestartFromBeginning,
+      buttonTitle: context.l10n.playerContinue,
     ),
   );
   if (continueWatching == null) return;

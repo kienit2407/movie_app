@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:movie_app/core/config/routes/app_router.dart';
 import 'package:movie_app/core/config/themes/app_color.dart';
+import 'package:movie_app/core/extension/build_context_extension.dart';
 
 bool startsNewLibraryDateGroup(
   DateTime activityDate,
@@ -110,7 +111,7 @@ class LibraryMovieCard extends StatelessWidget {
                         right: 4,
                         child: IconButton.filledTonal(
                           visualDensity: VisualDensity.compact,
-                          tooltip: 'Xóa khỏi danh sách',
+                          tooltip: context.l10n.libraryRemoveFromList,
                           onPressed: isSelectionMode ? null : onRemove,
                           icon: const Icon(Icons.close, size: 16),
                         ),
@@ -219,7 +220,9 @@ class LibraryMovieCard extends StatelessWidget {
                       episodeCurrent,
                       year > 0 ? '$year' : '',
                     ].where((value) => value.isNotEmpty).join(' • ')
-                  : 'Tiếp tục ${(progress! * 100).round()}%',
+                  : context.l10n.libraryContinueProgress(
+                      (progress! * 100).round(),
+                    ),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
@@ -243,7 +246,7 @@ class _LibraryDateBadge extends StatelessWidget {
   Widget build(BuildContext context) {
     final localDate = date.toLocal();
     return Semantics(
-      label: 'Ngày ${localDate.day} tháng ${localDate.month}',
+      label: context.l10n.libraryDateDayMonth(localDate),
       child: Container(
         key: const ValueKey('library-date-badge'),
         constraints: const BoxConstraints(minWidth: 42),
@@ -266,7 +269,7 @@ class _LibraryDateBadge extends StatelessWidget {
             ),
             const SizedBox(height: 2),
             Text(
-              'tháng ${localDate.month}',
+              context.l10n.libraryMonthLabel(localDate.month),
               style: const TextStyle(
                 fontSize: 8,
                 height: 1,

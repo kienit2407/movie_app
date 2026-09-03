@@ -3,6 +3,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
 import 'package:movie_app/core/config/themes/app_color.dart';
+import 'package:movie_app/core/extension/build_context_extension.dart';
 
 class QualityChoosingBottomSheet extends StatefulWidget {
   final String? currentQuality;
@@ -47,7 +48,8 @@ class _QualityChoosingBottomSheetState
   void initState() {
     super.initState();
     selectedQuality = widget.currentQuality;
-    availableQualityList = widget.availableQualities?.keys.toList() ??
+    availableQualityList =
+        widget.availableQualities?.keys.toList() ??
         ['480p', '720p', '1080p', '4K'];
   }
 
@@ -90,9 +92,9 @@ class _QualityChoosingBottomSheetState
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   const Icon(Iconsax.video, size: 16),
-                  const Text(
-                    'Chất lượng video',
-                    style: TextStyle(fontWeight: FontWeight.w700),
+                  Text(
+                    context.l10n.detailVideoQuality,
+                    style: const TextStyle(fontWeight: FontWeight.w700),
                   ),
                 ],
               ),
@@ -100,8 +102,7 @@ class _QualityChoosingBottomSheetState
             const SizedBox(height: 15),
             Container(
               width: double.infinity,
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
               height: MediaQuery.of(context).size.height * .25,
               decoration: BoxDecoration(
                 border: Border(
@@ -123,11 +124,8 @@ class _QualityChoosingBottomSheetState
       shrinkWrap: true,
       physics: const BouncingScrollPhysics(),
       itemCount: availableQualityList.length,
-      separatorBuilder: (context, index) => const Divider(
-        color: AppColor.buttonColor,
-        thickness: 1,
-        height: 1,
-      ),
+      separatorBuilder: (context, index) =>
+          const Divider(color: AppColor.buttonColor, thickness: 1, height: 1),
       itemBuilder: (context, index) {
         final quality = availableQualityList[index];
         final bool isSelected = selectedQuality == quality;
@@ -147,11 +145,7 @@ class _QualityChoosingBottomSheetState
                 ),
                 const Spacer(),
                 if (isSelected)
-                  const Icon(
-                    Iconsax.check,
-                    size: 20,
-                    color: Color(0xffF1D775),
-                  ),
+                  const Icon(Iconsax.check, size: 20, color: Color(0xffF1D775)),
               ],
             ),
           ),

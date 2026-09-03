@@ -11,6 +11,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:movie_app/common/components/app_toast.dart';
 import 'package:movie_app/core/config/routes/app_router.dart';
 import 'package:movie_app/core/config/themes/app_color.dart';
+import 'package:movie_app/core/extension/build_context_extension.dart';
 import 'package:movie_app/feature/auth/presentation/session/auth_session_cubit.dart';
 import 'package:movie_app/feature/library/presentation/cubit/user_library_cubit.dart';
 
@@ -55,6 +56,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
   }
 
   Future<void> _pickAndUploadAvatar(ImageSource source) async {
+    final l10n = context.l10n;
     try {
       final picked = await ImagePicker().pickImage(
         source: source,
@@ -69,7 +71,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
         aspectRatio: const CropAspectRatio(ratioX: 1, ratioY: 1),
         uiSettings: [
           AndroidUiSettings(
-            toolbarTitle: 'Cắt ảnh đại diện',
+            toolbarTitle: l10n.profileCropAvatar,
             toolbarColor: AppColor.bgApp,
             toolbarWidgetColor: Colors.white,
             activeControlsWidgetColor: AppColor.firstColor,
@@ -77,11 +79,11 @@ class _EditProfilePageState extends State<EditProfilePage> {
             hideBottomControls: false,
           ),
           IOSUiSettings(
-            title: 'Cắt ảnh đại diện',
+            title: l10n.profileCropAvatar,
             aspectRatioLockEnabled: true,
             resetAspectRatioEnabled: false,
-            doneButtonTitle: 'Xong',
-            cancelButtonTitle: 'Hủy',
+            doneButtonTitle: l10n.commonDone,
+            cancelButtonTitle: l10n.commonCancel,
           ),
         ],
       );
@@ -108,17 +110,17 @@ class _EditProfilePageState extends State<EditProfilePage> {
         );
         if (!mounted) return;
         context.read<AuthSessionCubit>().refresh();
-        _showMessage('Đã cập nhật ảnh đại diện.');
+        _showMessage(l10n.profileAvatarUpdated);
       } catch (_) {
         if (!mounted) return;
         setState(() => _localAvatar = previousAvatar);
-        _showMessage('Không thể cập nhật ảnh đại diện. Hãy thử lại.');
+        _showMessage(l10n.profileAvatarUpdateFailed);
       } finally {
         if (mounted) setState(() => _isUpdating = false);
       }
     } catch (_) {
       if (mounted) {
-        _showMessage('Không thể mở ảnh. Hãy kiểm tra quyền truy cập.');
+        _showMessage(l10n.profilePhotoOpenFailed);
       }
     }
   }
@@ -137,10 +139,10 @@ class _EditProfilePageState extends State<EditProfilePage> {
       await cubit.updateProfile(displayName: nextName);
       if (!mounted) return;
       context.read<AuthSessionCubit>().refresh();
-      _showMessage('Đã cập nhật tên hiển thị.');
+      _showMessage(context.l10n.profileNameUpdated);
     } catch (_) {
       if (mounted) {
-        _showMessage('Không thể cập nhật tên. Hãy thử lại.');
+        _showMessage(context.l10n.profileNameUpdateFailed);
       }
     } finally {
       if (mounted) setState(() => _isUpdating = false);
@@ -182,9 +184,9 @@ class _EditProfilePageState extends State<EditProfilePage> {
               surfaceTintColor: Colors.transparent,
               foregroundColor: Colors.white,
               centerTitle: true,
-              title: const Text(
-                'Sửa hồ sơ',
-                style: TextStyle(
+              title: Text(
+                context.l10n.profileEdit,
+                style: const TextStyle(
                   color: Colors.white,
                   fontSize: 20,
                   fontWeight: FontWeight.w800,
@@ -214,20 +216,20 @@ class _EditProfilePageState extends State<EditProfilePage> {
                           fontWeight: FontWeight.w700,
                         ),
                       ),
-                      child: const Text('Thay đổi ảnh'),
+                      child: Text(context.l10n.profileChangePhoto),
                     ),
                   ),
                   const SizedBox(height: 28),
                   _InfoCard(
                     children: [
                       _ProfileInfoRow(
-                        label: 'Tên',
+                        label: context.l10n.profileName,
                         value: displayName,
                         onTap: _openNameEditor,
                       ),
                       const _CardDivider(),
                       _ProfileInfoRow(
-                        label: 'Email',
+                        label: context.l10n.authEmail,
                         value: user?.email ?? '',
                         trailing: const Icon(
                           Icons.lock_outline_rounded,
@@ -247,19 +249,19 @@ class _EditProfilePageState extends State<EditProfilePage> {
                         color: Colors.white.withValues(alpha: .08),
                       ),
                     ),
-                    child: const Row(
+                    child: Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Icon(
+                        const Icon(
                           Icons.info_outline_rounded,
                           size: 20,
                           color: Colors.white54,
                         ),
-                        SizedBox(width: 11),
+                        const SizedBox(width: 11),
                         Expanded(
                           child: Text(
-                            'Email được liên kết với tài khoản và chỉ hiển thị tại đây.',
-                            style: TextStyle(
+                            context.l10n.profileEmailDescription,
+                            style: const TextStyle(
                               color: Colors.white54,
                               height: 1.45,
                             ),
@@ -318,7 +320,7 @@ class _EditableAvatar extends StatelessWidget {
   Widget build(BuildContext context) {
     return Semantics(
       button: true,
-      label: 'Thay đổi ảnh đại diện',
+      label: context.l10n.profileChangeAvatar,
       child: InkWell(
         onTap: onTap,
         customBorder: const CircleBorder(),
@@ -512,19 +514,19 @@ class _AvatarActionSheet extends StatelessWidget {
           ),
           _AvatarActionRow(
             icon: Iconsax.camera_copy,
-            label: 'Chụp ảnh',
+            label: context.l10n.profileTakePhoto,
             onTap: onCamera,
           ),
           const _SheetDivider(),
           _AvatarActionRow(
             icon: Iconsax.gallery_copy,
-            label: 'Tải ảnh lên',
+            label: context.l10n.profileUploadPhoto,
             onTap: onGallery,
           ),
           const _SheetDivider(),
           _AvatarActionRow(
             icon: Iconsax.eye_copy,
-            label: 'Xem ảnh',
+            label: context.l10n.profileViewPhoto,
             onTap: canPreview ? onPreview : null,
           ),
         ],
@@ -601,7 +603,7 @@ class _AvatarPreviewPage extends StatelessWidget {
           backgroundColor: Colors.black,
           surfaceTintColor: Colors.transparent,
           foregroundColor: Colors.white,
-          title: const Text('Ảnh đại diện'),
+          title: Text(context.l10n.profileAvatar),
         ),
         body: Center(
           child: InteractiveViewer(

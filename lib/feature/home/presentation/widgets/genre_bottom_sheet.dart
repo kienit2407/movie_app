@@ -8,6 +8,8 @@ import 'package:movie_app/common/components/alert_dialog/app_alert_dialog.dart';
 import 'package:movie_app/common/helpers/navigation/app_navigation.dart';
 import 'package:movie_app/common/helpers/sort_map.dart';
 import 'package:movie_app/core/config/themes/app_color.dart';
+import 'package:movie_app/core/extension/build_context_extension.dart';
+import 'package:movie_app/core/extension/filter_localization_extension.dart';
 import 'package:movie_app/core/config/utils/animated_dialog.dart';
 import 'package:movie_app/feature/home/domain/entities/fillterType.dart';
 import 'package:movie_app/feature/home/domain/entities/fillter_genre_movie_req.dart';
@@ -52,8 +54,8 @@ class _GenreBottomSheetState extends State<GenreBottomSheet> {
       showAnimatedDialog(
         context: context,
         dialog: AppAlertDialog(
-          content: "Làm ơn hãy chọn thể loại!",
-          title: 'Chú ý !',
+          content: context.l10n.filterChooseGenre,
+          title: context.l10n.searchAttentionTitle,
         ),
       );
       return;
@@ -105,7 +107,7 @@ class _GenreBottomSheetState extends State<GenreBottomSheet> {
                     children: [
                       Icon(Iconsax.category, size: 16),
                       Text(
-                        'Thể loại',
+                        context.l10n.homeGenres,
                         style: TextStyle(fontWeight: FontWeight.w700),
                       ),
                     ],
@@ -115,7 +117,7 @@ class _GenreBottomSheetState extends State<GenreBottomSheet> {
                 Container(
                   width: double.infinity,
                   padding: EdgeInsets.symmetric(horizontal: 10),
-                  height: MediaQuery.of(context).size.height * .25, 
+                  height: MediaQuery.of(context).size.height * .25,
                   decoration: BoxDecoration(
                     border: Border(
                       top: BorderSide(color: AppColor.buttonColor),
@@ -148,9 +150,9 @@ class _GenreBottomSheetState extends State<GenreBottomSheet> {
                           spacing: 5,
                           crossAxisAlignment: CrossAxisAlignment.center,
                           children: [
-                            const Text(
-                              'Xem thêm',
-                              style: TextStyle(
+                            Text(
+                              context.l10n.commonSeeMore,
+                              style: const TextStyle(
                                 fontSize: 10,
                                 color: Color(0xffF1D775),
                               ),
@@ -193,7 +195,7 @@ class _GenreBottomSheetState extends State<GenreBottomSheet> {
                                   children: [
                                     Icon(Iconsax.translate_copy, size: 16),
                                     Text(
-                                      'Ngôn ngữ',
+                                      context.l10n.filterLanguage,
                                       style: TextStyle(
                                         fontWeight: FontWeight.w700,
                                       ),
@@ -215,10 +217,10 @@ class _GenreBottomSheetState extends State<GenreBottomSheet> {
                                             .sortLangMap[index]
                                             .keys
                                             .single;
-                                
+
                                         bool isSelected =
                                             selectedLanguage == slug;
-                                
+
                                         return ChoiceChip(
                                           showCheckmark: false,
                                           side: BorderSide(
@@ -231,10 +233,7 @@ class _GenreBottomSheetState extends State<GenreBottomSheet> {
                                           ), // ← Background trong suốt
                                           selectedColor: Color(0xff2F3345),
                                           label: Text(
-                                            SortMap
-                                                .sortLangMap[index]
-                                                .values
-                                                .single,
+                                            context.filterLanguageLabel(slug),
                                             style: TextStyle(
                                               color: isSelected
                                                   ? Color(0xffF1D775)
@@ -254,7 +253,7 @@ class _GenreBottomSheetState extends State<GenreBottomSheet> {
                                                   20,
                                                 ),
                                           ),
-                                
+
                                           selected: true,
                                           onSelected: (value) {
                                             setState(() {
@@ -275,7 +274,7 @@ class _GenreBottomSheetState extends State<GenreBottomSheet> {
                                   children: [
                                     Icon(Iconsax.sort_copy, size: 16),
                                     Text(
-                                      'Sắp xếp',
+                                      context.l10n.filterSortBy,
                                       style: TextStyle(
                                         fontWeight: FontWeight.w700,
                                       ),
@@ -311,10 +310,7 @@ class _GenreBottomSheetState extends State<GenreBottomSheet> {
                                           ), // <- Background trong suốt
                                           selectedColor: Color(0xff2F3345),
                                           label: Text(
-                                            SortMap
-                                                .sortFieldMap[index]
-                                                .values
-                                                .single,
+                                            context.filterSortLabel(slug),
                                             style: TextStyle(
                                               color: isSelected
                                                   ? Color(0xffF1D775)
@@ -387,18 +383,18 @@ class _GenreBottomSheetState extends State<GenreBottomSheet> {
                       child: Container(
                         height: 50,
                         alignment: Alignment.center,
-                        child: const Row(
+                        child: Row(
                           spacing: 10,
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Text(
-                              'Lọc kết quả',
-                              style: TextStyle(
+                              context.l10n.filterResults,
+                              style: const TextStyle(
                                 fontWeight: FontWeight.w600,
                                 fontSize: 12,
                               ),
                             ),
-                            Icon(Iconsax.arrow_right_1_copy, size: 16),
+                            const Icon(Iconsax.arrow_right_1_copy, size: 16),
                           ],
                         ),
                       ),
@@ -470,7 +466,7 @@ class _GenreBottomSheetState extends State<GenreBottomSheet> {
           children: List.generate(state.genreMovie.length, (index) {
             final slug = state.genreMovie[index].slug;
             bool isSelected = selectedGenre == slug;
-      
+
             return ChoiceChip(
               showCheckmark: false,
               side: BorderSide(
@@ -558,7 +554,7 @@ class _GenreBottomSheetState extends State<GenreBottomSheet> {
 // class DataSuccess<T> extends DataState<T> {
 //   final T data;
 //   const DataSuccess(this.data);
-  
+
 //   @override
 //   List<Object> get props => [data];
 // }
@@ -566,7 +562,7 @@ class _GenreBottomSheetState extends State<GenreBottomSheet> {
 // class DataFailure<T> extends DataState<T> {
 //   final String message;
 //   const DataFailure(this.message);
-  
+
 //   @override
 //   List<Object> get props => [message];
 // }

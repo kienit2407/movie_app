@@ -6,6 +6,8 @@ import 'package:iconsax_flutter/iconsax_flutter.dart';
 import 'package:movie_app/common/helpers/list_year.dart';
 import 'package:movie_app/common/helpers/sort_map.dart';
 import 'package:movie_app/core/config/themes/app_color.dart';
+import 'package:movie_app/core/extension/build_context_extension.dart';
+import 'package:movie_app/core/extension/filter_localization_extension.dart';
 import 'package:movie_app/feature/home/presentation/bloc/country_movie_cubit.dart';
 import 'package:movie_app/feature/home/presentation/bloc/country_movie_state.dart';
 import 'package:movie_app/feature/home/presentation/bloc/genre_cubit.dart';
@@ -118,7 +120,7 @@ class _SearchFilterBottomSheetState extends State<SearchFilterBottomSheet> {
                       _buildTitleRow(),
                       _buildSectionHeader(
                         icon: Iconsax.sort_copy,
-                        title: 'Sắp xếp',
+                        title: context.l10n.filterSortBy,
                         selectedLabel: _sortFieldLabel,
                         isExpand: _expandSortField,
                         onTap: () => setState(
@@ -139,7 +141,7 @@ class _SearchFilterBottomSheetState extends State<SearchFilterBottomSheet> {
                       ),
                       _buildSectionHeader(
                         icon: Iconsax.arrow_swap_horizontal,
-                        title: 'Chiều sắp xếp',
+                        title: context.l10n.filterSortDirection,
                         selectedLabel: _sortTypeLabel,
                         isExpand: _expandSortType,
                         onTap: () =>
@@ -159,7 +161,7 @@ class _SearchFilterBottomSheetState extends State<SearchFilterBottomSheet> {
                       ),
                       _buildSectionHeader(
                         icon: Iconsax.translate_copy,
-                        title: 'Ngôn ngữ',
+                        title: context.l10n.filterLanguage,
                         selectedLabel: _languageLabel,
                         isExpand: _expandLanguage,
                         onTap: () =>
@@ -192,7 +194,7 @@ class _SearchFilterBottomSheetState extends State<SearchFilterBottomSheet> {
                       _buildCountrySection(),
                       _buildSectionHeader(
                         icon: Iconsax.calendar,
-                        title: 'Năm',
+                        title: context.l10n.homeYear,
                         selectedLabel: _filters.year,
                         isExpand: _expandYear,
                         onTap: () => setState(() => _expandYear = !_expandYear),
@@ -234,29 +236,24 @@ class _SearchFilterBottomSheetState extends State<SearchFilterBottomSheet> {
     );
   }
 
-  String get _sortFieldLabel =>
-      _labelFromOptions(_sortFieldOptions, _filters.sortField);
+  String get _sortFieldLabel => _localizedOptionLabel(_filters.sortField);
 
-  String get _sortTypeLabel =>
-      _labelFromOptions(_sortTypeOptions, _filters.sortType);
+  String get _sortTypeLabel => _localizedOptionLabel(_filters.sortType);
 
   String? get _languageLabel {
     if (_filters.sortLang == null) return null;
-    return SortMap.sortLangMap
-        .firstWhere(
-          (item) => item.containsKey(_filters.sortLang),
-          orElse: () => {_filters.sortLang!: _filters.sortLang!},
-        )
-        .values
-        .first;
+    return context.filterLanguageLabel(_filters.sortLang!);
   }
 
-  String _labelFromOptions(List<Map<String, String>> options, String slug) {
-    return options.firstWhere(
-      (item) => item['slug'] == slug,
-      orElse: () => {'slug': slug, 'name': slug},
-    )['name']!;
-  }
+  String _localizedOptionLabel(String slug) => switch (slug) {
+    'desc' => context.l10n.filterDescending,
+    'asc' => context.l10n.filterAscending,
+    'year' => context.l10n.filterReleaseYear,
+    'vietsub' => context.l10n.filterSubtitled,
+    'thuyet-minh' => context.l10n.filterVoiceOver,
+    'long-tieng' => context.l10n.filterDubbed,
+    _ => context.filterSortLabel(slug),
+  };
 
   Widget _buildToggle() {
     return Container(
@@ -278,9 +275,9 @@ class _SearchFilterBottomSheetState extends State<SearchFilterBottomSheet> {
         children: [
           const Icon(Iconsax.filter, size: 18, color: Colors.white),
           const SizedBox(width: 8),
-          const Text(
-            'Bộ lọc tìm kiếm',
-            style: TextStyle(
+          Text(
+            context.l10n.searchFilterTooltip,
+            style: const TextStyle(
               color: Colors.white,
               fontSize: 16,
               fontWeight: FontWeight.w700,
@@ -289,9 +286,9 @@ class _SearchFilterBottomSheetState extends State<SearchFilterBottomSheet> {
           const Spacer(),
           TextButton(
             onPressed: _reset,
-            child: const Text(
-              'Đặt lại',
-              style: TextStyle(color: Color(0xffF1D775)),
+            child: Text(
+              context.l10n.commonReset,
+              style: const TextStyle(color: Color(0xffF1D775)),
             ),
           ),
         ],
@@ -344,7 +341,7 @@ class _SearchFilterBottomSheetState extends State<SearchFilterBottomSheet> {
                 children: [
                   Flexible(
                     child: Text(
-                      hasSelected ? selectedLabel : 'Tất cả',
+                      hasSelected ? selectedLabel : context.l10n.commonAll,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
@@ -424,7 +421,9 @@ class _SearchFilterBottomSheetState extends State<SearchFilterBottomSheet> {
       runSpacing: 8,
       children: options.map((item) {
         final slug = item['slug']!;
-        final label = item['name']!;
+        final label = _localizedOptionLabel(item['slug']!) == item['slug']
+            ? item['name']!
+            : _localizedOptionLabel(item['slug']!);
         final isSelected = selected == slug;
 
         return ChoiceChip(
@@ -476,7 +475,7 @@ class _SearchFilterBottomSheetState extends State<SearchFilterBottomSheet> {
 
         final header = _buildSectionHeader(
           icon: Iconsax.filter,
-          title: 'Thể loại',
+          title: context.l10n.homeGenres,
           selectedLabel: selectedGenreName ?? _filters.category,
           isExpand: _expandGenre,
           onTap: () => setState(() => _expandGenre = !_expandGenre),
@@ -491,11 +490,11 @@ class _SearchFilterBottomSheetState extends State<SearchFilterBottomSheet> {
               _buildChipPanel(
                 isExpanded: _expandGenre,
                 height: 44,
-                child: const Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 10),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 10),
                   child: Text(
-                    'Đang tải thể loại...',
-                    style: TextStyle(color: Colors.white70, fontSize: 12),
+                    context.l10n.searchLoadingGenres,
+                    style: const TextStyle(color: Colors.white70, fontSize: 12),
                   ),
                 ),
               ),
@@ -546,7 +545,7 @@ class _SearchFilterBottomSheetState extends State<SearchFilterBottomSheet> {
 
         final header = _buildSectionHeader(
           icon: Iconsax.global,
-          title: 'Quốc gia',
+          title: context.l10n.homeCountries,
           selectedLabel: selectedCountryName ?? _filters.country,
           isExpand: _expandCountry,
           onTap: () => setState(() => _expandCountry = !_expandCountry),
@@ -561,11 +560,11 @@ class _SearchFilterBottomSheetState extends State<SearchFilterBottomSheet> {
               _buildChipPanel(
                 isExpanded: _expandCountry,
                 height: 44,
-                child: const Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 10),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 10),
                   child: Text(
-                    'Đang tải quốc gia...',
-                    style: TextStyle(color: Colors.white70, fontSize: 12),
+                    context.l10n.searchLoadingCountries,
+                    style: const TextStyle(color: Colors.white70, fontSize: 12),
                   ),
                 ),
               ),
@@ -626,12 +625,12 @@ class _SearchFilterBottomSheetState extends State<SearchFilterBottomSheet> {
         child: InkWell(
           onTap: _apply,
           borderRadius: BorderRadius.circular(12),
-          child: const SizedBox(
+          child: SizedBox(
             height: 50,
             child: Center(
               child: Text(
-                'Áp dụng bộ lọc',
-                style: TextStyle(
+                context.l10n.filterApply,
+                style: const TextStyle(
                   color: Colors.white,
                   fontWeight: FontWeight.w600,
                   fontSize: 14,

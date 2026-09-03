@@ -5,22 +5,25 @@ import 'package:intl/intl.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:movie_app/core/config/themes/app_color.dart';
 import 'package:movie_app/feature/detail_movie/data/model/detail_movie_model.dart';
+import 'package:movie_app/core/extension/build_context_extension.dart';
 
 class MovieExtraInfo extends StatelessWidget {
   final MovieModel movie;
 
   const MovieExtraInfo({super.key, required this.movie});
 
-  String get _directorName {
+  String _directorName(BuildContext context) {
     if (movie.director != null && movie.director!.isNotEmpty) {
       return movie.director!.map((d) => d.toString()).join(', ');
     }
-    return 'Đang cập nhật';
+    return context.l10n.commonUpdating;
   }
 
-  String get _releaseDate {
+  String _releaseDate(BuildContext context) {
     final dateValue = movie.created?.time;
-    return DateFormat('dd/MM/yyyy').format(dateValue ?? DateTime.now());
+    return DateFormat.yMd(
+      Localizations.localeOf(context).toLanguageTag(),
+    ).format(dateValue ?? DateTime.now());
   }
 
   @override
@@ -203,16 +206,25 @@ class MovieExtraInfo extends StatelessWidget {
                           mainAxisSize: MainAxisSize.min,
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            _buildBullet(_directorName, 'Đạo diễn:'),
+                            _buildBullet(
+                              _directorName(context),
+                              context.l10n.detailDirectorLabel,
+                            ),
                             const SizedBox(height: 8),
-                            _buildBullet(_releaseDate, 'Ngày tạo:'),
+                            _buildBullet(
+                              _releaseDate(context),
+                              context.l10n.detailCreatedDateLabel,
+                            ),
                             const SizedBox(height: 8),
                             _buildBullet(
                               movie.year.toString(),
-                              'Năm sản xuất:',
+                              context.l10n.detailProductionYearLabel,
                             ),
                             const SizedBox(height: 8),
-                            _buildBullet(movie.country[0].name, 'Quốc gia:'),
+                            _buildBullet(
+                              movie.country[0].name,
+                              context.l10n.detailCountryLabel,
+                            ),
                           ],
                         ),
                       ),

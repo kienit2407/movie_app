@@ -10,6 +10,7 @@ import 'package:movie_app/feature/library/presentation/cubit/user_library_cubit.
 import 'package:movie_app/feature/library/presentation/pages/display_name_editor_page.dart';
 import 'package:movie_app/feature/library/presentation/pages/edit_profile_page.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:movie_app/l10n/app_localizations.dart';
 
 void main() {
   testWidgets('shows email as read-only profile information', (tester) async {
@@ -106,6 +107,9 @@ class _TestAppState extends State<_TestApp> {
     return BlocProvider.value(
       value: widget.cubit,
       child: MaterialApp.router(
+        locale: const Locale('vi'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         themeMode: ThemeMode.dark,
         darkTheme: ThemeData.dark(),
         routerConfig: _router,

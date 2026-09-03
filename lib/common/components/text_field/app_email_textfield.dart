@@ -3,6 +3,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
 import 'package:movie_app/core/config/themes/app_color.dart';
+import 'package:movie_app/core/extension/build_context_extension.dart';
 
 class AppEmailTextfield extends StatefulWidget {
   const AppEmailTextfield({super.key, required this.controller});
@@ -112,7 +113,7 @@ class _AppEmailTextfieldState extends State<AppEmailTextfield> {
                   ? AppColor.secondColor.withOpacity(.2)
                   : Colors.transparent,
               prefixIconColor: _isFocused ? AppColor.secondColor : Colors.white,
-              hintText: 'Email',
+              hintText: context.l10n.authEmail,
             ).applyDefaults(Theme.of(context).inputDecorationTheme),
           ),
         ),
