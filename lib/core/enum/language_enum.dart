@@ -51,3 +51,24 @@ enum Language {
   @override
   String toString() => languageName;
 }
+
+extension LanguageExtension on Language {
+  String get flagPath {
+    switch (this) {
+      case Language.english:
+        return 'en';
+      case Language.japanese:
+        return 'ja';
+      case Language.korean:
+        return 'ko';
+      case Language.chineseSimplified:
+        return 'zh';
+      case Language.chineseTraditional:
+        return 'zh';
+      case Language.thai:
+        return 'th';
+      case Language.vietnamese:
+        return 'vi';
+    }
+  }
+}

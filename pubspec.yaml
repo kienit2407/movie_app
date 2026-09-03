@@ -113,6 +113,7 @@ flutter:
     - assets/fonts/
     - assets/svg/
     - assets/.env
+    - assets/images/languages/
   #   - images/a_dot_ham.jpeg
 
 

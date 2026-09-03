@@ -150,6 +150,7 @@ class _HomePageState extends State<HomePage>
 
   @override
   void initState() {
+    debugPrint('🟢 HOME INIT');
     _homeUiCubit = HomeUiCubit();
     _loadPackageInfo();
     indexCarouselController = CarouselSliderController();
@@ -158,7 +159,20 @@ class _HomePageState extends State<HomePage>
   }
 
   @override
+  void activate() {
+    super.activate();
+    debugPrint('🔵 LOGO ACTIVATE');
+  }
+
+  @override
+  void deactivate() {
+    debugPrint('🟡 LOGO DEACTIVATE');
+    super.deactivate();
+  }
+
+  @override
   void dispose() {
+    debugPrint('🔴 HOME DISPOSE');
     HubTabReselectNotifier.instance.removeListener(_onHubTabReselected);
     _currentPageNotifier.dispose();
     _scrollController.dispose();
@@ -435,12 +449,7 @@ class _HomePageState extends State<HomePage>
             children: [
               Row(
                 children: [
-                  Container(
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Image.asset(AppImage.splashIcon, scale: 28),
-                  ),
+                  const _HomeLogo(),
                   const SizedBox(width: 10),
                   Expanded(
                     child: Column(
@@ -2238,6 +2247,54 @@ class _CountrySkeletonList extends StatelessWidget {
             ),
           );
         },
+      ),
+    );
+  }
+}
+
+class _HomeLogo extends StatefulWidget {
+  const _HomeLogo();
+
+  @override
+  State<_HomeLogo> createState() => _HomeLogoState();
+}
+
+class _HomeLogoState extends State<_HomeLogo> {
+  @override
+  void initState() {
+    super.initState();
+    debugPrint('🟢 LOGO INIT');
+  }
+
+  @override
+  void activate() {
+    super.activate();
+    debugPrint('🔵 LOGO ACTIVATE');
+  }
+
+  @override
+  void deactivate() {
+    debugPrint('🟡 LOGO DEACTIVATE');
+    super.deactivate();
+  }
+
+  @override
+  void dispose() {
+    debugPrint('🔴 LOGO DISPOSE');
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    debugPrint('⚪ LOGO BUILD');
+
+    return const SizedBox(
+      width: 32,
+      height: 32,
+      child: Image(
+        image: AssetImage(AppImage.splashIcon),
+        fit: BoxFit.contain,
+        gaplessPlayback: true,
       ),
     );
   }
