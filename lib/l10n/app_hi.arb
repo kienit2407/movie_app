@@ -1,0 +1,1481 @@
+{
+  "@@locale": "hi",
+  "appTitle": "Liquid Phim",
+  "@appTitle": {
+    "description": "Application name"
+  },
+  "appTagline": "फ़िल्में कभी भी, कहीं भी",
+  "@appTagline": {
+    "description": "Tagline displayed on the splash or branding screen"
+  },
+  "commonAgree": "ठीक है",
+  "@commonAgree": {
+    "description": "Generic confirmation action"
+  },
+  "commonCancel": "रद्द करें",
+  "@commonCancel": {
+    "description": "Generic cancel action"
+  },
+  "commonClose": "बंद करें",
+  "@commonClose": {
+    "description": "Generic close action or tooltip"
+  },
+  "commonDone": "हो गया",
+  "@commonDone": {
+    "description": "Generic done action"
+  },
+  "commonSave": "सहेजें",
+  "@commonSave": {
+    "description": "Generic save action"
+  },
+  "commonDelete": "हटाएँ",
+  "@commonDelete": {
+    "description": "Generic delete action"
+  },
+  "commonEdit": "संपादित करें",
+  "@commonEdit": {
+    "description": "Generic edit action"
+  },
+  "commonReport": "रिपोर्ट करें",
+  "@commonReport": {
+    "description": "Generic report action"
+  },
+  "commonRetry": "फिर से कोशिश करें",
+  "@commonRetry": {
+    "description": "Generic retry action"
+  },
+  "commonReset": "रीसेट करें",
+  "@commonReset": {
+    "description": "Generic reset action"
+  },
+  "commonAll": "सभी",
+  "@commonAll": {
+    "description": "Option representing all available values"
+  },
+  "commonSeeMore": "और देखें",
+  "@commonSeeMore": {
+    "description": "Action that expands content"
+  },
+  "commonCollapse": "कम दिखाएँ",
+  "@commonCollapse": {
+    "description": "Action that collapses content"
+  },
+  "commonLoading": "लोड हो रहा है...",
+  "@commonLoading": {
+    "description": "Generic loading state"
+  },
+  "commonUpdating": "अपडेट हो रहा है",
+  "@commonUpdating": {
+    "description": "Fallback text while movie information is being updated"
+  },
+  "commonUnderstood": "समझ गया",
+  "@commonUnderstood": {
+    "description": "Acknowledgement action in an informational dialog"
+  },
+  "commonNoData": "कोई डेटा नहीं",
+  "@commonNoData": {
+    "description": "Generic empty data state"
+  },
+  "commonNotAvailable": "उपलब्ध नहीं",
+  "@commonNotAvailable": {
+    "description": "Fallback value when information is unavailable"
+  },
+  "commonWarningTitle": "चेतावनी",
+  "@commonWarningTitle": {
+    "description": "Generic warning dialog title"
+  },
+  "commonNoticeTitle": "सूचना",
+  "@commonNoticeTitle": {
+    "description": "Generic informational dialog title"
+  },
+  "commonCongratulationsTitle": "बधाई!",
+  "@commonCongratulationsTitle": {
+    "description": "Generic success dialog title"
+  },
+  "commonBack": "वापस",
+  "@commonBack": {
+    "description": "Generic back navigation tooltip"
+  },
+  "commonGoHome": "होम पर जाएँ",
+  "@commonGoHome": {
+    "description": "Action on the router error page that navigates home"
+  },
+  "commonSelectedCount": "{count, plural, =0{कुछ भी चयनित नहीं} =1{1 चयनित} other{{count} चयनित}}",
+  "@commonSelectedCount": {
+    "description": "Number of selected list items",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "commonErrorWithDetails": "त्रुटि: {error}",
+  "@commonErrorWithDetails": {
+    "description": "Generic error containing technical details",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "commonDurationHoursMinutes": "{hours, plural, =1{1 घंटा} other{{hours} घंटे}} {minutes, plural, =1{1 मिनट} other{{minutes} मिनट}}",
+  "@commonDurationHoursMinutes": {
+    "description": "Movie duration containing hours and minutes",
+    "placeholders": {
+      "hours": {
+        "type": "int"
+      },
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "settingsLanguage": "भाषा",
+  "@settingsLanguage": {
+    "description": "Application language setting title"
+  },
+  "settingsLanguageSystem": "डिवाइस की भाषा का उपयोग करें",
+  "@settingsLanguageSystem": {
+    "description": "Option that follows the operating system language"
+  },
+  "settingsLanguageVietnamese": "Tiếng Việt",
+  "@settingsLanguageVietnamese": {
+    "description": "Vietnamese language option written in its native name"
+  },
+  "settingsLanguageEnglish": "English",
+  "@settingsLanguageEnglish": {
+    "description": "English language option written in its native name"
+  },
+  "settingsLanguageJapanese": "日本語",
+  "@settingsLanguageJapanese": {
+    "description": "Japanese language option written in its native name"
+  },
+  "settingsLanguageThai": "ไทย",
+  "@settingsLanguageThai": {
+    "description": "Thai language option written in its native name"
+  },
+  "settingsLanguageKorean": "한국어",
+  "@settingsLanguageKorean": {
+    "description": "Korean language option written in its native name"
+  },
+  "settingsLanguageChineseSimplified": "简体中文",
+  "@settingsLanguageChineseSimplified": {
+    "description": "Simplified Chinese language option written in its native name"
+  },
+  "settingsLanguageChineseTraditional": "繁體中文",
+  "@settingsLanguageChineseTraditional": {
+    "description": "Traditional Chinese language option written in its native name"
+  },
+  "settingsTitle": "सेटिंग्स",
+  "@settingsTitle": {
+    "description": "Settings page title and settings button tooltip"
+  },
+  "settingsGeneralSection": "सामान्य",
+  "@settingsGeneralSection": {
+    "description": "General settings section heading"
+  },
+  "settingsAppLanguage": "ऐप की भाषा",
+  "@settingsAppLanguage": {
+    "description": "App language row and language picker title"
+  },
+  "settingsAccountSection": "खाता",
+  "@settingsAccountSection": {
+    "description": "Account settings section heading"
+  },
+  "settingsSwitchAccount": "खाता बदलें",
+  "@settingsSwitchAccount": {
+    "description": "Switch account row and bottom sheet title"
+  },
+  "settingsAddAccount": "खाता जोड़ें",
+  "@settingsAddAccount": {
+    "description": "Action that starts sign-in for another account"
+  },
+  "settingsAccountSwitchFailed": "खाता बदला नहीं जा सका। कृपया उस खाते में फिर से साइन इन करें।",
+  "@settingsAccountSwitchFailed": {
+    "description": "Error shown when a saved account session cannot be restored"
+  },
+  "settingsSignOutFailed": "साइन आउट नहीं हो सका। कृपया फिर से कोशिश करें।",
+  "@settingsSignOutFailed": {
+    "description": "Error shown when signing out fails"
+  },
+  "navHome": "होम",
+  "@navHome": {
+    "description": "Home tab accessibility label"
+  },
+  "navSearch": "खोजें",
+  "@navSearch": {
+    "description": "Search tab accessibility label"
+  },
+  "navFavorites": "पसंदीदा",
+  "@navFavorites": {
+    "description": "Favorites tab accessibility label"
+  },
+  "navProfile": "प्रोफ़ाइल",
+  "@navProfile": {
+    "description": "Profile tab accessibility label"
+  },
+  "navNotifications": "सूचनाएँ",
+  "@navNotifications": {
+    "description": "Notifications page title and tooltip"
+  },
+  "internetOffline": "इंटरनेट कनेक्शन नहीं है",
+  "@internetOffline": {
+    "description": "Banner shown while the device is offline"
+  },
+  "internetBackOnline": "फिर से ऑनलाइन",
+  "@internetBackOnline": {
+    "description": "Banner shown when Internet access returns"
+  },
+  "authJoinMember": "सदस्य के रूप में जुड़ें",
+  "@authJoinMember": {
+    "description": "Action inviting a signed-out user to authenticate"
+  },
+  "authSignInTitle": "Liquid Phim में साइन इन करें",
+  "@authSignInTitle": {
+    "description": "Sign-in page heading"
+  },
+  "authSignIn": "साइन इन करें",
+  "@authSignIn": {
+    "description": "Sign-in action"
+  },
+  "authSignInFailed": "साइन इन सफल नहीं हुआ। कृपया फिर से कोशिश करें।",
+  "@authSignInFailed": {
+    "description": "Fallback sign-in failure message"
+  },
+  "authSignInToComment": "टिप्पणी करने और समुदाय से जुड़ने के लिए साइन इन करें।",
+  "@authSignInToComment": {
+    "description": "Sign-in benefit shown when authentication is required for comments"
+  },
+  "authGoogleSyncDescription": "अपना खाता सिंक करने और समुदाय से जुड़ने के लिए Google के साथ जारी रखें।",
+  "@authGoogleSyncDescription": {
+    "description": "Description of Google sign-in benefits"
+  },
+  "authGoogleConsent": "जारी रखकर, आप Liquid Phim के साथ अपने Google खाते का उपयोग करने के लिए सहमत होते हैं।",
+  "@authGoogleConsent": {
+    "description": "Consent copy below the Google sign-in action"
+  },
+  "authContinueWithGoogle": "Google के साथ जारी रखें",
+  "@authContinueWithGoogle": {
+    "description": "Google sign-in action"
+  },
+  "authGoogleSignInFailed": "Google से साइन इन नहीं हो सका। कृपया फिर से कोशिश करें।",
+  "@authGoogleSignInFailed": {
+    "description": "Google sign-in failure message"
+  },
+  "authGoogleSignInCheckFailed": "Google से साइन इन नहीं हो सका। अपना कनेक्शन जाँचें और फिर से कोशिश करें।",
+  "@authGoogleSignInCheckFailed": {
+    "description": "Google sign-in failure message that asks the user to check and retry"
+  },
+  "authSessionUpdateFailed": "आपका साइन-इन सत्र अपडेट नहीं हो सका।",
+  "@authSessionUpdateFailed": {
+    "description": "Authentication session refresh failure"
+  },
+  "authLoginRequired": "आपको साइन इन करना होगा।",
+  "@authLoginRequired": {
+    "description": "Message shown when a signed-in user is required"
+  },
+  "authLoginRequiredForAction": "यह कार्रवाई करने के लिए आपको साइन इन करना होगा।",
+  "@authLoginRequiredForAction": {
+    "description": "Message shown when an action requires authentication"
+  },
+  "authEmail": "ईमेल",
+  "@authEmail": {
+    "description": "Email field label or hint"
+  },
+  "authPassword": "पासवर्ड",
+  "@authPassword": {
+    "description": "Password field label or hint"
+  },
+  "authFullName": "पूरा नाम",
+  "@authFullName": {
+    "description": "Full name field label or hint"
+  },
+  "authForgotPassword": "पासवर्ड भूल गए?",
+  "@authForgotPassword": {
+    "description": "Forgot password action"
+  },
+  "authOrContinueWith": "या इसके साथ जारी रखें",
+  "@authOrContinueWith": {
+    "description": "Separator before social sign-in options"
+  },
+  "authAlreadyHaveAccount": "क्या आपका खाता पहले से है?",
+  "@authAlreadyHaveAccount": {
+    "description": "Prompt on the sign-up page"
+  },
+  "authFullNameRequired": "पूरा नाम खाली नहीं हो सकता।",
+  "@authFullNameRequired": {
+    "description": "Full name validation error"
+  },
+  "authFullNameLength": "पूरा नाम 3 से 15 अक्षरों के बीच होना चाहिए।",
+  "@authFullNameLength": {
+    "description": "Full name length validation error"
+  },
+  "authEmailRequired": "ईमेल खाली नहीं हो सकता।",
+  "@authEmailRequired": {
+    "description": "Email validation error"
+  },
+  "authEmailInvalid": "मान्य ईमेल पता दर्ज करें।",
+  "@authEmailInvalid": {
+    "description": "Email format validation error"
+  },
+  "authPasswordRequired": "पासवर्ड खाली नहीं हो सकता।",
+  "@authPasswordRequired": {
+    "description": "Password validation error"
+  },
+  "authPasswordLength": "पासवर्ड 6 से 15 अक्षरों के बीच होना चाहिए।",
+  "@authPasswordLength": {
+    "description": "Password length validation error"
+  },
+  "authAccountAlreadyExists": "यह खाता पहले से मौजूद है। कृपया दूसरा ईमेल चुनें।",
+  "@authAccountAlreadyExists": {
+    "description": "Sign-up failure when an account already exists"
+  },
+  "authWeakPassword": "यह पासवर्ड बहुत कमजोर है। कृपया अधिक मजबूत पासवर्ड दर्ज करें।",
+  "@authWeakPassword": {
+    "description": "Weak password validation returned by authentication"
+  },
+  "authInvalidCredentials": "ईमेल या पासवर्ड गलत है। कृपया फिर से कोशिश करें।",
+  "@authInvalidCredentials": {
+    "description": "Invalid sign-in credentials message"
+  },
+  "authUnexpectedError": "कुछ गलत हो गया। कृपया फिर से कोशिश करें।",
+  "@authUnexpectedError": {
+    "description": "Generic authentication failure"
+  },
+  "authSignUpFailed": "आपका खाता नहीं बनाया जा सका। कृपया फिर से कोशिश करें।",
+  "@authSignUpFailed": {
+    "description": "Generic sign-up failure"
+  },
+  "authSignUpSucceeded": "आपका खाता बना दिया गया है।",
+  "@authSignUpSucceeded": {
+    "description": "Sign-up success message"
+  },
+  "authSignInSucceeded": "सफलतापूर्वक साइन इन किया गया।",
+  "@authSignInSucceeded": {
+    "description": "Sign-in success message"
+  },
+  "authSignOutSucceeded": "सफलतापूर्वक साइन आउट किया गया।",
+  "@authSignOutSucceeded": {
+    "description": "Sign-out success message"
+  },
+  "authTokenConfirmed": "सत्यापन कोड की पुष्टि हो गई।",
+  "@authTokenConfirmed": {
+    "description": "Password reset token confirmation success"
+  },
+  "authTokenInvalid": "सत्यापन कोड गलत है।",
+  "@authTokenInvalid": {
+    "description": "Password reset token validation failure"
+  },
+  "homeEnableNewMovieNotificationsTitle": "नई फ़िल्मों की सूचनाएँ प्राप्त करें?",
+  "@homeEnableNewMovieNotificationsTitle": {
+    "description": "Title of the new movie notification opt-in dialog"
+  },
+  "homeEnableNewMovieNotificationsBody": "Liquid Phim समय-समय पर बैकग्राउंड में जाँच कर सकता है और नई फ़िल्में मिलने पर आपको सूचित कर सकता है। बैटरी बचाने के लिए ऑपरेटिंग सिस्टम जाँच में 20 मिनट से अधिक की देरी कर सकता है।",
+  "@homeEnableNewMovieNotificationsBody": {
+    "description": "Explanation in the new movie notification opt-in dialog"
+  },
+  "homeEnableNotifications": "सूचनाएँ चालू करें",
+  "@homeEnableNotifications": {
+    "description": "Action that enables new movie notifications"
+  },
+  "homeDoNotEnable": "अभी नहीं",
+  "@homeDoNotEnable": {
+    "description": "Action that declines new movie notifications"
+  },
+  "homeNotificationPermissionDisabled": "सूचना की अनुमति बंद है। आप इसे अपने फ़ोन की सेटिंग्स में फिर से चालू कर सकते हैं।",
+  "@homeNotificationPermissionDisabled": {
+    "description": "Message shown when notification permission is not granted"
+  },
+  "homeLoadMoviesFailed": "फ़िल्में लोड नहीं हो सकीं।\nफिर से कोशिश करने के लिए नीचे खींचें।",
+  "@homeLoadMoviesFailed": {
+    "description": "Home page movie loading error with retry guidance"
+  },
+  "homeRecommended": "सुझाए गए",
+  "@homeRecommended": {
+    "description": "Recommended movies filter"
+  },
+  "homeGenres": "शैलियाँ",
+  "@homeGenres": {
+    "description": "Genres filter or section label"
+  },
+  "homeCountries": "देश",
+  "@homeCountries": {
+    "description": "Countries filter or section label"
+  },
+  "homeYear": "वर्ष",
+  "@homeYear": {
+    "description": "Year filter label"
+  },
+  "homeFreshMovies": "नई रिलीज़!",
+  "@homeFreshMovies": {
+    "description": "Heading for newly released movies"
+  },
+  "homeKoreanMovies": "कोरियाई फ़िल्में",
+  "@homeKoreanMovies": {
+    "description": "Heading for the Korean movie section"
+  },
+  "homeChineseMovies": "चीनी फ़िल्में",
+  "@homeChineseMovies": {
+    "description": "Heading for the Chinese movie section"
+  },
+  "homeUsUkMovies": "अमेरिकी और ब्रिटिश फ़िल्में",
+  "@homeUsUkMovies": {
+    "description": "Heading for the US and UK movie section"
+  },
+  "homeWatchMovie": "देखें",
+  "@homeWatchMovie": {
+    "description": "Primary action that starts movie playback"
+  },
+  "homeInformation": "जानकारी",
+  "@homeInformation": {
+    "description": "Action that opens movie information"
+  },
+  "homeViewAll": "सभी देखें",
+  "@homeViewAll": {
+    "description": "Action that opens all items in a section"
+  },
+  "homeWhatToWatch": "आज आप क्या देखना चाहेंगे?",
+  "@homeWhatToWatch": {
+    "description": "Heading above movie type recommendations"
+  },
+  "homeViewMore": "और देखें",
+  "@homeViewMore": {
+    "description": "Action to show more movie recommendations"
+  },
+  "homeAppVersion": "संस्करण: {version} ({buildNumber})",
+  "@homeAppVersion": {
+    "description": "Application version and build number",
+    "placeholders": {
+      "version": {
+        "type": "String"
+      },
+      "buildNumber": {
+        "type": "String"
+      }
+    }
+  },
+  "filterMovieType": "फ़िल्म का प्रकार",
+  "@filterMovieType": {
+    "description": "Movie type filter heading"
+  },
+  "filterSeries": "सीरीज़",
+  "@filterSeries": {
+    "description": "Series movie type"
+  },
+  "filterSingleMovies": "फ़िल्में",
+  "@filterSingleMovies": {
+    "description": "Single movie type"
+  },
+  "filterAnimation": "एनीमेशन",
+  "@filterAnimation": {
+    "description": "Animation movie type"
+  },
+  "filterTvShows": "टीवी शो",
+  "@filterTvShows": {
+    "description": "TV show movie type"
+  },
+  "filterSubtitled": "उपशीर्षक सहित",
+  "@filterSubtitled": {
+    "description": "Content with subtitles"
+  },
+  "filterVoiceOver": "वॉइस-ओवर",
+  "@filterVoiceOver": {
+    "description": "Content with voice-over narration"
+  },
+  "filterDubbed": "डब किया हुआ",
+  "@filterDubbed": {
+    "description": "Dubbed content"
+  },
+  "filterChooseMovieType": "कृपया फ़िल्म का प्रकार चुनें।",
+  "@filterChooseMovieType": {
+    "description": "Validation message when no movie type is selected"
+  },
+  "filterChooseGenre": "कृपया कोई शैली चुनें।",
+  "@filterChooseGenre": {
+    "description": "Validation message when no genre is selected"
+  },
+  "filterChooseCountry": "फ़िल्टर करने के लिए कोई देश चुनें।",
+  "@filterChooseCountry": {
+    "description": "Validation message when no country is selected"
+  },
+  "filterChooseYear": "फ़िल्टर करने के लिए कोई वर्ष चुनें।",
+  "@filterChooseYear": {
+    "description": "Validation message when no year is selected"
+  },
+  "filterLanguage": "भाषा",
+  "@filterLanguage": {
+    "description": "Content language filter heading"
+  },
+  "filterSortBy": "इसके अनुसार क्रमबद्ध करें",
+  "@filterSortBy": {
+    "description": "Sort field heading"
+  },
+  "filterSortDirection": "क्रमबद्ध करने की दिशा",
+  "@filterSortDirection": {
+    "description": "Ascending or descending sort heading"
+  },
+  "filterDescending": "घटते क्रम में",
+  "@filterDescending": {
+    "description": "Descending sort option"
+  },
+  "filterAscending": "बढ़ते क्रम में",
+  "@filterAscending": {
+    "description": "Ascending sort option"
+  },
+  "filterMostViewed": "सबसे अधिक देखी गई",
+  "@filterMostViewed": {
+    "description": "Most viewed sort option"
+  },
+  "filterNewest": "नवीनतम",
+  "@filterNewest": {
+    "description": "Newest sort option"
+  },
+  "filterReleaseYear": "रिलीज़ वर्ष",
+  "@filterReleaseYear": {
+    "description": "Release year sort option"
+  },
+  "filterApply": "फ़िल्टर लागू करें",
+  "@filterApply": {
+    "description": "Action that applies all selected filters"
+  },
+  "filterResults": "परिणाम फ़िल्टर करें",
+  "@filterResults": {
+    "description": "Action that applies a simple filter"
+  },
+  "searchAttentionTitle": "ध्यान दें",
+  "@searchAttentionTitle": {
+    "description": "Search validation dialog title"
+  },
+  "searchEnterKeywordBeforeFiltering": "फ़िल्मों को फ़िल्टर करने से पहले कोई कीवर्ड दर्ज करें।",
+  "@searchEnterKeywordBeforeFiltering": {
+    "description": "Validation shown when filters are opened without a search keyword"
+  },
+  "searchNoResults": "कोई परिणाम नहीं मिला",
+  "@searchNoResults": {
+    "description": "Search empty result message"
+  },
+  "searchMovieActorHint": "फ़िल्में, अभिनेता खोजें...",
+  "@searchMovieActorHint": {
+    "description": "Search input hint"
+  },
+  "searchFilterTooltip": "खोज फ़िल्टर",
+  "@searchFilterTooltip": {
+    "description": "Tooltip and title for search filters"
+  },
+  "searchStartPrompt": "खोज शुरू करने के लिए फ़िल्म का शीर्षक दर्ज करें",
+  "@searchStartPrompt": {
+    "description": "Prompt shown before the first search"
+  },
+  "searchRecent": "हाल की खोजें",
+  "@searchRecent": {
+    "description": "Recent search history heading"
+  },
+  "searchLoadingGenres": "शैलियाँ लोड हो रही हैं...",
+  "@searchLoadingGenres": {
+    "description": "Loading state for genres in search filters"
+  },
+  "searchLoadingCountries": "देश लोड हो रहे हैं...",
+  "@searchLoadingCountries": {
+    "description": "Loading state for countries in search filters"
+  },
+  "searchNoMovies": "कोई फ़िल्म नहीं",
+  "@searchNoMovies": {
+    "description": "Movie list empty state"
+  },
+  "searchTryDifferentFilters": "अलग फ़िल्टर आज़माएँ",
+  "@searchTryDifferentFilters": {
+    "description": "Guidance shown when filters return no movies"
+  },
+  "librarySignOutTitle": "साइन आउट करें?",
+  "@librarySignOutTitle": {
+    "description": "Sign-out confirmation dialog title"
+  },
+  "librarySignOutConfirmation": "क्या आप वाकई इस खाते से साइन आउट करना चाहते हैं?",
+  "@librarySignOutConfirmation": {
+    "description": "Sign-out confirmation dialog body"
+  },
+  "librarySignOut": "साइन आउट करें",
+  "@librarySignOut": {
+    "description": "Sign-out action and tooltip"
+  },
+  "libraryDeleteSelectedMoviesTitle": "{count, plural, =1{चुनी गई फ़िल्म हटाएँ?} other{{count} चुनी गई फ़िल्में हटाएँ?}}",
+  "@libraryDeleteSelectedMoviesTitle": {
+    "description": "Title for deleting selected movies",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "libraryDeleteHistoryMovieTitle": "इस फ़िल्म को इतिहास से हटाएँ?",
+  "@libraryDeleteHistoryMovieTitle": {
+    "description": "Title for deleting one history item"
+  },
+  "libraryDeleteHistoryConfirmation": "{count, plural, =1{इस फ़िल्म को देखने के इतिहास से हटाएँ?} other{{count} फ़िल्मों को देखने के इतिहास से हटाएँ?}}",
+  "@libraryDeleteHistoryConfirmation": {
+    "description": "Confirmation for removing movies from watch history",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "libraryDeleteFavoriteMovieTitle": "इस फ़िल्म को पसंदीदा से हटाएँ?",
+  "@libraryDeleteFavoriteMovieTitle": {
+    "description": "Title for deleting one favorite movie"
+  },
+  "libraryDeleteFavoritesConfirmation": "{count, plural, =1{इस फ़िल्म को पसंदीदा से हटाएँ?} other{{count} फ़िल्मों को पसंदीदा से हटाएँ?}}",
+  "@libraryDeleteFavoritesConfirmation": {
+    "description": "Confirmation for removing movies from favorites",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "libraryCancelSelection": "चयन रद्द करें",
+  "@libraryCancelSelection": {
+    "description": "Tooltip that exits selection mode"
+  },
+  "libraryDeleteSelectedMovies": "चुनी गई फ़िल्में हटाएँ",
+  "@libraryDeleteSelectedMovies": {
+    "description": "Tooltip that deletes selected movies"
+  },
+  "libraryCannotResumeMovie": "अभी इस फ़िल्म को वहीं से जारी नहीं किया जा सकता।",
+  "@libraryCannotResumeMovie": {
+    "description": "Error shown when playback cannot resume from history"
+  },
+  "libraryYourProfile": "आपकी प्रोफ़ाइल",
+  "@libraryYourProfile": {
+    "description": "Profile section title"
+  },
+  "librarySignInProfileDescription": "अपनी प्रोफ़ाइल संपादित करने और देखने का इतिहास सिंक करने के लिए साइन इन करें।",
+  "@librarySignInProfileDescription": {
+    "description": "Description shown to a signed-out user on the profile page"
+  },
+  "libraryWatchHistory": "देखने का इतिहास",
+  "@libraryWatchHistory": {
+    "description": "Watch history heading"
+  },
+  "libraryNoWatchHistory": "अभी तक देखने का कोई इतिहास नहीं",
+  "@libraryNoWatchHistory": {
+    "description": "Empty watch history message"
+  },
+  "libraryFavorites": "पसंदीदा",
+  "@libraryFavorites": {
+    "description": "Favorites page title"
+  },
+  "librarySignInToSaveFavorites": "पसंदीदा फ़िल्में सहेजने के लिए साइन इन करें",
+  "@librarySignInToSaveFavorites": {
+    "description": "Signed-out favorites page heading"
+  },
+  "libraryFavoritesSyncDescription": "आपकी सूची आपके सभी डिवाइसों पर सिंक की जाएगी।",
+  "@libraryFavoritesSyncDescription": {
+    "description": "Signed-out favorites page description"
+  },
+  "libraryNoFavorites": "अभी तक कोई पसंदीदा फ़िल्म नहीं",
+  "@libraryNoFavorites": {
+    "description": "Empty favorites message"
+  },
+  "libraryRemoveFromList": "सूची से हटाएँ",
+  "@libraryRemoveFromList": {
+    "description": "Tooltip for deleting a library movie card"
+  },
+  "libraryContinueProgress": "{progress}% से जारी रखें",
+  "@libraryContinueProgress": {
+    "description": "Playback progress action on a library movie card",
+    "placeholders": {
+      "progress": {
+        "type": "int"
+      }
+    }
+  },
+  "libraryDateDayMonth": "{date}",
+  "@libraryDateDayMonth": {
+    "description": "Short month and day label for a watch history group",
+    "placeholders": {
+      "date": {
+        "type": "DateTime",
+        "format": "MMMd"
+      }
+    }
+  },
+  "libraryLoadFailed": "आपकी लाइब्रेरी लोड नहीं हो सकी। कृपया फिर से कोशिश करें।",
+  "@libraryLoadFailed": {
+    "description": "Library loading failure"
+  },
+  "libraryFavoriteUpdateFailed": "पसंदीदा अपडेट नहीं हो सके। कृपया फिर से कोशिश करें।",
+  "@libraryFavoriteUpdateFailed": {
+    "description": "Favorite update failure"
+  },
+  "libraryFavoriteRemoveFailed": "पसंदीदा से हटाया नहीं जा सका। कृपया फिर से कोशिश करें।",
+  "@libraryFavoriteRemoveFailed": {
+    "description": "Favorite removal failure"
+  },
+  "libraryHistorySyncLater": "आपका इतिहास बाद में फिर से सिंक किया जाएगा।",
+  "@libraryHistorySyncLater": {
+    "description": "Deferred watch history synchronization message"
+  },
+  "libraryHistoryDeleteFailed": "देखने का इतिहास हटाया नहीं जा सका। कृपया फिर से कोशिश करें।",
+  "@libraryHistoryDeleteFailed": {
+    "description": "Watch history deletion failure"
+  },
+  "profileEdit": "प्रोफ़ाइल संपादित करें",
+  "@profileEdit": {
+    "description": "Edit profile page title"
+  },
+  "profileChangePhoto": "फ़ोटो बदलें",
+  "@profileChangePhoto": {
+    "description": "Action for changing the profile photo"
+  },
+  "profileName": "नाम",
+  "@profileName": {
+    "description": "Display name field label"
+  },
+  "profileNameDescription": "यह नाम आपकी Liquid Phim प्रोफ़ाइल पर दिखाई देगा।",
+  "@profileNameDescription": {
+    "description": "Display name explanation"
+  },
+  "profileNameHint": "दिखाने के लिए नाम दर्ज करें",
+  "@profileNameHint": {
+    "description": "Display name input hint"
+  },
+  "profileClearName": "नाम साफ़ करें",
+  "@profileClearName": {
+    "description": "Tooltip that clears the display name field"
+  },
+  "profileEmailDescription": "यह ईमेल आपके खाते से जुड़ा है और केवल यहाँ दिखाया जाता है।",
+  "@profileEmailDescription": {
+    "description": "Email privacy explanation on the edit profile page"
+  },
+  "profileChangeAvatar": "प्रोफ़ाइल फ़ोटो बदलें",
+  "@profileChangeAvatar": {
+    "description": "Avatar action sheet heading"
+  },
+  "profileTakePhoto": "फ़ोटो लें",
+  "@profileTakePhoto": {
+    "description": "Camera avatar source action"
+  },
+  "profileUploadPhoto": "फ़ोटो अपलोड करें",
+  "@profileUploadPhoto": {
+    "description": "Gallery avatar source action"
+  },
+  "profileViewPhoto": "फ़ोटो देखें",
+  "@profileViewPhoto": {
+    "description": "Action that opens the current avatar"
+  },
+  "profileAvatar": "प्रोफ़ाइल फ़ोटो",
+  "@profileAvatar": {
+    "description": "Full-screen profile photo page title"
+  },
+  "profileCropAvatar": "प्रोफ़ाइल फ़ोटो क्रॉप करें",
+  "@profileCropAvatar": {
+    "description": "Image cropper title"
+  },
+  "profileAvatarUpdated": "प्रोफ़ाइल फ़ोटो अपडेट हो गई।",
+  "@profileAvatarUpdated": {
+    "description": "Avatar update success message"
+  },
+  "profileAvatarUpdateFailed": "प्रोफ़ाइल फ़ोटो अपडेट नहीं हो सकी। कृपया फिर से कोशिश करें।",
+  "@profileAvatarUpdateFailed": {
+    "description": "Avatar update failure message"
+  },
+  "profilePhotoOpenFailed": "फ़ोटो नहीं खुल सकी। फ़ोटो एक्सेस की अनुमति जाँचें।",
+  "@profilePhotoOpenFailed": {
+    "description": "Photo picker failure message"
+  },
+  "profileNameUpdated": "दिखाने वाला नाम अपडेट हो गया।",
+  "@profileNameUpdated": {
+    "description": "Display name update success message"
+  },
+  "profileNameUpdateFailed": "नाम अपडेट नहीं हो सका। कृपया फिर से कोशिश करें।",
+  "@profileNameUpdateFailed": {
+    "description": "Display name update failure message"
+  },
+  "profileNameRequired": "नाम खाली नहीं हो सकता।",
+  "@profileNameRequired": {
+    "description": "Display name required validation message"
+  },
+  "profileUpdatedProfileReadFailed": "अपडेट की गई प्रोफ़ाइल पढ़ी नहीं जा सकी।",
+  "@profileUpdatedProfileReadFailed": {
+    "description": "Failure while reading the profile immediately after an update"
+  },
+  "detailCastUnavailable": "कलाकारों की जानकारी उपलब्ध नहीं है",
+  "@detailCastUnavailable": {
+    "description": "Empty cast message"
+  },
+  "detailCast": "कलाकार",
+  "@detailCast": {
+    "description": "Cast tab or section title"
+  },
+  "detailRecommendationsLoadFailed": "सुझाव लोड नहीं हो सके",
+  "@detailRecommendationsLoadFailed": {
+    "description": "Movie recommendations loading failure"
+  },
+  "detailNoRecommendations": "कोई सुझाव नहीं",
+  "@detailNoRecommendations": {
+    "description": "Empty movie recommendations message"
+  },
+  "detailEpisodeNotFound": "एपिसोड {episode} मौजूदा सर्वर पर उपलब्ध नहीं है।",
+  "@detailEpisodeNotFound": {
+    "description": "Dialog message when an episode does not exist on the selected server",
+    "placeholders": {
+      "episode": {
+        "type": "int"
+      }
+    }
+  },
+  "detailNoEpisodes": "कोई एपिसोड उपलब्ध नहीं",
+  "@detailNoEpisodes": {
+    "description": "Empty episode list message"
+  },
+  "detailWatchThisVersion": "यह संस्करण देखें",
+  "@detailWatchThisVersion": {
+    "description": "Action that starts a particular server or dub version"
+  },
+  "detailServer": "सर्वर",
+  "@detailServer": {
+    "description": "Single movie server section label"
+  },
+  "detailServerNumber": "सर्वर {number}",
+  "@detailServerNumber": {
+    "description": "Fallback server name",
+    "placeholders": {
+      "number": {
+        "type": "int"
+      }
+    }
+  },
+  "detailEpisodeRange": "एपिसोड 1–{count}",
+  "@detailEpisodeRange": {
+    "description": "Episode range heading",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "detailEnterEpisode": "एपिसोड दर्ज करें",
+  "@detailEnterEpisode": {
+    "description": "Episode search input hint"
+  },
+  "detailLoadMovieError": "फ़िल्म लोड नहीं हो सकी",
+  "@detailLoadMovieError": {
+    "description": "Movie detail loading error title"
+  },
+  "detailEpisodesTab": "एपिसोड",
+  "@detailEpisodesTab": {
+    "description": "Episodes tab title"
+  },
+  "detailRecommendationsTab": "सुझाव",
+  "@detailRecommendationsTab": {
+    "description": "Recommendations tab title"
+  },
+  "detailCommentsTab": "टिप्पणियाँ",
+  "@detailCommentsTab": {
+    "description": "Comments tab title"
+  },
+  "detailInTheaters": "सिनेमाघरों में",
+  "@detailInTheaters": {
+    "description": "Badge for theatrical movies"
+  },
+  "detailExclusiveSubtitles": "विशेष उपशीर्षक",
+  "@detailExclusiveSubtitles": {
+    "description": "Badge for exclusive subtitles"
+  },
+  "detailDirectorLabel": "निर्देशक:",
+  "@detailDirectorLabel": {
+    "description": "Movie director metadata label"
+  },
+  "detailCreatedDateLabel": "जोड़ा गया:",
+  "@detailCreatedDateLabel": {
+    "description": "Movie record creation date metadata label"
+  },
+  "detailProductionYearLabel": "निर्माण वर्ष:",
+  "@detailProductionYearLabel": {
+    "description": "Movie production year metadata label"
+  },
+  "detailCountryLabel": "देश:",
+  "@detailCountryLabel": {
+    "description": "Movie country metadata label"
+  },
+  "detailWatchLatestEpisode": "नवीनतम एपिसोड देखें",
+  "@detailWatchLatestEpisode": {
+    "description": "Action that starts the latest episode"
+  },
+  "detailWatchMovie": "फ़िल्म देखें",
+  "@detailWatchMovie": {
+    "description": "Action that starts a full movie"
+  },
+  "detailIntroduction": "सारांश",
+  "@detailIntroduction": {
+    "description": "Movie description section heading"
+  },
+  "detailFavorite": "पसंदीदा",
+  "@detailFavorite": {
+    "description": "Favorite movie action label"
+  },
+  "detailContent": "कथासार",
+  "@detailContent": {
+    "description": "Movie synopsis heading in the quick detail dialog"
+  },
+  "detailNoPlayableEpisodes": "इस फ़िल्म में अभी कोई चलाने योग्य एपिसोड नहीं है। कृपया बाद में फिर कोशिश करें।",
+  "@detailNoPlayableEpisodes": {
+    "description": "Dialog message when a movie has no playable episodes"
+  },
+  "detailDetails": "विवरण",
+  "@detailDetails": {
+    "description": "Movie details section or action"
+  },
+  "detailVideoQuality": "वीडियो गुणवत्ता",
+  "@detailVideoQuality": {
+    "description": "Video quality selection sheet title"
+  },
+  "detailViews": "{count} बार देखा गया",
+  "@detailViews": {
+    "description": "Formatted movie view count",
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "detailLikes": "{count} लाइक",
+  "@detailLikes": {
+    "description": "Formatted movie like count",
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "detailUpdatedJustNow": "अभी-अभी अपडेट किया गया",
+  "@detailUpdatedJustNow": {
+    "description": "Relative update time less than one minute ago"
+  },
+  "playerSubtitleServer": "उपशीर्षक सहित",
+  "@playerSubtitleServer": {
+    "description": "Fallback name for a subtitle server"
+  },
+  "playerNowPlaying": "अभी चल रहा है",
+  "@playerNowPlaying": {
+    "description": "Label for the currently playing episode or server"
+  },
+  "playerNowPlayingEpisode": "अभी चल रहा है: {episode}",
+  "@playerNowPlayingEpisode": {
+    "description": "Currently playing episode label",
+    "placeholders": {
+      "episode": {
+        "type": "String"
+      }
+    }
+  },
+  "playerEpisodeAndServer": "{episode} — {server}",
+  "@playerEpisodeAndServer": {
+    "description": "Now-playing subtitle containing episode and server names",
+    "placeholders": {
+      "episode": {
+        "type": "String"
+      },
+      "server": {
+        "type": "String"
+      }
+    }
+  },
+  "playerSourceUnavailable": "इस सर्वर पर चलाने योग्य स्रोत नहीं है।",
+  "@playerSourceUnavailable": {
+    "description": "Player error when a server contains no source URL"
+  },
+  "playerSourceLoadFailed": "इस फ़िल्म का स्रोत लोड नहीं हो सका।",
+  "@playerSourceLoadFailed": {
+    "description": "Player source loading failure"
+  },
+  "playerAutoplayEnabled": "ऑटोप्ले चालू है",
+  "@playerAutoplayEnabled": {
+    "description": "Toast shown after enabling episode autoplay"
+  },
+  "playerAutoplayDisabled": "ऑटोप्ले बंद है",
+  "@playerAutoplayDisabled": {
+    "description": "Toast shown after disabling episode autoplay"
+  },
+  "playerNoMoreEpisodes": "आप अंतिम एपिसोड तक पहुँच गए हैं",
+  "@playerNoMoreEpisodes": {
+    "description": "Toast shown when navigating after the final episode"
+  },
+  "playerFirstEpisode": "यह पहला एपिसोड है",
+  "@playerFirstEpisode": {
+    "description": "Toast shown when navigating before the first episode"
+  },
+  "playerPlaybackFailed": "वीडियो चलाया नहीं जा सका। कृपया फिर से कोशिश करें।",
+  "@playerPlaybackFailed": {
+    "description": "Generic video playback failure"
+  },
+  "playerPlay": "चलाएँ",
+  "@playerPlay": {
+    "description": "Action or accessibility label that starts playback"
+  },
+  "playerPause": "रोकें",
+  "@playerPause": {
+    "description": "Action or accessibility label that pauses playback"
+  },
+  "playerPullDownToCloseComments": "टिप्पणियाँ बंद करने के लिए नीचे खींचें",
+  "@playerPullDownToCloseComments": {
+    "description": "Accessibility label for dismissing the comments sheet"
+  },
+  "playerPlayOnTv": "टीवी पर चलाएँ",
+  "@playerPlayOnTv": {
+    "description": "Casting action tooltip"
+  },
+  "playerEpisodeList": "एपिसोड सूची",
+  "@playerEpisodeList": {
+    "description": "Episode list button tooltip"
+  },
+  "playerVideoProgress": "वीडियो प्रगति",
+  "@playerVideoProgress": {
+    "description": "Accessibility label for the video seek bar"
+  },
+  "playerClose": "प्लेयर बंद करें",
+  "@playerClose": {
+    "description": "Tooltip that closes the persistent player"
+  },
+  "playerContinueWatchingTitle": "देखना जारी रखें?",
+  "@playerContinueWatchingTitle": {
+    "description": "Resume playback dialog title"
+  },
+  "playerContinueWatchingBody": "आप {episode} देख रहे थे। क्या आप वहीं से जारी रखना चाहते हैं या एपिसोड 1 से फिर शुरू करना चाहते हैं?",
+  "@playerContinueWatchingBody": {
+    "description": "Resume playback dialog body",
+    "placeholders": {
+      "episode": {
+        "type": "String"
+      }
+    }
+  },
+  "playerRestartFromBeginning": "शुरू से फिर चलाएँ",
+  "@playerRestartFromBeginning": {
+    "description": "Action that restarts playback from episode 1"
+  },
+  "playerContinue": "जारी रखें",
+  "@playerContinue": {
+    "description": "Action that resumes playback from history"
+  },
+  "commentsReply": "जवाब दें",
+  "@commentsReply": {
+    "description": "Action that replies to a comment"
+  },
+  "commentsReplyCount": "{count, plural, =0{कोई जवाब नहीं} =1{1 जवाब} other{{count} जवाब}}",
+  "@commentsReplyCount": {
+    "description": "Number of replies to a comment",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "commentsLoadFailedTitle": "टिप्पणियाँ लोड नहीं हो सकीं",
+  "@commentsLoadFailedTitle": {
+    "description": "Comments loading error title"
+  },
+  "commentsEmptyTitle": "अभी तक कोई टिप्पणी नहीं",
+  "@commentsEmptyTitle": {
+    "description": "Empty comments title"
+  },
+  "commentsEmptySubtitle": "अपनी राय साझा करने वाले पहले व्यक्ति बनें।",
+  "@commentsEmptySubtitle": {
+    "description": "Empty comments guidance"
+  },
+  "commentsEditHint": "टिप्पणी संपादित करें...",
+  "@commentsEditHint": {
+    "description": "Comment composer hint while editing"
+  },
+  "commentsReplyToHint": "{name} को जवाब दें...",
+  "@commentsReplyToHint": {
+    "description": "Comment composer hint while replying to a person",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "commentsAddReplyHint": "जवाब जोड़ें...",
+  "@commentsAddReplyHint": {
+    "description": "Reply composer hint"
+  },
+  "commentsComposerHint": "टिप्पणी लिखें...",
+  "@commentsComposerHint": {
+    "description": "Default comment composer hint"
+  },
+  "commentsEditingStatus": "टिप्पणी संपादित की जा रही है",
+  "@commentsEditingStatus": {
+    "description": "Comment composer editing status"
+  },
+  "commentsReplyingStatus": "{name} को जवाब दिया जा रहा है",
+  "@commentsReplyingStatus": {
+    "description": "Comment composer reply status",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "commentsWrite": "टिप्पणी लिखें",
+  "@commentsWrite": {
+    "description": "Comment input accessibility label"
+  },
+  "commentsSend": "भेजें",
+  "@commentsSend": {
+    "description": "Send comment action tooltip"
+  },
+  "commentsCloseMenu": "टिप्पणी मेनू बंद करें",
+  "@commentsCloseMenu": {
+    "description": "Accessibility label for closing a comment action menu"
+  },
+  "commentsCopied": "टिप्पणी कॉपी की गई",
+  "@commentsCopied": {
+    "description": "Toast after copying a comment"
+  },
+  "commentsYourComment": "आपकी टिप्पणी",
+  "@commentsYourComment": {
+    "description": "Action sheet title for the signed-in user's own comment"
+  },
+  "commentsReportReasonTitle": "आप इस टिप्पणी की रिपोर्ट क्यों कर रहे हैं?",
+  "@commentsReportReasonTitle": {
+    "description": "Comment report reason sheet title"
+  },
+  "commentsReportSent": "रिपोर्ट भेज दी गई। धन्यवाद।",
+  "@commentsReportSent": {
+    "description": "Toast after successfully reporting a comment"
+  },
+  "commentsDeleteTitle": "टिप्पणी हटाएँ?",
+  "@commentsDeleteTitle": {
+    "description": "Delete comment confirmation title"
+  },
+  "commentsRepliesPreserved": "जवाब सुरक्षित रहेंगे।",
+  "@commentsRepliesPreserved": {
+    "description": "Delete comment confirmation explanation"
+  },
+  "commentsDeleteAction": "टिप्पणी हटाएँ",
+  "@commentsDeleteAction": {
+    "description": "Delete comment confirmation action"
+  },
+  "commentsSortTitle": "टिप्पणियाँ क्रमबद्ध करें",
+  "@commentsSortTitle": {
+    "description": "Comment sort sheet title and tooltip"
+  },
+  "commentsPopular": "लोकप्रिय",
+  "@commentsPopular": {
+    "description": "Popular comment sort option"
+  },
+  "commentsNewest": "नवीनतम",
+  "@commentsNewest": {
+    "description": "Newest comment sort option"
+  },
+  "commentsCount": "{count, plural, =0{टिप्पणियाँ} =1{1 टिप्पणी} other{{count} टिप्पणियाँ}}",
+  "@commentsCount": {
+    "description": "Comments section count heading",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "commentsCopy": "टिप्पणी कॉपी करें",
+  "@commentsCopy": {
+    "description": "Comment context menu copy action"
+  },
+  "commentsEdited": "संपादित",
+  "@commentsEdited": {
+    "description": "Label for an edited comment"
+  },
+  "commentsDeleted": "टिप्पणी हटाई गई",
+  "@commentsDeleted": {
+    "description": "Placeholder shown for a deleted comment"
+  },
+  "commentsJustNow": "अभी-अभी",
+  "@commentsJustNow": {
+    "description": "Relative time for an event less than one minute ago"
+  },
+  "commentsMinutesAgo": "{count, plural, =1{1 मिनट पहले} other{{count} मिनट पहले}}",
+  "@commentsMinutesAgo": {
+    "description": "Relative time in minutes",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "commentsHoursAgo": "{count, plural, =1{1 घंटे पहले} other{{count} घंटे पहले}}",
+  "@commentsHoursAgo": {
+    "description": "Relative time in hours",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "commentsDaysAgo": "{count, plural, =1{1 दिन पहले} other{{count} दिन पहले}}",
+  "@commentsDaysAgo": {
+    "description": "Relative time in days",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "commentsWeeksAgo": "{count, plural, =1{1 सप्ताह पहले} other{{count} सप्ताह पहले}}",
+  "@commentsWeeksAgo": {
+    "description": "Relative time in weeks",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "commentsMonthsAgo": "{count, plural, =1{1 महीने पहले} other{{count} महीने पहले}}",
+  "@commentsMonthsAgo": {
+    "description": "Relative time in months",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "commentsYearsAgo": "{count, plural, =1{1 वर्ष पहले} other{{count} वर्ष पहले}}",
+  "@commentsYearsAgo": {
+    "description": "Relative time in years",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "commentsSpamReason": "स्पैम",
+  "@commentsSpamReason": {
+    "description": "Comment report reason for spam"
+  },
+  "commentsHarassmentReason": "उत्पीड़न या दुर्व्यवहार",
+  "@commentsHarassmentReason": {
+    "description": "Comment report reason for harassment"
+  },
+  "commentsSpoilerReason": "फ़िल्म स्पॉइलर",
+  "@commentsSpoilerReason": {
+    "description": "Comment report reason for spoilers"
+  },
+  "commentsInappropriateReason": "अनुचित सामग्री",
+  "@commentsInappropriateReason": {
+    "description": "Comment report reason for inappropriate content"
+  },
+  "commentsOtherReason": "अन्य कारण",
+  "@commentsOtherReason": {
+    "description": "Fallback comment report reason"
+  },
+  "commentsLoadFailed": "टिप्पणियाँ लोड नहीं हो सकीं। कृपया फिर से कोशिश करें।",
+  "@commentsLoadFailed": {
+    "description": "Initial comments loading failure"
+  },
+  "commentsLoadMoreFailed": "और टिप्पणियाँ लोड नहीं हो सकीं।",
+  "@commentsLoadMoreFailed": {
+    "description": "Pagination failure for comments"
+  },
+  "commentsRepliesLoadFailed": "जवाब लोड नहीं हो सके।",
+  "@commentsRepliesLoadFailed": {
+    "description": "Initial replies loading failure"
+  },
+  "commentsRepliesLoadMoreFailed": "और जवाब लोड नहीं हो सके।",
+  "@commentsRepliesLoadMoreFailed": {
+    "description": "Pagination failure for replies"
+  },
+  "commentsSendFailed": "टिप्पणी भेजी नहीं जा सकी। आपका टेक्स्ट सुरक्षित रखा गया है।",
+  "@commentsSendFailed": {
+    "description": "Comment submission failure"
+  },
+  "commentsEditFailed": "टिप्पणी संपादित नहीं की जा सकी।",
+  "@commentsEditFailed": {
+    "description": "Comment editing failure"
+  },
+  "commentsDeleteFailed": "टिप्पणी हटाई नहीं जा सकी।",
+  "@commentsDeleteFailed": {
+    "description": "Comment deletion failure"
+  },
+  "commentsReactionFailed": "प्रतिक्रिया अपडेट नहीं हो सकी।",
+  "@commentsReactionFailed": {
+    "description": "Comment reaction update failure"
+  },
+  "commentsReportFailed": "इस टिप्पणी की रिपोर्ट पहले ही की जा चुकी है या रिपोर्ट भेजी नहीं जा सकी।",
+  "@commentsReportFailed": {
+    "description": "Comment report failure"
+  },
+  "commentsOperationInProgress": "यह कार्रवाई पहले से चल रही है।",
+  "@commentsOperationInProgress": {
+    "description": "Message shown when the same comment operation is already running"
+  },
+  "notificationsEmpty": "कोई नई सूचना नहीं",
+  "@notificationsEmpty": {
+    "description": "Empty notification inbox message"
+  },
+  "notificationsRepliedToYourComment": "ने आपकी टिप्पणी का जवाब दिया",
+  "@notificationsRepliedToYourComment": {
+    "description ": "Action phrase in a reply notification"
+  },
+  "notificationsLikedYourComment": "ने आपकी टिप्पणी को लाइक किया",
+  "@notificationsLikedYourComment": {
+    "description": "Action phrase in a reaction notification"
+  },
+  "notificationsToday": "आज",
+  "@notificationsToday": {
+    "description": "Notification date group for today"
+  },
+  "notificationsYesterday": "कल",
+  "@notificationsYesterday": {
+    "description": "Notification date group for yesterday"
+  },
+  "notificationsUnknownUser": "कोई व्यक्ति",
+  "@notificationsUnknownUser": {
+    "description": "Fallback actor name in a notification"
+  },
+  "notificationsNewMovieTitle": "नई फ़िल्म",
+  "@notificationsNewMovieTitle": {
+    "description": "Notification channel and single new movie notification title"
+  },
+  "notificationsNewMoviesTitle": "{count} नई फ़िल्में",
+  "@notificationsNewMoviesTitle": {
+    "description": "Notification title for multiple new movies",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "notificationsMovieAdded": "{movieName} को अभी Liquid Phim में जोड़ा गया है।",
+  "@notificationsMovieAdded": {
+    "description": "Single new movie notification body",
+    "placeholders": {
+      "movieName": {
+        "type": "String"
+      }
+    }
+  },
+  "notificationsNewMovieChannelDescription": "जब Liquid Phim नई फ़िल्में खोजे तब सूचनाएँ",
+  "@notificationsNewMovieChannelDescription": {
+    "description": "Android new movie notification channel description"
+  },
+  "castChooseDevice": "डिवाइस चुनें",
+  "@castChooseDevice": {
+    "description": "Casting device sheet title"
+  },
+  "castAirPlayUnavailableTitle": "AirPlay नहीं खुल सका",
+  "@castAirPlayUnavailableTitle": {
+    "description": "AirPlay launch failure dialog title"
+  },
+  "castAirPlayUnavailableBody": "सुनिश्चित करें कि आपका iPhone और TV या Mac एक ही Wi-Fi नेटवर्क पर हैं, फिर से कोशिश करें।",
+  "@castAirPlayUnavailableBody": {
+    "description": "AirPlay launch failure guidance"
+  },
+  "castVideoUnavailableTitle": "कोई वीडियो उपलब्ध नहीं",
+  "@castVideoUnavailableTitle": {
+    "description": "Casting dialog title when video is not ready"
+  },
+  "castVideoUnavailableBody": "वीडियो के लोड होने की प्रतीक्षा करें, फिर Google Cast डिवाइस चुनें।",
+  "@castVideoUnavailableBody": {
+    "description": "Casting guidance when video is not ready"
+  },
+  "castConnectionFailedTitle": "Google Cast से कनेक्ट नहीं हो सका",
+  "@castConnectionFailedTitle": {
+    "description": "Google Cast connection failure title"
+  },
+  "castConnectionFailedBody": "Google Play services जाँचें और सुनिश्चित करें कि आपका फ़ोन और Chromecast या Google TV एक ही Wi-Fi नेटवर्क पर हैं।",
+  "@castConnectionFailedBody": {
+    "description": "Google Cast connection failure guidance"
+  },
+  "castAirPlayAndBluetoothDevices": "AirPlay और Bluetooth डिवाइस",
+  "@castAirPlayAndBluetoothDevices": {
+    "description": "AirPlay route picker item title"
+  },
+  "castConnecting": "कनेक्ट हो रहा है...",
+  "@castConnecting": {
+    "description": "Casting device connection state"
+  },
+  "castSearching": "Google Cast डिवाइस खोजे जा रहे हैं...",
+  "@castSearching": {
+    "description": "Casting device discovery loading state"
+  },
+  "castNoDevices": "कोई डिवाइस नहीं मिला",
+  "@castNoDevices": {
+    "description": "Casting device discovery empty state"
+  },
+  "castSameWifiGuidance": "सुनिश्चित करें कि आपका फ़ोन और Chromecast या Google TV एक ही Wi-Fi नेटवर्क पर हैं।",
+  "@castSameWifiGuidance": {
+    "description": "Casting device discovery guidance"
+  },
+  "castSearchAgain": "फिर खोजें",
+  "@castSearchAgain": {
+    "description": "Action that restarts casting device discovery"
+  },
+  "castDefaultDeviceName": "Google Cast डिवाइस",
+  "@castDefaultDeviceName": {
+    "description": "Fallback Google Cast device name"
+  },
+  "shareMovieSubject": "Liquid Phim पर {movieName} देखें",
+  "@shareMovieSubject": {
+    "description": "Movie share sheet subject",
+    "placeholders": {
+      "movieName": {
+        "type": "String"
+      }
+    }
+  },
+  "shareOpenFailed": "शेयर शीट नहीं खुल सकी।",
+  "@shareOpenFailed": {
+    "description": "Share sheet launch failure"
+  },
+  "rankingTopFavorites": "टॉप पसंदीदा फ़िल्में",
+  "@rankingTopFavorites": {
+    "description": "Favorite movies ranking title"
+  },
+  "rankingTopLiquidPhim": "Liquid Phim टॉप 30",
+  "@rankingTopLiquidPhim": {
+    "description": "Overall Liquid Phim ranking title"
+  },
+  "rankingTopHotMovies": "टॉप 30 लोकप्रिय फ़िल्में",
+  "@rankingTopHotMovies": {
+    "description": "Hot single movies ranking title"
+  },
+  "rankingMostViewed": "सबसे अधिक देखी गई",
+  "@rankingMostViewed": {
+    "description": "Most viewed ranking subtitle"
+  },
+  "rankingMostLiked": "सबसे अधिक लाइक की गई",
+  "@rankingMostLiked": {
+    "description": "Most liked ranking subtitle"
+  },
+  "rankingEmptyLikes": "फ़िल्मों को लाइक मिलने के बाद रैंकिंग दिखाई देगी।",
+  "@rankingEmptyLikes": {
+    "description": "Empty most-liked ranking message"
+  },
+  "rankingEmptyViews": "फ़िल्मों को व्यू मिलने के बाद रैंकिंग दिखाई देगी।",
+  "@rankingEmptyViews": {
+    "description": "Empty most-viewed ranking message"
+  },
+  "rankingLoadFailed": "रैंकिंग लोड नहीं हो सकी।",
+  "@rankingLoadFailed": {
+    "description": "Ranking loading failure"
+  },
+  "playerEpisodeNumber": "एपिसोड {number}",
+  "@playerEpisodeNumber": {
+    "description": "Episode number label",
+    "placeholders": {
+      "number": {
+        "type": "int"
+      }
+    }
+  },
+  "libraryMonthLabel": "महीना {month}",
+  "@libraryMonthLabel": {
+    "description": "Month label",
+    "placeholders": {
+      "month": {
+        "type": "int"
+      }
+    }
+  }
+}

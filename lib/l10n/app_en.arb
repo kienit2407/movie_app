@@ -600,7 +600,7 @@
   "notificationsEmpty": "No new notifications",
   "@notificationsEmpty": {"description": "Empty notification inbox message"},
   "notificationsRepliedToYourComment": "replied to your comment",
-  "@notificationsRepliedToYourComment": {"description": "Action phrase in a reply notification"},
+  "@notificationsRepliedToYourComment": {"description ": "Action phrase in a reply notification"},
   "notificationsLikedYourComment": "liked your comment",
   "@notificationsLikedYourComment": {"description": "Action phrase in a reaction notification"},
   "notificationsToday": "Today",

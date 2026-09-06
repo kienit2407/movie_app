@@ -450,6 +450,14 @@ class _HomePageState extends State<HomePage>
               Row(
                 children: [
                   const _HomeLogo(),
+                  // Container(
+                  //   decoration: const BoxDecoration(shape: BoxShape.circle),
+                  //   child: Image(
+                  //     image: AssetImage(AppImage.splashIcon),
+                  //     width: 35.0.w,
+                  //     height: 35.0.w,
+                  //   ),
+                  // ),
                   const SizedBox(width: 10),
                   Expanded(
                     child: Column(

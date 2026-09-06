@@ -2,7 +2,7 @@ import 'package:hydrated_bloc/hydrated_bloc.dart';
 import 'package:movie_app/core/enum/language_enum.dart';
 
 class LocalizationCubit extends HydratedCubit<Language> {
-  LocalizationCubit() : super(Language.vietnamese);
+  LocalizationCubit() : super(Language.system);
 
   void changeLanguage(Language language) {
     if (language != state) emit(language);
@@ -25,7 +25,7 @@ class LocalizationCubit extends HydratedCubit<Language> {
     if (languageCode == 'zh') return Language.chineseTraditional;
     return Language.values.firstWhere(
       (language) => language.languageCode == languageCode,
-      orElse: () => Language.vietnamese,
+      orElse: () => Language.system,
     );
   }
 

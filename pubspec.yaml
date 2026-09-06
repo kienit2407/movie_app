@@ -134,6 +134,11 @@ flutter:
           weight: 400
         - asset: assets/fonts/Inter_18pt-Light.ttf
           weight: 300
+
+    - family: NotoSansDevanagari
+      fonts:
+        - asset: assets/fonts/NotoSansDevanagari-Regular.ttf
+          weight: 400
   #   - family: Trajan Pro
   #     fonts:
   #       - asset: fonts/TrajanPro.ttf

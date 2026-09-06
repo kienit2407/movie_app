@@ -52,12 +52,12 @@ class _LanguagePageState extends State<LanguagePage> {
 
   @override
   Widget build(BuildContext context) {
-    final l10n = context.l10n;
     return Localizations.override(
       locale: _selectedLanguage.locale,
       context: context,
       child: Builder(
         builder: (context) {
+          final l10n = context.l10n;
           return Scaffold(
             backgroundColor: AppColor.bgApp,
             body: Stack(
@@ -219,6 +219,9 @@ class _LanguageTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final flagPath = language.flagPath;
+    final isSystem = language == Language.system;
+
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(20),
@@ -227,15 +230,25 @@ class _LanguageTile extends StatelessWidget {
         child: Row(
           children: [
             Container(
+              width: 35,
+              height: 35,
               decoration: const BoxDecoration(
                 shape: BoxShape.circle,
                 color: Colors.white,
               ),
-              child: Image(
-                image: AssetImage('assets/images/languages/${language.flagPath}.png'),
-                width: 35.0,
-                height: 35.0,
-              ),
+              clipBehavior: Clip.antiAlias,
+              child: flagPath == null
+                  ? const Icon(
+                      Icons.language_rounded,
+                      color: AppColor.secondColor,
+                      size: 22,
+                    )
+                  : Image(
+                      image: AssetImage(
+                        'assets/images/languages/$flagPath.png',
+                      ),
+                      fit: BoxFit.cover,
+                    ),
             ),
             SizedBox(width: 10),
             Expanded(
@@ -244,7 +257,9 @@ class _LanguageTile extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    language.displayName,
+                    isSystem
+                        ? context.l10n.settingsLanguageSystem
+                        : language.displayName,
                     style: const TextStyle(
                       color: Colors.white,
                       fontSize: 17,

@@ -97,6 +97,7 @@ class LibraryMovieCard extends StatelessWidget {
                             key: ValueKey('$slug-library-poster'),
                             url: posterUrl,
                             fit: BoxFit.cover,
+                            gaplessPlayback: true,
                             fadeInDuration: const Duration(milliseconds: 120),
                           ),
                     if (showDateBadge)

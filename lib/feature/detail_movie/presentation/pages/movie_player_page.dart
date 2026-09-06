@@ -5581,7 +5581,7 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
   }) {
     return Bounce(
       onTap: () {
-        HapticFeedback.lightImpact();
+        HapticFeedback.mediumImpact();
         onTap();
       },
       child: Container(

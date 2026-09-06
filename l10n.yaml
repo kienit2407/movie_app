@@ -2,6 +2,8 @@ arb-dir: lib/l10n
 template-arb-file: app_en.arb
 output-localization-file: app_localizations.dart
 output-class: AppLocalizations
+preferred-supported-locales:
+  - vi # Fallback when the device locale is not supported.
 nullable-getter: false #Dùng AppLocalizations.of(context) mà không phải thêm !.
 required-resource-attributes: true #bắt buộc key template có metadata, giúp translator hiểu ngữ cảnh.
 use-escaping: true

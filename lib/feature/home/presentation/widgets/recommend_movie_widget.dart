@@ -196,7 +196,11 @@ class _MovieSectionWithScrollState extends State<MovieSectionWithScroll> {
             right: 0,
             left: 0,
             top: 20,
-            child: Image.asset(imageAsset, fit: BoxFit.contain),
+            child: Image.asset(
+              imageAsset,
+              fit: BoxFit.contain,
+              gaplessPlayback: true,
+            ),
           ),
           Positioned.fill(
             child: ClipRRect(

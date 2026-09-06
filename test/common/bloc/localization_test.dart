@@ -1,7 +1,10 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hydrated_bloc/hydrated_bloc.dart';
 import 'package:movie_app/common/bloc/localization.dart';
 import 'package:movie_app/core/enum/language_enum.dart';
+import 'package:movie_app/l10n/app_localizations.dart';
 
 void main() {
   late _MemoryStorage storage;
@@ -11,13 +14,18 @@ void main() {
     HydratedBloc.storage = storage;
   });
 
-  test('defaults to Vietnamese when no preference is stored', () async {
-    final cubit = LocalizationCubit();
+  test(
+    'defaults to the device language when no preference is stored',
+    () async {
+      final cubit = LocalizationCubit();
 
-    expect(cubit.state, Language.vietnamese);
+      expect(cubit.state, Language.system);
+      expect(cubit.state.locale, isNull);
+      expect(cubit.state.localeTag, 'system');
 
-    await cubit.close();
-  });
+      await cubit.close();
+    },
+  );
 
   test('restores the selected language from hydrated storage', () async {
     final firstCubit = LocalizationCubit();
@@ -28,6 +36,61 @@ void main() {
     expect(restoredCubit.state, Language.english);
 
     await restoredCubit.close();
+  });
+
+  test('persists the device-language preference', () async {
+    final firstCubit = LocalizationCubit();
+    firstCubit.changeLanguage(Language.english);
+    firstCubit.changeLanguage(Language.system);
+    await firstCubit.close();
+
+    final restoredCubit = LocalizationCubit();
+    expect(restoredCubit.state, Language.system);
+    expect(restoredCubit.state.locale, isNull);
+
+    await restoredCubit.close();
+  });
+
+  testWidgets('system preference follows the device locale', (tester) async {
+    tester.binding.platformDispatcher.localesTestValue = const <Locale>[
+      Locale('hi'),
+    ];
+    addTearDown(tester.binding.platformDispatcher.clearLocalesTestValue);
+
+    final cubit = LocalizationCubit();
+    addTearDown(cubit.close);
+
+    await tester.pumpWidget(
+      BlocProvider.value(
+        value: cubit,
+        child: BlocBuilder<LocalizationCubit, Language>(
+          builder: (context, language) => MaterialApp(
+            locale: language.locale,
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: Builder(
+              builder: (context) =>
+                  Text(Localizations.localeOf(context).toLanguageTag()),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    expect(find.text('hi'), findsOneWidget);
+
+    cubit.changeLanguage(Language.english);
+    await tester.pumpAndSettle();
+
+    expect(find.text('en'), findsOneWidget);
+  });
+
+  test('unsupported device locale falls back to Vietnamese', () {
+    final resolvedLocale = basicLocaleListResolution(const <Locale>[
+      Locale('ar'),
+    ], AppLocalizations.supportedLocales);
+
+    expect(resolvedLocale, const Locale('vi'));
   });
 
   test('keeps simplified and traditional Chinese as distinct locales', () {
@@ -64,8 +127,8 @@ void main() {
     final cubit = LocalizationCubit();
 
     expect(
-      cubit.fromJson(const <String, dynamic>{'languageCode': 'fr'}),
-      Language.vietnamese,
+      cubit.fromJson(const <String, dynamic>{'languageCode': 'xx'}),
+      Language.system,
     );
 
     await cubit.close();

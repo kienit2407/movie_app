@@ -25,6 +25,8 @@ void main() {
         ),
       );
 
+      expect(find.text('Theo ngôn ngữ thiết bị'), findsOneWidget);
+
       final appBar = tester.widget<SliverAppBar>(find.byType(SliverAppBar));
       expect(appBar.pinned, isTrue);
       expect(appBar.backgroundColor, Colors.transparent);

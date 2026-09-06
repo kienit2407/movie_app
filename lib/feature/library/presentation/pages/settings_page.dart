@@ -11,6 +11,7 @@ import 'package:movie_app/common/components/app_toast.dart';
 import 'package:movie_app/core/config/routes/app_router.dart';
 import 'package:movie_app/core/config/themes/app_color.dart';
 import 'package:movie_app/core/config/utils/animated_dialog.dart';
+import 'package:movie_app/core/enum/language_enum.dart';
 import 'package:movie_app/core/extension/build_context_extension.dart';
 import 'package:movie_app/feature/auth/data/saved_account_store.dart';
 import 'package:movie_app/feature/auth/presentation/session/saved_accounts_cubit.dart';
@@ -132,6 +133,7 @@ class _SettingsPageState extends State<SettingsPage> {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
+    final selectedLanguage = context.watch<LocalizationCubit>().state;
     return Scaffold(
       backgroundColor: AppColor.bgApp,
       body: Stack(
@@ -216,10 +218,9 @@ class _SettingsPageState extends State<SettingsPage> {
                               _SettingsTile(
                                 icon: Iconsax.language_square_copy,
                                 title: l10n.settingsAppLanguage,
-                                subtitle: context
-                                    .watch<LocalizationCubit>()
-                                    .state
-                                    .displayName,
+                                subtitle: selectedLanguage == Language.system
+                                    ? l10n.settingsLanguageSystem
+                                    : selectedLanguage.displayName,
                                 onTap: () => context.push(AppRoutes.language),
                               ),
                             ],
