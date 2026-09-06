@@ -112,27 +112,15 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
   String? _currentEpisodeLink;
   static const double _seekbarHitHeight = 28; // vùng chạm dày
   static const double _seekbarVisualHeight = 2; // thanh mỏng
-  int _episodeCrossAxisCount = 1;
-  static const double _episodeMaxExtent = 120;
-  static const double _episodeMainExtent = 40;
-  static const double _episodeMainSpacing = 5;
-  static const double _episodeCrossSpacing = 5;
-  static const double _episodePaddingTop = 10;
-  static const double _episodePaddingH = 10;
-  bool _isPLaying = false;
   int _currentEpisodeIndex = 0;
   String _currentServer = '';
   bool _isFullscreen = false;
-  static const double kMinPanelHFull = 120; // title + handle (tối thiểu)
-  static const double kMinPanelHRich = 260; // title + server list + TextField
   double _videoHeight = 0;
   double? _portraitVideoHeightBeforeFullscreen;
   bool _lsDrawerOpen = false;
   double _minVideoHeight = 0;
   double _maxVideoHeight = 0;
-  double _initialDragY = 0;
-  double _initialHeight = 0;
-  bool _isDragging = false;
+
   bool _showControls = false;
   bool _isScrubbing = false;
   bool _isExpanded = false;
@@ -208,16 +196,11 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
   static const double _thumbRadius = 6;
   final DraggableScrollableController _panelCtrl =
       DraggableScrollableController();
-  static const double _panelMin = 0.18;
-  static const double _panelMax = 0.65;
-  double _dragDy = 0;
   double _miniDragDy = 0;
   final List<GlobalKey> _episodeKeys = [];
   bool get _isExpandedPortrait => _expandT >= 0.97;
   bool _wasPlayingBeforeScrub = false;
   Duration _previewPosition = Duration.zero;
-  String? _previewThumbUrl; // nếu có storyboard từ server
-  static const double _panelAmbientH = 26;
 
   bool _showSeekOverlay = false;
   SeekDirection? _seekDir;
