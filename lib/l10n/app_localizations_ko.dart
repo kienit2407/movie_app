@@ -105,6 +105,11 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
+  String commonDurationMinutesPerEpisode(int minutes) {
+    return '$minutes분/회';
+  }
+
+  @override
   String get settingsLanguage => '언어';
 
   @override
@@ -413,6 +418,84 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get filterResults => '필터 결과';
+
+  @override
+  String filterGenreName(String slug, String fallback) {
+    String _temp0 = intl.Intl.selectLogic(slug, {
+      'bi_an': '미스터리',
+      'chien_tranh': '전쟁',
+      'chinh_kich': '드라마',
+      'co_trang': '시대극',
+      'gia_dinh': '가족',
+      'hai_huoc': '코미디',
+      'hanh_dong': '액션',
+      'hinh_su': '범죄',
+      'hoc_duong': '학원',
+      'khoa_hoc': '과학',
+      'kinh_di': '공포',
+      'kinh_dien': '고전',
+      'lich_su': '역사',
+      'mien_tay': '서부극',
+      'phim_18': '성인',
+      'phim_ngan': '단편 영화',
+      'phieu_luu': '모험',
+      'than_thoai': '신화',
+      'the_thao': '스포츠',
+      'tre_em': '어린이',
+      'tai_lieu': '다큐멘터리',
+      'tam_ly': '심리',
+      'tinh_cam': '로맨스',
+      'vien_tuong': 'SF',
+      'vo_thuat': '무술',
+      'am_nhac': '음악',
+      'other': '$fallback',
+    });
+    return '$_temp0';
+  }
+
+  @override
+  String filterCountryName(String slug, String fallback) {
+    String _temp0 = intl.Intl.selectLogic(slug, {
+      'anh': '잉글랜드',
+      'ba_lan': '폴란드',
+      'brazil': '브라질',
+      'bo_dao_nha': '포르투갈',
+      'canada': '캐나다',
+      'chau_phi': '아프리카',
+      'ha_lan': '네덜란드',
+      'han_quoc': '대한민국',
+      'hong_kong': '홍콩',
+      'indonesia': '인도네시아',
+      'malaysia': '말레이시아',
+      'mexico': '멕시코',
+      'na_uy': '노르웨이',
+      'nam_phi': '남아프리카 공화국',
+      'nga': '러시아',
+      'nhat_ban': '일본',
+      'philippines': '필리핀',
+      'phap': '프랑스',
+      'quoc_gia_khac': '기타 국가',
+      'thai_lan': '태국',
+      'tho_nhi_ky': '튀르키예',
+      'thuy_si': '스위스',
+      'thuy_dien': '스웨덴',
+      'trung_quoc': '중국',
+      'tay_ban_nha': '스페인',
+      'uae': '아랍에미리트',
+      'ukraina': '우크라이나',
+      'viet_nam': '베트남',
+      'au_my': '유럽 및 아메리카',
+      'uc': '호주',
+      'y': '이탈리아',
+      'dan_mach': '덴마크',
+      'dai_loan': '대만',
+      'duc': '독일',
+      'a_rap_xe_ut': '사우디아라비아',
+      'an_do': '인도',
+      'other': '$fallback',
+    });
+    return '$_temp0';
+  }
 
   @override
   String get searchAttentionTitle => '주의';
@@ -1080,6 +1163,31 @@ class AppLocalizationsKo extends AppLocalizations {
   String playerEpisodeNumber(int number) {
     return '$number화';
   }
+
+  @override
+  String commonEpisodeNumberShort(int number) {
+    return '$number화';
+  }
+
+  @override
+  String commonEpisodeCompleted(int current, int total) {
+    return '완결 ($current/$total)';
+  }
+
+  @override
+  String get profileChangeCover => '커버 사진 변경';
+
+  @override
+  String get profileCover => '커버 사진';
+
+  @override
+  String get profileCropCover => '커버 사진 자르기';
+
+  @override
+  String get profileCoverUpdated => '커버 사진이 업데이트되었습니다.';
+
+  @override
+  String get profileCoverUpdateFailed => '커버 사진을 업데이트할 수 없습니다. 다시 시도해 주세요.';
 
   @override
   String libraryMonthLabel(int month) {

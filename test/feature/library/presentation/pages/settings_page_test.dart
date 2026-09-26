@@ -7,6 +7,7 @@ import 'package:movie_app/common/bloc/localization.dart';
 import 'package:movie_app/feature/auth/data/saved_account_store.dart';
 import 'package:movie_app/feature/auth/presentation/session/saved_accounts_cubit.dart';
 import 'package:movie_app/feature/library/presentation/pages/settings_page.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../../helpers/localized_test_app.dart';
@@ -17,6 +18,13 @@ void main() {
   ) async {
     HydratedBloc.storage = _MemoryStorage();
     FlutterSecureStorage.setMockInitialValues(const <String, String>{});
+    PackageInfo.setMockInitialValues(
+      appName: 'Movie App',
+      packageName: 'com.example.movieApp',
+      version: '1.0.2',
+      buildNumber: '12',
+      buildSignature: '',
+    );
 
     final localizationCubit = LocalizationCubit();
     final accountsCubit = SavedAccountsCubit(
@@ -43,6 +51,7 @@ void main() {
       ),
     );
     await tester.pump();
+    await tester.pump();
 
     final appBar = tester.widget<SliverAppBar>(find.byType(SliverAppBar));
     expect(appBar.pinned, isTrue);
@@ -59,10 +68,12 @@ void main() {
 
     expect(headerDecoration().color, Colors.transparent);
 
-    await tester.drag(find.byType(CustomScrollView), const Offset(0, -120));
+    await tester.drag(find.byType(CustomScrollView), const Offset(0, -400));
     await tester.pumpAndSettle();
 
     expect(find.text('Cài đặt'), findsOneWidget);
+    expect(find.text('Phiên bản: 1.0.2 (12)'), findsOneWidget);
+    expect(find.text('Movie App - com.example.movieApp'), findsOneWidget);
     expect(headerDecoration().color, isNot(Colors.transparent));
   });
 }

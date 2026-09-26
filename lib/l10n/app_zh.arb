@@ -119,6 +119,8 @@
     }
   },
   "commonDurationHoursMinutes": "{hours} 小时 {minutes} 分钟",
+  "commonDurationMinutesPerEpisode": "{minutes} 分钟/集",
+  "@commonDurationMinutesPerEpisode": {"description": "Runtime in minutes for each episode of a series", "placeholders": {"minutes": {"type": "int"}}},
   "@commonDurationHoursMinutes": {
     "description": "Movie duration containing hours and minutes",
     "placeholders": {
@@ -542,6 +544,10 @@
   "@filterResults": {
     "description": "Action that applies a simple filter"
   },
+  "filterGenreName": "{slug, select, bi_an{悬疑} chien_tranh{战争} chinh_kich{剧情} co_trang{古装} gia_dinh{家庭} hai_huoc{喜剧} hanh_dong{动作} hinh_su{犯罪} hoc_duong{校园} khoa_hoc{科学} kinh_di{恐怖} kinh_dien{经典} lich_su{历史} mien_tay{西部} phim_18{成人} phim_ngan{短片} phieu_luu{冒险} than_thoai{神话} the_thao{体育} tre_em{儿童} tai_lieu{纪录片} tam_ly{心理} tinh_cam{爱情} vien_tuong{科幻} vo_thuat{武术} am_nhac{音乐} other{{fallback}}}",
+  "@filterGenreName": {"description": "Localized genre name from the stable API slug, falling back to the API name", "placeholders": {"slug": {"type": "String"}, "fallback": {"type": "String"}}},
+  "filterCountryName": "{slug, select, anh{英格兰} ba_lan{波兰} brazil{巴西} bo_dao_nha{葡萄牙} canada{加拿大} chau_phi{非洲} ha_lan{荷兰} han_quoc{韩国} hong_kong{中国香港} indonesia{印度尼西亚} malaysia{马来西亚} mexico{墨西哥} na_uy{挪威} nam_phi{南非} nga{俄罗斯} nhat_ban{日本} philippines{菲律宾} phap{法国} quoc_gia_khac{其他国家} thai_lan{泰国} tho_nhi_ky{土耳其} thuy_si{瑞士} thuy_dien{瑞典} trung_quoc{中国} tay_ban_nha{西班牙} uae{阿联酋} ukraina{乌克兰} viet_nam{越南} au_my{欧美} uc{澳大利亚} y{意大利} dan_mach{丹麦} dai_loan{中国台湾} duc{德国} a_rap_xe_ut{沙特阿拉伯} an_do{印度} other{{fallback}}}",
+  "@filterCountryName": {"description": "Localized country or region name from the stable API slug, falling back to the API name", "placeholders": {"slug": {"type": "String"}, "fallback": {"type": "String"}}},
   "searchAttentionTitle": "注意",
   "@searchAttentionTitle": {
     "description": "Search validation dialog title"
@@ -1463,6 +1469,15 @@
       }
     }
   },
+  "commonEpisodeNumberShort": "第{number}集",
+  "@commonEpisodeNumberShort": {"description": "Compact episode number label", "placeholders": {"number": {"type": "int"}}},
+  "commonEpisodeCompleted": "已完结（{current}/{total}）",
+  "@commonEpisodeCompleted": {"description": "Completed series episode progress", "placeholders": {"current": {"type": "int"}, "total": {"type": "int"}}},
+  "profileChangeCover": "更换封面图片",
+  "profileCover": "封面图片",
+  "profileCropCover": "裁剪封面图片",
+  "profileCoverUpdated": "封面图片已更新。",
+  "profileCoverUpdateFailed": "无法更新封面图片，请重试。",
   "libraryMonthLabel": "{month} 月",
   "@libraryMonthLabel": {
     "description": "Month label",

@@ -8,8 +8,11 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
 import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 import 'package:movie_app/common/components/app_toast.dart';
+import 'package:movie_app/core/audio/sound_effect_player.dart';
+import 'package:movie_app/core/config/di/service_locator.dart';
 import 'package:movie_app/core/config/themes/app_color.dart';
 import 'package:movie_app/core/extension/build_context_extension.dart';
+import 'package:movie_app/core/widgets/app_refresh_indicator.dart';
 import 'package:movie_app/feature/auth/presentation/session/auth_session_cubit.dart';
 import 'package:movie_app/feature/auth/presentation/sign_in/pages/sign_in.dart';
 import 'package:movie_app/feature/comments/domain/entities/comment.dart';
@@ -711,7 +714,8 @@ class _CommentsTabState extends State<CommentsTab> with WidgetsBindingObserver {
       );
     }
 
-    return RefreshIndicator.adaptive(
+    return AppRefreshIndicator(
+      soundEffectPlayer: sl<SoundEffectPlayer>(),
       onRefresh: context.read<CommentsCubit>().retry,
       color: const Color(0xffC77DFF),
       child: ListView.builder(

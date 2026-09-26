@@ -119,6 +119,8 @@
     }
   },
   "commonDurationHoursMinutes": "{hours} ชั่วโมง {minutes} นาที",
+  "commonDurationMinutesPerEpisode": "{minutes} นาที/ตอน",
+  "@commonDurationMinutesPerEpisode": {"description": "Runtime in minutes for each episode of a series", "placeholders": {"minutes": {"type": "int"}}},
   "@commonDurationHoursMinutes": {
     "description": "Movie duration containing hours and minutes",
     "placeholders": {
@@ -542,6 +544,10 @@
   "@filterResults": {
     "description": "Action that applies a simple filter"
   },
+  "filterGenreName": "{slug, select, bi_an{ลึกลับ} chien_tranh{สงคราม} chinh_kich{ดราม่า} co_trang{ย้อนยุค} gia_dinh{ครอบครัว} hai_huoc{ตลก} hanh_dong{แอ็กชัน} hinh_su{อาชญากรรม} hoc_duong{โรงเรียน} khoa_hoc{วิทยาศาสตร์} kinh_di{สยองขวัญ} kinh_dien{คลาสสิก} lich_su{ประวัติศาสตร์} mien_tay{ตะวันตก} phim_18{สำหรับผู้ใหญ่} phim_ngan{หนังสั้น} phieu_luu{ผจญภัย} than_thoai{เทพปกรณัม} the_thao{กีฬา} tre_em{เด็ก} tai_lieu{สารคดี} tam_ly{จิตวิทยา} tinh_cam{โรแมนติก} vien_tuong{นิยายวิทยาศาสตร์} vo_thuat{ศิลปะการต่อสู้} am_nhac{ดนตรี} other{{fallback}}}",
+  "@filterGenreName": {"description": "Localized genre name from the stable API slug, falling back to the API name", "placeholders": {"slug": {"type": "String"}, "fallback": {"type": "String"}}},
+  "filterCountryName": "{slug, select, anh{อังกฤษ} ba_lan{โปแลนด์} brazil{บราซิล} bo_dao_nha{โปรตุเกส} canada{แคนาดา} chau_phi{แอฟริกา} ha_lan{เนเธอร์แลนด์} han_quoc{เกาหลีใต้} hong_kong{ฮ่องกง} indonesia{อินโดนีเซีย} malaysia{มาเลเซีย} mexico{เม็กซิโก} na_uy{นอร์เวย์} nam_phi{แอฟริกาใต้} nga{รัสเซีย} nhat_ban{ญี่ปุ่น} philippines{ฟิลิปปินส์} phap{ฝรั่งเศส} quoc_gia_khac{ประเทศอื่น} thai_lan{ไทย} tho_nhi_ky{ตุรกี} thuy_si{สวิตเซอร์แลนด์} thuy_dien{สวีเดน} trung_quoc{จีน} tay_ban_nha{สเปน} uae{สหรัฐอาหรับเอมิเรตส์} ukraina{ยูเครน} viet_nam{เวียดนาม} au_my{ยุโรปและอเมริกา} uc{ออสเตรเลีย} y{อิตาลี} dan_mach{เดนมาร์ก} dai_loan{ไต้หวัน} duc{เยอรมนี} a_rap_xe_ut{ซาอุดีอาระเบีย} an_do{อินเดีย} other{{fallback}}}",
+  "@filterCountryName": {"description": "Localized country or region name from the stable API slug, falling back to the API name", "placeholders": {"slug": {"type": "String"}, "fallback": {"type": "String"}}},
   "searchAttentionTitle": "โปรดทราบ",
   "@searchAttentionTitle": {
     "description": "Search validation dialog title"
@@ -1463,6 +1469,15 @@
       }
     }
   },
+  "commonEpisodeNumberShort": "ตอน {number}",
+  "@commonEpisodeNumberShort": {"description": "Compact episode number label", "placeholders": {"number": {"type": "int"}}},
+  "commonEpisodeCompleted": "จบแล้ว ({current}/{total})",
+  "@commonEpisodeCompleted": {"description": "Completed series episode progress", "placeholders": {"current": {"type": "int"}, "total": {"type": "int"}}},
+  "profileChangeCover": "เปลี่ยนรูปหน้าปก",
+  "profileCover": "รูปหน้าปก",
+  "profileCropCover": "ครอปรูปหน้าปก",
+  "profileCoverUpdated": "อัปเดตรูปหน้าปกแล้ว",
+  "profileCoverUpdateFailed": "ไม่สามารถอัปเดตรูปหน้าปกได้ โปรดลองอีกครั้ง",
   "libraryMonthLabel": "เดือน {month}",
   "@libraryMonthLabel": {
     "description": "Month label",

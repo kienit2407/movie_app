@@ -1074,7 +1074,7 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
     final episodeName = _historyEpisodeName(
       _selectedServerIndex,
       _currentEpisodeIndex,
-    ).trim();
+    ).toLocalizedEpisodeLabel(context.l10n).trim();
     final serverName = _friendlyCurrentServerLabel();
 
     if (widget.movie.episode_current == 'Full') {
@@ -1107,10 +1107,12 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
     final episodeName = _historyEpisodeName(
       _selectedServerIndex,
       _currentEpisodeIndex,
-    ).trim();
+    ).toLocalizedEpisodeLabel(context.l10n).trim();
     if (episodeName.isNotEmpty) return episodeName;
 
-    final fallback = widget.movie.episode_current.trim();
+    final fallback = widget.movie.episode_current
+        .toLocalizedEpisodeLabel(context.l10n)
+        .trim();
     if (fallback.isNotEmpty) return fallback;
     return context.l10n.playerNowPlaying;
   }
@@ -4668,7 +4670,11 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
                                                         child: Text(
                                                           context.l10n
                                                               .playerNowPlayingEpisode(
-                                                                epName,
+                                                                epName
+                                                                    .toLocalizedEpisodeLabel(
+                                                                      context
+                                                                          .l10n,
+                                                                    ),
                                                               ),
                                                           maxLines: 1,
                                                           overflow: TextOverflow
@@ -5313,7 +5319,9 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
                             ],
                             Flexible(
                               child: Text(
-                                episode.name,
+                                episode.name.toLocalizedEpisodeLabel(
+                                  context.l10n,
+                                ),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                                 softWrap: false,

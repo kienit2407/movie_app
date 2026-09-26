@@ -8,6 +8,7 @@ import 'package:go_router/go_router.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
 import 'package:movie_app/core/config/themes/app_color.dart';
 import 'package:movie_app/core/extension/build_context_extension.dart';
+import 'package:movie_app/core/widgets/animation/hub_bounce_animation_widget.dart';
 import 'package:movie_app/feature/library/presentation/cubit/user_library_cubit.dart';
 
 class HubPage extends StatelessWidget {
@@ -116,140 +117,153 @@ class _FloatingBlurHubBar extends StatelessWidget {
 
     return SafeArea(
       top: false,
-      minimum: const EdgeInsets.fromLTRB(14, 0, 14, -10),
-      child: SizedBox(
-        height: 66,
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(32),
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                color: AppColor.bgApp.withValues(alpha: 0.64),
-                borderRadius: BorderRadius.circular(32),
-                border: Border.all(
-                  color: Colors.white.withValues(alpha: 0.10),
-                  width: 0.8,
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.20),
-                    blurRadius: 14,
-                    offset: const Offset(0, 5),
+      bottom: false,
+      minimum: const EdgeInsets.symmetric(horizontal: 14),
+      child: Padding(
+        padding: EdgeInsets.only(bottom: 18),
+        child: HubBounceAnimationWidget(
+          reduceMotion: reduceMotion,
+          child: SizedBox(
+            height: 56,
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(32),
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: AppColor.bgApp.withValues(alpha: 0.64),
+                    borderRadius: BorderRadius.circular(32),
+                    border: Border.all(
+                      color: Colors.white.withValues(alpha: 0.10),
+                      width: 0.8,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.20),
+                        blurRadius: 14,
+                        offset: const Offset(0, 5),
+                      ),
+                    ],
                   ),
-                ],
-              ),
-              child: LayoutBuilder(
-                builder: (context, constraints) {
-                  const outerPadding = 5.0;
+                  child: LayoutBuilder(
+                    builder: (context, constraints) {
+                      const outerPadding = 5.0;
 
-                  final availableWidth =
-                      constraints.maxWidth - outerPadding * 2;
+                      final availableWidth =
+                          constraints.maxWidth - outerPadding * 2;
 
-                  final itemWidth = availableWidth / _itemCount;
+                      final itemWidth = availableWidth / _itemCount;
 
-                  return Stack(
-                    children: [
-                      /// Indicator của tab đang chọn.
-                      AnimatedPositioned(
-                        duration: Duration(
-                          milliseconds: reduceMotion ? 80 : 260,
-                        ),
-                        curve: Curves.easeOutCubic,
-                        left: outerPadding + itemWidth * selectedIndex,
-                        top: outerPadding,
-                        bottom: outerPadding,
-                        width: itemWidth,
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 3),
-                          child: DecoratedBox(
-                            decoration: BoxDecoration(
-                              color: AppColor.secondColor.withValues(
-                                alpha: 0.22,
+                      return Stack(
+                        children: [
+                          /// Indicator của tab đang chọn.
+                          AnimatedPositioned(
+                            duration: Duration(
+                              milliseconds: reduceMotion ? 80 : 260,
+                            ),
+                            curve: Curves.easeOutCubic,
+                            left: outerPadding + itemWidth * selectedIndex,
+                            top: outerPadding,
+                            bottom: outerPadding,
+                            width: itemWidth,
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 3,
                               ),
-                              borderRadius: BorderRadius.circular(27),
-                              border: Border.all(
-                                color: AppColor.secondColor.withValues(
-                                  alpha: 0.28,
+                              child: DecoratedBox(
+                                decoration: BoxDecoration(
+                                  color: AppColor.secondColor.withValues(
+                                    alpha: 0.22,
+                                  ),
+                                  borderRadius: BorderRadius.circular(27),
+                                  border: Border.all(
+                                    color: AppColor.secondColor.withValues(
+                                      alpha: 0.28,
+                                    ),
+                                    width: 0.8,
+                                  ),
                                 ),
-                                width: 0.8,
                               ),
                             ),
                           ),
-                        ),
-                      ),
 
-                      Padding(
-                        padding: const EdgeInsets.all(outerPadding),
-                        child: Row(
-                          children: [
-                            /// HOME
-                            _HubTabButton(
-                              selected: selectedIndex == 0,
-                              icon: Image.asset(
-                                'assets/images/home.png',
-                                width: 22,
-                                height: 22,
-                                fit: BoxFit.contain,
-                                filterQuality: FilterQuality.high,
-                                gaplessPlayback: true,
-                                color: Colors.white54,
-                                colorBlendMode: BlendMode.srcIn,
-                              ),
-                              activeIcon: Image.asset(
-                                'assets/images/home_filled.png',
-                                width: 22,
-                                height: 22,
-                                fit: BoxFit.contain,
-                                filterQuality: FilterQuality.high,
-                                gaplessPlayback: true,
-                              ),
-                              semanticLabel: l10n.navHome,
-                              onTap: () => onSelected(0),
-                              reduceMotion: reduceMotion,
-                              animateIcon: false,
-                            ),
+                          Padding(
+                            padding: const EdgeInsets.all(outerPadding),
+                            child: Row(
+                              children: [
+                                /// HOME
+                                _HubTabButton(
+                                  selected: selectedIndex == 0,
+                                  icon: Image.asset(
+                                    'assets/images/home.png',
+                                    width: 22,
+                                    height: 22,
+                                    fit: BoxFit.contain,
+                                    filterQuality: FilterQuality.high,
+                                    gaplessPlayback: true,
+                                    color: Colors.white54,
+                                    colorBlendMode: BlendMode.srcIn,
+                                  ),
+                                  activeIcon: Image.asset(
+                                    'assets/images/home_filled.png',
+                                    width: 22,
+                                    height: 22,
+                                    fit: BoxFit.contain,
+                                    filterQuality: FilterQuality.high,
+                                    gaplessPlayback: true,
+                                  ),
+                                  semanticLabel: l10n.navHome,
+                                  onTap: () => onSelected(0),
+                                  reduceMotion: reduceMotion,
+                                  animateIcon: false,
+                                ),
 
-                            /// SEARCH
-                            _HubTabButton(
-                              selected: selectedIndex == 1,
-                              icon: const Icon(Iconsax.search_normal_1_copy),
-                              activeIcon: const Icon(
-                                Iconsax.search_normal_1_copy,
-                                weight: 8,
-                              ),
-                              semanticLabel: l10n.navSearch,
-                              onTap: () => onSelected(1),
-                              reduceMotion: reduceMotion,
-                            ),
+                                /// SEARCH
+                                _HubTabButton(
+                                  selected: selectedIndex == 1,
+                                  icon: const Icon(
+                                    Iconsax.search_normal_1_copy,
+                                  ),
+                                  activeIcon: const Icon(
+                                    Iconsax.search_normal_1_copy,
+                                    weight: 8,
+                                  ),
+                                  semanticLabel: l10n.navSearch,
+                                  onTap: () => onSelected(1),
+                                  reduceMotion: reduceMotion,
+                                ),
 
-                            /// FAVORITE
-                            _HubTabButton(
-                              selected: selectedIndex == 2,
-                              icon: const Icon(CupertinoIcons.heart, size: 23),
-                              activeIcon: const Icon(
-                                CupertinoIcons.heart_fill,
-                                size: 25,
-                              ),
-                              semanticLabel: l10n.navFavorites,
-                              onTap: () => onSelected(2),
-                              reduceMotion: reduceMotion,
-                            ),
+                                /// FAVORITE
+                                _HubTabButton(
+                                  selected: selectedIndex == 2,
+                                  icon: const Icon(
+                                    CupertinoIcons.heart,
+                                    size: 23,
+                                  ),
+                                  activeIcon: const Icon(
+                                    CupertinoIcons.heart_fill,
+                                    size: 25,
+                                  ),
+                                  semanticLabel: l10n.navFavorites,
+                                  onTap: () => onSelected(2),
+                                  reduceMotion: reduceMotion,
+                                ),
 
-                            /// PROFILE
-                            _HubAvatarTabButton(
-                              selected: selectedIndex == 3,
-                              avatarUrl: avatarUrl,
-                              semanticLabel: l10n.navProfile,
-                              onTap: () => onSelected(3),
-                              reduceMotion: reduceMotion,
+                                /// PROFILE
+                                _HubAvatarTabButton(
+                                  selected: selectedIndex == 3,
+                                  avatarUrl: avatarUrl,
+                                  semanticLabel: l10n.navProfile,
+                                  onTap: () => onSelected(3),
+                                ),
+                              ],
                             ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  );
-                },
+                          ),
+                        ],
+                      );
+                    },
+                  ),
+                ),
               ),
             ),
           ),
@@ -298,22 +312,15 @@ class _HubTabButton extends StatelessWidget {
             highlightColor: Colors.white.withValues(alpha: 0.08),
             child: Center(
               child: animateIcon
-                  ? AnimatedScale(
-                      duration: Duration(milliseconds: reduceMotion ? 70 : 180),
-                      curve: Curves.easeOutBack,
-                      scale: selected ? 1.08 : 1,
-                      child: AnimatedSwitcher(
-                        duration: Duration(
-                          milliseconds: reduceMotion ? 70 : 170,
-                        ),
-                        switchInCurve: Curves.easeOut,
-                        switchOutCurve: Curves.easeIn,
-                        child: KeyedSubtree(
-                          key: ValueKey(selected),
-                          child: _ThemedHubIcon(
-                            selected: selected,
-                            child: selected ? activeIcon ?? icon : icon,
-                          ),
+                  ? AnimatedSwitcher(
+                      duration: Duration(milliseconds: reduceMotion ? 70 : 170),
+                      switchInCurve: Curves.easeOut,
+                      switchOutCurve: Curves.easeIn,
+                      child: KeyedSubtree(
+                        key: ValueKey(selected),
+                        child: _ThemedHubIcon(
+                          selected: selected,
+                          child: selected ? activeIcon ?? icon : icon,
                         ),
                       ),
                     )
@@ -360,14 +367,12 @@ class _HubAvatarTabButton extends StatelessWidget {
     required this.avatarUrl,
     required this.semanticLabel,
     required this.onTap,
-    required this.reduceMotion,
   });
 
   final bool selected;
   final String avatarUrl;
   final String semanticLabel;
   final VoidCallback onTap;
-  final bool reduceMotion;
 
   @override
   Widget build(BuildContext context) {
@@ -384,12 +389,7 @@ class _HubAvatarTabButton extends StatelessWidget {
             splashFactory: NoSplash.splashFactory,
             highlightColor: Colors.white.withValues(alpha: 0.08),
             child: Center(
-              child: AnimatedScale(
-                duration: Duration(milliseconds: reduceMotion ? 70 : 180),
-                curve: Curves.easeOutBack,
-                scale: selected ? 1.08 : 1,
-                child: _HubAvatarIcon(url: avatarUrl, selected: selected),
-              ),
+              child: _HubAvatarIcon(url: avatarUrl, selected: selected),
             ),
           ),
         ),

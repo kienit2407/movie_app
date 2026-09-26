@@ -105,6 +105,11 @@ class AppLocalizationsTh extends AppLocalizations {
   }
 
   @override
+  String commonDurationMinutesPerEpisode(int minutes) {
+    return '$minutes นาที/ตอน';
+  }
+
+  @override
   String get settingsLanguage => 'ภาษา';
 
   @override
@@ -423,6 +428,84 @@ class AppLocalizationsTh extends AppLocalizations {
 
   @override
   String get filterResults => 'ผลการกรอง';
+
+  @override
+  String filterGenreName(String slug, String fallback) {
+    String _temp0 = intl.Intl.selectLogic(slug, {
+      'bi_an': 'ลึกลับ',
+      'chien_tranh': 'สงคราม',
+      'chinh_kich': 'ดราม่า',
+      'co_trang': 'ย้อนยุค',
+      'gia_dinh': 'ครอบครัว',
+      'hai_huoc': 'ตลก',
+      'hanh_dong': 'แอ็กชัน',
+      'hinh_su': 'อาชญากรรม',
+      'hoc_duong': 'โรงเรียน',
+      'khoa_hoc': 'วิทยาศาสตร์',
+      'kinh_di': 'สยองขวัญ',
+      'kinh_dien': 'คลาสสิก',
+      'lich_su': 'ประวัติศาสตร์',
+      'mien_tay': 'ตะวันตก',
+      'phim_18': 'สำหรับผู้ใหญ่',
+      'phim_ngan': 'หนังสั้น',
+      'phieu_luu': 'ผจญภัย',
+      'than_thoai': 'เทพปกรณัม',
+      'the_thao': 'กีฬา',
+      'tre_em': 'เด็ก',
+      'tai_lieu': 'สารคดี',
+      'tam_ly': 'จิตวิทยา',
+      'tinh_cam': 'โรแมนติก',
+      'vien_tuong': 'นิยายวิทยาศาสตร์',
+      'vo_thuat': 'ศิลปะการต่อสู้',
+      'am_nhac': 'ดนตรี',
+      'other': '$fallback',
+    });
+    return '$_temp0';
+  }
+
+  @override
+  String filterCountryName(String slug, String fallback) {
+    String _temp0 = intl.Intl.selectLogic(slug, {
+      'anh': 'อังกฤษ',
+      'ba_lan': 'โปแลนด์',
+      'brazil': 'บราซิล',
+      'bo_dao_nha': 'โปรตุเกส',
+      'canada': 'แคนาดา',
+      'chau_phi': 'แอฟริกา',
+      'ha_lan': 'เนเธอร์แลนด์',
+      'han_quoc': 'เกาหลีใต้',
+      'hong_kong': 'ฮ่องกง',
+      'indonesia': 'อินโดนีเซีย',
+      'malaysia': 'มาเลเซีย',
+      'mexico': 'เม็กซิโก',
+      'na_uy': 'นอร์เวย์',
+      'nam_phi': 'แอฟริกาใต้',
+      'nga': 'รัสเซีย',
+      'nhat_ban': 'ญี่ปุ่น',
+      'philippines': 'ฟิลิปปินส์',
+      'phap': 'ฝรั่งเศส',
+      'quoc_gia_khac': 'ประเทศอื่น',
+      'thai_lan': 'ไทย',
+      'tho_nhi_ky': 'ตุรกี',
+      'thuy_si': 'สวิตเซอร์แลนด์',
+      'thuy_dien': 'สวีเดน',
+      'trung_quoc': 'จีน',
+      'tay_ban_nha': 'สเปน',
+      'uae': 'สหรัฐอาหรับเอมิเรตส์',
+      'ukraina': 'ยูเครน',
+      'viet_nam': 'เวียดนาม',
+      'au_my': 'ยุโรปและอเมริกา',
+      'uc': 'ออสเตรเลีย',
+      'y': 'อิตาลี',
+      'dan_mach': 'เดนมาร์ก',
+      'dai_loan': 'ไต้หวัน',
+      'duc': 'เยอรมนี',
+      'a_rap_xe_ut': 'ซาอุดีอาระเบีย',
+      'an_do': 'อินเดีย',
+      'other': '$fallback',
+    });
+    return '$_temp0';
+  }
 
   @override
   String get searchAttentionTitle => 'โปรดทราบ';
@@ -1109,6 +1192,32 @@ class AppLocalizationsTh extends AppLocalizations {
   String playerEpisodeNumber(int number) {
     return 'ตอนที่ $number';
   }
+
+  @override
+  String commonEpisodeNumberShort(int number) {
+    return 'ตอน $number';
+  }
+
+  @override
+  String commonEpisodeCompleted(int current, int total) {
+    return 'จบแล้ว ($current/$total)';
+  }
+
+  @override
+  String get profileChangeCover => 'เปลี่ยนรูปหน้าปก';
+
+  @override
+  String get profileCover => 'รูปหน้าปก';
+
+  @override
+  String get profileCropCover => 'ครอปรูปหน้าปก';
+
+  @override
+  String get profileCoverUpdated => 'อัปเดตรูปหน้าปกแล้ว';
+
+  @override
+  String get profileCoverUpdateFailed =>
+      'ไม่สามารถอัปเดตรูปหน้าปกได้ โปรดลองอีกครั้ง';
 
   @override
   String libraryMonthLabel(int month) {

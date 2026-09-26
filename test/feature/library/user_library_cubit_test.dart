@@ -86,11 +86,13 @@ void main() {
     await cubit.updateProfile(
       displayName: 'Liquid User mới',
       avatarUrl: 'https://example.com/new-avatar.jpg',
+      coverUrl: 'https://example.com/new-cover.jpg',
     );
 
     expect(cubit.state.profile, same(_updatedProfile));
     expect(cubit.state.displayName, 'Liquid User mới');
     expect(cubit.state.avatarUrl, 'https://example.com/new-avatar.jpg');
+    expect(cubit.state.coverUrl, 'https://example.com/new-cover.jpg');
     await cubit.close();
   });
 
@@ -109,6 +111,7 @@ void main() {
 
     expect(cubit.state.displayName, 'Liquid User mới');
     expect(cubit.state.avatarUrl, 'https://example.com/new-avatar.jpg');
+    expect(cubit.state.coverUrl, 'https://example.com/new-cover.jpg');
     await cubit.close();
   });
 
@@ -119,6 +122,7 @@ void main() {
       userMetadata: const {
         'full_name': 'Tên vừa cập nhật',
         'avatar_url': 'https://example.com/new.jpg',
+        'cover_url': 'https://example.com/new-cover.jpg',
         'profile_updated_at': '2026-08-30T12:00:00.000Z',
       },
       aud: 'authenticated',
@@ -129,11 +133,13 @@ void main() {
     final profile = UserProfile.fromMap({
       'display_name': 'Tên cũ',
       'avatar_url': 'https://example.com/old.jpg',
+      'cover_url': 'https://example.com/old-cover.jpg',
       'updated_at': '2026-08-30T11:00:00.000Z',
     }, fallbackUser: updatedUser);
 
     expect(profile.displayName, 'Tên vừa cập nhật');
     expect(profile.avatarUrl, 'https://example.com/new.jpg');
+    expect(profile.coverUrl, 'https://example.com/new-cover.jpg');
   });
 }
 
@@ -149,6 +155,7 @@ final _user = User(
 const _updatedProfile = UserProfile(
   displayName: 'Liquid User mới',
   avatarUrl: 'https://example.com/new-avatar.jpg',
+  coverUrl: 'https://example.com/new-cover.jpg',
 );
 
 UserWatchHistory _history(int index) => UserWatchHistory(
@@ -261,11 +268,13 @@ class _FakeLibraryRepository implements UserLibraryRepository {
   Future<UserProfile> updateProfile({
     required String displayName,
     String? avatarUrl,
+    String? coverUrl,
   }) async =>
       profileUpdateResult ??
       UserProfile(
         displayName: displayName,
         avatarUrl: avatarUrl ?? profile?.avatarUrl ?? '',
+        coverUrl: coverUrl ?? profile?.coverUrl ?? '',
       );
 
   @override
@@ -273,6 +282,12 @@ class _FakeLibraryRepository implements UserLibraryRepository {
     Uint8List bytes, {
     required String extension,
   }) async => 'https://example.com/avatar.$extension';
+
+  @override
+  Future<String> uploadCover(
+    Uint8List bytes, {
+    required String extension,
+  }) async => 'https://example.com/cover.$extension';
 
   @override
   Future<void> upsertWatchHistory(UserWatchHistory history) async {

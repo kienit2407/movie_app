@@ -92,6 +92,8 @@ dependencies:
   firebase_analytics: ^12.5.0
   firebase_crashlytics: ^5.3.0
   bounce: ^1.0.2
+  audioplayers: ^6.7.1
+  package_info_plus: ^9.0.1
 
 dev_dependencies:
   flutter_test:
@@ -114,6 +116,7 @@ flutter:
     - assets/svg/
     - assets/.env
     - assets/images/languages/
+    - assets/musics/sfx/
   #   - images/a_dot_ham.jpeg
 
 

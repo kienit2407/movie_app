@@ -119,6 +119,8 @@
     }
   },
   "commonDurationHoursMinutes": "{hours}시간 {minutes}분",
+  "commonDurationMinutesPerEpisode": "{minutes}분/회",
+  "@commonDurationMinutesPerEpisode": {"description": "Runtime in minutes for each episode of a series", "placeholders": {"minutes": {"type": "int"}}},
   "@commonDurationHoursMinutes": {
     "description": "Movie duration containing hours and minutes",
     "placeholders": {
@@ -542,6 +544,10 @@
   "@filterResults": {
     "description": "Action that applies a simple filter"
   },
+  "filterGenreName": "{slug, select, bi_an{미스터리} chien_tranh{전쟁} chinh_kich{드라마} co_trang{시대극} gia_dinh{가족} hai_huoc{코미디} hanh_dong{액션} hinh_su{범죄} hoc_duong{학원} khoa_hoc{과학} kinh_di{공포} kinh_dien{고전} lich_su{역사} mien_tay{서부극} phim_18{성인} phim_ngan{단편 영화} phieu_luu{모험} than_thoai{신화} the_thao{스포츠} tre_em{어린이} tai_lieu{다큐멘터리} tam_ly{심리} tinh_cam{로맨스} vien_tuong{SF} vo_thuat{무술} am_nhac{음악} other{{fallback}}}",
+  "@filterGenreName": {"description": "Localized genre name from the stable API slug, falling back to the API name", "placeholders": {"slug": {"type": "String"}, "fallback": {"type": "String"}}},
+  "filterCountryName": "{slug, select, anh{잉글랜드} ba_lan{폴란드} brazil{브라질} bo_dao_nha{포르투갈} canada{캐나다} chau_phi{아프리카} ha_lan{네덜란드} han_quoc{대한민국} hong_kong{홍콩} indonesia{인도네시아} malaysia{말레이시아} mexico{멕시코} na_uy{노르웨이} nam_phi{남아프리카 공화국} nga{러시아} nhat_ban{일본} philippines{필리핀} phap{프랑스} quoc_gia_khac{기타 국가} thai_lan{태국} tho_nhi_ky{튀르키예} thuy_si{스위스} thuy_dien{스웨덴} trung_quoc{중국} tay_ban_nha{스페인} uae{아랍에미리트} ukraina{우크라이나} viet_nam{베트남} au_my{유럽 및 아메리카} uc{호주} y{이탈리아} dan_mach{덴마크} dai_loan{대만} duc{독일} a_rap_xe_ut{사우디아라비아} an_do{인도} other{{fallback}}}",
+  "@filterCountryName": {"description": "Localized country or region name from the stable API slug, falling back to the API name", "placeholders": {"slug": {"type": "String"}, "fallback": {"type": "String"}}},
   "searchAttentionTitle": "주의",
   "@searchAttentionTitle": {
     "description": "Search validation dialog title"
@@ -1463,6 +1469,15 @@
       }
     }
   },
+  "commonEpisodeNumberShort": "{number}화",
+  "@commonEpisodeNumberShort": {"description": "Compact episode number label", "placeholders": {"number": {"type": "int"}}},
+  "commonEpisodeCompleted": "완결 ({current}/{total})",
+  "@commonEpisodeCompleted": {"description": "Completed series episode progress", "placeholders": {"current": {"type": "int"}, "total": {"type": "int"}}},
+  "profileChangeCover": "커버 사진 변경",
+  "profileCover": "커버 사진",
+  "profileCropCover": "커버 사진 자르기",
+  "profileCoverUpdated": "커버 사진이 업데이트되었습니다.",
+  "profileCoverUpdateFailed": "커버 사진을 업데이트할 수 없습니다. 다시 시도해 주세요.",
   "libraryMonthLabel": "{month}월",
   "@libraryMonthLabel": {
     "description": "Month label",

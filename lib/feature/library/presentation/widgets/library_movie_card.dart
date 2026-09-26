@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:movie_app/core/config/routes/app_router.dart';
 import 'package:movie_app/core/config/themes/app_color.dart';
+import 'package:movie_app/core/config/utils/format_episode.dart';
 import 'package:movie_app/core/extension/build_context_extension.dart';
 
 bool startsNewLibraryDateGroup(
@@ -63,7 +64,7 @@ class LibraryMovieCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Semantics(
       button: true,
-      label: '$name, $episodeCurrent',
+      label: '$name, ${episodeCurrent.toLocalizedEpisodeLabel(context.l10n)}',
       child: InkWell(
         borderRadius: BorderRadius.circular(12),
         onTap: isSelectionMode
@@ -218,7 +219,7 @@ class LibraryMovieCard extends StatelessWidget {
             Text(
               progress == null
                   ? [
-                      episodeCurrent,
+                      episodeCurrent.toLocalizedEpisodeLabel(context.l10n),
                       year > 0 ? '$year' : '',
                     ].where((value) => value.isNotEmpty).join(' • ')
                   : context.l10n.libraryContinueProgress(

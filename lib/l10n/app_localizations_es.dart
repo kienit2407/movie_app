@@ -118,6 +118,17 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
+  String commonDurationMinutesPerEpisode(int minutes) {
+    String _temp0 = intl.Intl.pluralLogic(
+      minutes,
+      locale: localeName,
+      other: '$minutes minutos por episodio',
+      one: '1 minuto por episodio',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get settingsLanguage => 'Idioma';
 
   @override
@@ -441,6 +452,84 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get filterResults => 'Filtrar resultados';
+
+  @override
+  String filterGenreName(String slug, String fallback) {
+    String _temp0 = intl.Intl.selectLogic(slug, {
+      'bi_an': 'Misterio',
+      'chien_tranh': 'Bélico',
+      'chinh_kich': 'Drama',
+      'co_trang': 'Drama histórico',
+      'gia_dinh': 'Familia',
+      'hai_huoc': 'Comedia',
+      'hanh_dong': 'Acción',
+      'hinh_su': 'Crimen',
+      'hoc_duong': 'Escolar',
+      'khoa_hoc': 'Ciencia',
+      'kinh_di': 'Terror',
+      'kinh_dien': 'Clásicos',
+      'lich_su': 'Historia',
+      'mien_tay': 'Wéstern',
+      'phim_18': 'Solo adultos',
+      'phim_ngan': 'Cortometrajes',
+      'phieu_luu': 'Aventura',
+      'than_thoai': 'Mitología',
+      'the_thao': 'Deportes',
+      'tre_em': 'Infantil',
+      'tai_lieu': 'Documental',
+      'tam_ly': 'Psicológico',
+      'tinh_cam': 'Romance',
+      'vien_tuong': 'Ciencia ficción',
+      'vo_thuat': 'Artes marciales',
+      'am_nhac': 'Música',
+      'other': '$fallback',
+    });
+    return '$_temp0';
+  }
+
+  @override
+  String filterCountryName(String slug, String fallback) {
+    String _temp0 = intl.Intl.selectLogic(slug, {
+      'anh': 'Inglaterra',
+      'ba_lan': 'Polonia',
+      'brazil': 'Brasil',
+      'bo_dao_nha': 'Portugal',
+      'canada': 'Canadá',
+      'chau_phi': 'África',
+      'ha_lan': 'Países Bajos',
+      'han_quoc': 'Corea del Sur',
+      'hong_kong': 'Hong Kong',
+      'indonesia': 'Indonesia',
+      'malaysia': 'Malasia',
+      'mexico': 'México',
+      'na_uy': 'Noruega',
+      'nam_phi': 'Sudáfrica',
+      'nga': 'Rusia',
+      'nhat_ban': 'Japón',
+      'philippines': 'Filipinas',
+      'phap': 'Francia',
+      'quoc_gia_khac': 'Otros países',
+      'thai_lan': 'Tailandia',
+      'tho_nhi_ky': 'Turquía',
+      'thuy_si': 'Suiza',
+      'thuy_dien': 'Suecia',
+      'trung_quoc': 'China',
+      'tay_ban_nha': 'España',
+      'uae': 'EAU',
+      'ukraina': 'Ucrania',
+      'viet_nam': 'Vietnam',
+      'au_my': 'Europa y América',
+      'uc': 'Australia',
+      'y': 'Italia',
+      'dan_mach': 'Dinamarca',
+      'dai_loan': 'Taiwán',
+      'duc': 'Alemania',
+      'a_rap_xe_ut': 'Arabia Saudita',
+      'an_do': 'India',
+      'other': '$fallback',
+    });
+    return '$_temp0';
+  }
 
   @override
   String get searchAttentionTitle => 'Atención';
@@ -1199,6 +1288,32 @@ class AppLocalizationsEs extends AppLocalizations {
   String playerEpisodeNumber(int number) {
     return 'Episodio $number';
   }
+
+  @override
+  String commonEpisodeNumberShort(int number) {
+    return 'Ep.$number';
+  }
+
+  @override
+  String commonEpisodeCompleted(int current, int total) {
+    return 'Completado ($current/$total)';
+  }
+
+  @override
+  String get profileChangeCover => 'Cambiar foto de portada';
+
+  @override
+  String get profileCover => 'Foto de portada';
+
+  @override
+  String get profileCropCover => 'Recortar foto de portada';
+
+  @override
+  String get profileCoverUpdated => 'Foto de portada actualizada.';
+
+  @override
+  String get profileCoverUpdateFailed =>
+      'No se pudo actualizar la foto de portada. Inténtalo de nuevo.';
 
   @override
   String libraryMonthLabel(int month) {

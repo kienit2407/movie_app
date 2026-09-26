@@ -30,6 +30,7 @@
   "commonSelectedCount": "{count, plural, =0{Chưa chọn mục nào} other{{count} đã chọn}}",
   "commonErrorWithDetails": "Lỗi: {error}",
   "commonDurationHoursMinutes": "{hours} giờ {minutes} phút",
+  "commonDurationMinutesPerEpisode": "{minutes} phút/tập",
 
   "settingsLanguage": "Ngôn ngữ",
   "settingsLanguageSystem": "Theo ngôn ngữ thiết bị",
@@ -137,6 +138,8 @@
   "filterReleaseYear": "Năm phát hành",
   "filterApply": "Áp dụng bộ lọc",
   "filterResults": "Lọc kết quả",
+  "filterGenreName": "{slug, select, bi_an{Bí ẩn} chien_tranh{Chiến tranh} chinh_kich{Chính kịch} co_trang{Cổ trang} gia_dinh{Gia đình} hai_huoc{Hài hước} hanh_dong{Hành động} hinh_su{Hình sự} hoc_duong{Học đường} khoa_hoc{Khoa học} kinh_di{Kinh dị} kinh_dien{Kinh điển} lich_su{Lịch sử} mien_tay{Miền Tây} phim_18{Phim 18+} phim_ngan{Phim ngắn} phieu_luu{Phiêu lưu} than_thoai{Thần thoại} the_thao{Thể thao} tre_em{Trẻ em} tai_lieu{Tài liệu} tam_ly{Tâm lý} tinh_cam{Tình cảm} vien_tuong{Viễn tưởng} vo_thuat{Võ thuật} am_nhac{Âm nhạc} other{{fallback}}}",
+  "filterCountryName": "{slug, select, anh{Anh} ba_lan{Ba Lan} brazil{Brazil} bo_dao_nha{Bồ Đào Nha} canada{Canada} chau_phi{Châu Phi} ha_lan{Hà Lan} han_quoc{Hàn Quốc} hong_kong{Hồng Kông} indonesia{Indonesia} malaysia{Malaysia} mexico{Mexico} na_uy{Na Uy} nam_phi{Nam Phi} nga{Nga} nhat_ban{Nhật Bản} philippines{Philippines} phap{Pháp} quoc_gia_khac{Quốc gia khác} thai_lan{Thái Lan} tho_nhi_ky{Thổ Nhĩ Kỳ} thuy_si{Thụy Sĩ} thuy_dien{Thụy Điển} trung_quoc{Trung Quốc} tay_ban_nha{Tây Ban Nha} uae{UAE} ukraina{Ukraina} viet_nam{Việt Nam} au_my{Âu Mỹ} uc{Úc} y{Ý} dan_mach{Đan Mạch} dai_loan{Đài Loan} duc{Đức} a_rap_xe_ut{Ả Rập Xê Út} an_do{Ấn Độ} other{{fallback}}}",
 
   "searchAttentionTitle": "Chú ý!",
   "searchEnterKeywordBeforeFiltering": "Nhập từ khóa trước khi lọc phim.",
@@ -344,6 +347,15 @@
   "rankingEmptyViews": "Bảng xếp hạng sẽ xuất hiện khi có lượt xem.",
   "rankingLoadFailed": "Chưa thể tải bảng xếp hạng.",
   "playerEpisodeNumber": "Tập {number}",
-  "libraryMonthLabel": "tháng {month}"
+  "commonEpisodeNumberShort": "T.{number}",
+  "@commonEpisodeNumberShort": {"description": "Compact episode number label", "placeholders": {"number": {"type": "int"}}},
+  "commonEpisodeCompleted": "Hoàn tất ({current}/{total})",
+  "@commonEpisodeCompleted": {"description": "Completed series episode progress", "placeholders": {"current": {"type": "int"}, "total": {"type": "int"}}},
+  "libraryMonthLabel": "tháng {month}",
+  "profileChangeCover": "Thay đổi ảnh bìa",
+  "profileCover": "Ảnh bìa",
+  "profileCropCover": "Cắt ảnh bìa",
+  "profileCoverUpdated": "Đã cập nhật ảnh bìa.",
+  "profileCoverUpdateFailed": "Không thể cập nhật ảnh bìa. Hãy thử lại."
 
 }

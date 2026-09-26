@@ -5,7 +5,9 @@ import 'package:fast_cached_network_image/fast_cached_network_image.dart';
 import 'package:movie_app/core/config/routes/app_router.dart';
 import 'package:movie_app/core/config/utils/animated_dialog.dart';
 import 'package:movie_app/core/config/utils/episode_map.dart';
+import 'package:movie_app/core/config/utils/format_episode.dart';
 import 'package:movie_app/core/config/utils/show_detail_movie_dialog.dart';
+import 'package:movie_app/core/extension/build_context_extension.dart';
 import 'package:movie_app/feature/home/domain/entities/new_movie_entity.dart';
 import 'package:movie_app/feature/detail_movie/presentation/widgets/movie_badge.dart';
 
@@ -126,7 +128,9 @@ class RecommendationItem extends StatelessWidget {
                             currentEp.isNotEmpty &&
                             currentEp != 'Full')
                           MovieBadge(
-                            text: EpisodeFormatter.toShort(currentEp),
+                            text: currentEp.toLocalizedEpisodeShortLabel(
+                              context.l10n,
+                            ),
                             color: Colors.redAccent,
                           ),
                       ],

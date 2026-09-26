@@ -288,6 +288,12 @@ abstract class AppLocalizations {
   /// **'{hours, plural, =1{1 hour} other{{hours} hours}} {minutes, plural, =1{1 minute} other{{minutes} minutes}}'**
   String commonDurationHoursMinutes(int hours, int minutes);
 
+  /// Runtime in minutes for each episode of a series
+  ///
+  /// In en, this message translates to:
+  /// **'{minutes, plural, =1{1 minute/episode} other{{minutes} minutes/episode}}'**
+  String commonDurationMinutesPerEpisode(int minutes);
+
   /// Application language setting title
   ///
   /// In en, this message translates to:
@@ -893,6 +899,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Filter results'**
   String get filterResults;
+
+  /// Localized genre name from the stable API slug, falling back to the API name
+  ///
+  /// In en, this message translates to:
+  /// **'{slug, select, bi_an{Mystery} chien_tranh{War} chinh_kich{Drama} co_trang{Costume drama} gia_dinh{Family} hai_huoc{Comedy} hanh_dong{Action} hinh_su{Crime} hoc_duong{School} khoa_hoc{Science} kinh_di{Horror} kinh_dien{Classics} lich_su{History} mien_tay{Western} phim_18{Adults only} phim_ngan{Short films} phieu_luu{Adventure} than_thoai{Mythology} the_thao{Sports} tre_em{Kids} tai_lieu{Documentary} tam_ly{Psychological} tinh_cam{Romance} vien_tuong{Science fiction} vo_thuat{Martial arts} am_nhac{Music} other{{fallback}}}'**
+  String filterGenreName(String slug, String fallback);
+
+  /// Localized country or region name from the stable API slug, falling back to the API name
+  ///
+  /// In en, this message translates to:
+  /// **'{slug, select, anh{England} ba_lan{Poland} brazil{Brazil} bo_dao_nha{Portugal} canada{Canada} chau_phi{Africa} ha_lan{Netherlands} han_quoc{South Korea} hong_kong{Hong Kong} indonesia{Indonesia} malaysia{Malaysia} mexico{Mexico} na_uy{Norway} nam_phi{South Africa} nga{Russia} nhat_ban{Japan} philippines{Philippines} phap{France} quoc_gia_khac{Other countries} thai_lan{Thailand} tho_nhi_ky{Türkiye} thuy_si{Switzerland} thuy_dien{Sweden} trung_quoc{China} tay_ban_nha{Spain} uae{UAE} ukraina{Ukraine} viet_nam{Vietnam} au_my{Europe and America} uc{Australia} y{Italy} dan_mach{Denmark} dai_loan{Taiwan} duc{Germany} a_rap_xe_ut{Saudi Arabia} an_do{India} other{{fallback}}}'**
+  String filterCountryName(String slug, String fallback);
 
   /// Search validation dialog title
   ///
@@ -2075,6 +2093,48 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Episode {number}'**
   String playerEpisodeNumber(int number);
+
+  /// Compact episode number label
+  ///
+  /// In en, this message translates to:
+  /// **'Ep.{number}'**
+  String commonEpisodeNumberShort(int number);
+
+  /// Completed series episode progress
+  ///
+  /// In en, this message translates to:
+  /// **'Completed ({current}/{total})'**
+  String commonEpisodeCompleted(int current, int total);
+
+  /// Action for changing the profile cover photo
+  ///
+  /// In en, this message translates to:
+  /// **'Change cover photo'**
+  String get profileChangeCover;
+
+  /// Full-screen cover photo page title
+  ///
+  /// In en, this message translates to:
+  /// **'Cover photo'**
+  String get profileCover;
+
+  /// Cover photo cropper title
+  ///
+  /// In en, this message translates to:
+  /// **'Crop cover photo'**
+  String get profileCropCover;
+
+  /// Cover photo update success message
+  ///
+  /// In en, this message translates to:
+  /// **'Cover photo updated.'**
+  String get profileCoverUpdated;
+
+  /// Cover photo update failure message
+  ///
+  /// In en, this message translates to:
+  /// **'Could not update the cover photo. Please try again.'**
+  String get profileCoverUpdateFailed;
 
   /// Month label
   ///

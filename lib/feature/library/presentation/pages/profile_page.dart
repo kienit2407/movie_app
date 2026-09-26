@@ -2,10 +2,10 @@ import 'package:fast_cached_network_image/fast_cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
 import 'package:movie_app/common/components/app_toast.dart';
+import 'package:movie_app/core/audio/sound_effect_player.dart';
 import 'package:movie_app/core/config/routes/app_router.dart';
 import 'package:movie_app/core/config/themes/app_color.dart';
 import 'package:movie_app/core/config/di/service_locator.dart';
@@ -13,10 +13,15 @@ import 'package:movie_app/core/config/utils/movie_player_args.dart';
 import 'package:movie_app/core/config/utils/animated_dialog.dart';
 import 'package:movie_app/core/extension/build_context_extension.dart';
 import 'package:movie_app/core/player_overlay_launcher.dart';
+import 'package:movie_app/core/widgets/app_refresh_indicator.dart';
 import 'package:movie_app/common/components/alert_dialog/app_alert_dialog.dart';
+import 'package:movie_app/feature/auth/presentation/session/auth_session_cubit.dart';
+import 'package:movie_app/feature/auth/presentation/session/saved_accounts_cubit.dart';
+import 'package:movie_app/feature/auth/presentation/sign_in/pages/sign_in.dart';
 import 'package:movie_app/feature/detail_movie/domain/usecase/get_detail_movie_usecase.dart';
 import 'package:movie_app/feature/library/data/user_library_repository.dart';
 import 'package:movie_app/feature/library/presentation/cubit/user_library_cubit.dart';
+import 'package:movie_app/feature/library/presentation/pages/settings_page.dart';
 import 'package:movie_app/feature/library/presentation/widgets/auth_required_view.dart';
 import 'package:movie_app/feature/library/presentation/widgets/library_movie_card.dart';
 import 'package:movie_app/feature/hub/presentation/pages/hub_page.dart';
@@ -67,6 +72,56 @@ class _ProfilePageState extends State<ProfilePage>
     HubTabReselectNotifier.instance.removeListener(_onHubTabReselected);
     _scrollController.dispose();
     super.dispose();
+  }
+
+  Future<void> _openAccountSwitcher() async {
+    final accountsCubit = context.read<SavedAccountsCubit>();
+    await accountsCubit.rememberCurrentSession();
+    if (!mounted) return;
+
+    final result = await showModalBottomSheet<AccountSheetResult>(
+      context: context,
+      useRootNavigator: true,
+      isScrollControlled: true,
+      useSafeArea: true,
+      backgroundColor: Colors.transparent,
+      barrierColor: Colors.black.withValues(alpha: .68),
+      builder: (_) => BlocProvider.value(
+        value: accountsCubit,
+        child: const AccountSwitcherSheet(),
+      ),
+    );
+    if (result == null || !mounted) return;
+
+    if (result.addAccount) {
+      final signedIn = await SignInPage.showSheet(
+        context,
+        forceGoogleAccountPicker: true,
+      );
+      if (signedIn) {
+        await accountsCubit.rememberCurrentSession();
+        if (!mounted) return;
+        await _finishAccountChange();
+      }
+      return;
+    }
+
+    final userId = result.userId;
+    if (userId == null) return;
+    final switched = await accountsCubit.switchAccount(userId);
+    if (!mounted) return;
+    if (switched) {
+      await _finishAccountChange();
+    } else {
+      AppToast.show(context, context.l10n.settingsAccountSwitchFailed);
+    }
+  }
+
+  Future<void> _finishAccountChange() async {
+    context.read<AuthSessionCubit>().refresh();
+    await context.read<UserLibraryCubit>().refresh();
+    if (!mounted) return;
+    context.go(AppRoutes.home);
   }
 
   void _toggleHistorySelection(String slug) {
@@ -194,8 +249,10 @@ class _ProfilePageState extends State<ProfilePage>
             ),
           ),
           Scaffold(
+            extendBody: true,
             backgroundColor: Colors.transparent,
             body: SafeArea(
+              top: false,
               bottom: false,
               child: BlocBuilder<UserLibraryCubit, UserLibraryState>(
                 builder: (context, state) {
@@ -210,8 +267,10 @@ class _ProfilePageState extends State<ProfilePage>
                   }
                   final displayName = state.displayName;
                   final avatarUrl = state.avatarUrl;
+                  final coverUrl = state.coverUrl;
 
-                  return RefreshIndicator.adaptive(
+                  return AppRefreshIndicator(
+                    soundEffectPlayer: sl<SoundEffectPlayer>(),
                     onRefresh: context.read<UserLibraryCubit>().refresh,
                     child: CustomScrollView(
                       key: const PageStorageKey('profile-scroll'),
@@ -222,8 +281,10 @@ class _ProfilePageState extends State<ProfilePage>
                             displayName: displayName,
                             email: user.email ?? '',
                             avatarUrl: avatarUrl,
+                            coverUrl: coverUrl,
                             onEdit: () => context.push(AppRoutes.editProfile),
                             onSettings: () => context.push(AppRoutes.settings),
+                            onAccountSwitch: _openAccountSwitcher,
                           ),
                         ),
                         SliverPadding(
@@ -357,108 +418,130 @@ class _ProfileHeader extends StatelessWidget {
     required this.displayName,
     required this.email,
     required this.avatarUrl,
+    required this.coverUrl,
     required this.onEdit,
     required this.onSettings,
+    required this.onAccountSwitch,
   });
 
   final String displayName;
   final String email;
   final String avatarUrl;
+  final String coverUrl;
   final VoidCallback onEdit;
   final VoidCallback onSettings;
+  final VoidCallback onAccountSwitch;
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 18, 20, 0),
-      child: Column(
-        children: [
-          Align(
-            alignment: Alignment.centerRight,
-            child: IconButton(
-              tooltip: context.l10n.settingsTitle,
-              onPressed: onSettings,
-              icon: const Icon(Iconsax.setting_2_copy, color: Colors.white70),
+    return Stack(
+      children: [
+        if (coverUrl.isNotEmpty)
+          Positioned.fill(
+            child: IgnorePointer(
+              child: ShaderMask(
+                blendMode: BlendMode.dstIn,
+                shaderCallback: (bounds) {
+                  return const LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [Colors.white, Colors.white, Colors.transparent],
+                    stops: [0.0, 0.45, 1.0],
+                  ).createShader(bounds);
+                },
+                child: FastCachedImage(
+                  key: ValueKey(coverUrl),
+                  url: coverUrl,
+                  fit: BoxFit.cover,
+                ),
+              ),
             ),
           ),
 
-          _Avatar(url: avatarUrl, size: 112),
-
-          const SizedBox(height: 16),
-
-          // Tên luôn nằm chính giữa,
-          // icon edit nằm riêng bên phải.
-          LayoutBuilder(
-            builder: (context, constraints) {
-              const gap = 10.0;
-              const editButtonWidth = 46.0;
-
-              // Bên trái chừa đúng bằng:
-              // khoảng cách + chiều rộng nút edit.
-              const sideSpace = gap + editButtonWidth;
-
-              return Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  // Spacer giả để giữ tên chính giữa tuyệt đối.
-                  const SizedBox(width: sideSpace),
-
-                  // Tên.
-                  ConstrainedBox(
-                    constraints: BoxConstraints(
-                      maxWidth: constraints.maxWidth - sideSpace * 2,
-                    ),
-                    child: Text(
-                      displayName,
-                      textAlign: TextAlign.center,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 20,
-                        fontWeight: FontWeight.w700,
+        SafeArea(
+          bottom: false,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Column(
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    IconButton(
+                      onPressed: onEdit,
+                      icon: const Icon(
+                        Icons.edit_outlined,
+                        color: Colors.white70,
                       ),
                     ),
-                  ),
-
-                  // Khoảng cách tính từ chữ.
-                  const SizedBox(width: gap),
-
-                  // Nút edit.
-                  SizedBox(
-                    width: editButtonWidth,
-                    child: InkWell(
-                      onTap: onEdit,
-                      borderRadius: BorderRadius.circular(30.r),
-                      child: Ink(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 15,
-                          vertical: 5,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.white12,
-                          borderRadius: BorderRadius.circular(30.r),
-                        ),
-                        child: const Icon(
-                          Iconsax.edit_2,
-                          color: Colors.white54,
-                          size: 16,
-                        ),
+                    IconButton(
+                      tooltip: context.l10n.settingsTitle,
+                      onPressed: onSettings,
+                      icon: const Icon(
+                        Iconsax.setting_2_copy,
+                        color: Colors.white70,
                       ),
                     ),
-                  ),
-                ],
-              );
-            },
+                  ],
+                ),
+
+                Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          InkWell(
+                            borderRadius: BorderRadius.circular(20),
+                            onTap: () {
+                              HapticFeedback.mediumImpact();
+                              onAccountSwitch();
+                            },
+                            child: Text.rich(
+                              TextSpan(
+                                text: displayName,
+                                children: [
+                                  WidgetSpan(
+                                    alignment: PlaceholderAlignment.middle,
+                                    child: InkWell(
+                                      onTap: () => {},
+                                      borderRadius: BorderRadius.circular(20),
+                                      child: Icon(
+                                        Icons.arrow_drop_down,
+                                        size: 24,
+                                        color: Colors.white70,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              textAlign: TextAlign.start,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 20,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                          SizedBox(height: 4),
+                          Text(
+                            email,
+                            style: const TextStyle(color: Colors.white54),
+                          ),
+                        ],
+                      ),
+                    ),
+                    SizedBox(width: 5),
+                    _Avatar(url: avatarUrl, size: 112),
+                  ],
+                ),
+              ],
+            ),
           ),
-
-          const SizedBox(height: 5),
-
-          Text(email, style: const TextStyle(color: Colors.white54)),
-
-          const SizedBox(height: 18),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }
@@ -471,22 +554,13 @@ class _Avatar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: size,
-      height: size,
-      padding: const EdgeInsets.all(3),
-      decoration: const BoxDecoration(
-        shape: BoxShape.circle,
-        gradient: AppColor.primaryColor,
-      ),
-      child: ClipOval(
-        child: url.isEmpty
-            ? const ColoredBox(
-                color: Color(0xff292B38),
-                child: Icon(Icons.person, color: Colors.white70, size: 54),
-              )
-            : FastCachedImage(key: ValueKey(url), url: url, fit: BoxFit.cover),
-      ),
+    return ClipOval(
+      child: url.isEmpty
+          ? const ColoredBox(
+              color: Color(0xff292B38),
+              child: Icon(Icons.person, color: Colors.white70, size: 54),
+            )
+          : FastCachedImage(key: ValueKey(url), url: url, fit: BoxFit.cover),
     );
   }
 }

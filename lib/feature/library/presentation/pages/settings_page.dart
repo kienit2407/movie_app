@@ -11,6 +11,7 @@ import 'package:movie_app/common/components/app_toast.dart';
 import 'package:movie_app/core/config/routes/app_router.dart';
 import 'package:movie_app/core/config/themes/app_color.dart';
 import 'package:movie_app/core/config/utils/animated_dialog.dart';
+import 'package:movie_app/core/config/utils/package_infor.dart';
 import 'package:movie_app/core/enum/language_enum.dart';
 import 'package:movie_app/core/extension/build_context_extension.dart';
 import 'package:movie_app/feature/auth/data/saved_account_store.dart';
@@ -18,6 +19,7 @@ import 'package:movie_app/feature/auth/presentation/session/saved_accounts_cubit
 import 'package:movie_app/feature/auth/presentation/session/auth_session_cubit.dart';
 import 'package:movie_app/feature/auth/presentation/sign_in/pages/sign_in.dart';
 import 'package:movie_app/feature/library/presentation/cubit/user_library_cubit.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class SettingsPage extends StatefulWidget {
@@ -30,11 +32,26 @@ class SettingsPage extends StatefulWidget {
 class _SettingsPageState extends State<SettingsPage> {
   late final ScrollController _scrollController;
   bool _isScrolled = false;
-
+  PackageInfo? _packageInfo;
   @override
   void initState() {
     super.initState();
     _scrollController = ScrollController()..addListener(_handleScroll);
+    _loadPackageInfo();
+  }
+
+  Future<void> _loadPackageInfo() async {
+    try {
+      final packageInfo = await PackageInfor.getPackageInfo();
+      if (!mounted) return;
+
+      setState(() {
+        _packageInfo = packageInfo;
+      });
+    } catch (error, stackTrace) {
+      debugPrint('[SettingsPage] Failed to load package info: $error');
+      debugPrintStack(stackTrace: stackTrace);
+    }
   }
 
   void _handleScroll() {
@@ -64,7 +81,7 @@ class _SettingsPageState extends State<SettingsPage> {
     await accountsCubit.rememberCurrentSession();
     if (!mounted) return;
 
-    final result = await showModalBottomSheet<_AccountSheetResult>(
+    final result = await showModalBottomSheet<AccountSheetResult>(
       context: context,
       useRootNavigator: true,
       isScrollControlled: true,
@@ -73,13 +90,13 @@ class _SettingsPageState extends State<SettingsPage> {
       barrierColor: Colors.black.withValues(alpha: .68),
       builder: (_) => BlocProvider.value(
         value: accountsCubit,
-        child: const _AccountSwitcherSheet(),
+        child: const AccountSwitcherSheet(),
       ),
     );
     if (result == null || !mounted) return;
 
     if (result.addAccount) {
-      final signedIn = await SignInPage.showSheet(
+      final signedIn = await SignInPage.showSheet( 
         context,
         forceGoogleAccountPicker: true,
       );
@@ -263,6 +280,7 @@ class _SettingsPageState extends State<SettingsPage> {
                               ),
                             ],
                           ),
+                          _buildVersionInfo(),
                         ],
                       ),
                     ),
@@ -270,6 +288,39 @@ class _SettingsPageState extends State<SettingsPage> {
                 },
               ),
             ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildVersionInfo() {
+    final packageInfo = _packageInfo;
+
+    if (packageInfo == null || packageInfo.version.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+      child: Column(
+        children: [
+          Text(
+            context.l10n.homeAppVersion(
+              packageInfo.version,
+              packageInfo.buildNumber,
+            ),
+            style: TextStyle(
+              fontSize: 12,
+              color: Colors.white.withValues(alpha: .5),
+            ),
+          ),
+          Text(
+            '${packageInfo.appName} - ${packageInfo.packageName}',
+            style: TextStyle(
+              fontSize: 10,
+              color: Colors.white.withValues(alpha: .3),
+            ),
           ),
         ],
       ),
@@ -413,8 +464,8 @@ class _SettingsTile extends StatelessWidget {
   }
 }
 
-class _AccountSwitcherSheet extends StatelessWidget {
-  const _AccountSwitcherSheet();
+class AccountSwitcherSheet extends StatelessWidget {
+  const AccountSwitcherSheet();
 
   @override
   Widget build(BuildContext context) {
@@ -485,12 +536,12 @@ class _AccountSwitcherSheet extends StatelessWidget {
                             isBusy: account.userId == state.busyUserId,
                             onTap: () => Navigator.of(
                               context,
-                            ).pop(_AccountSheetResult.switchTo(account.userId)),
+                            ).pop(AccountSheetResult.switchTo(account.userId)),
                           ),
                         _AddAccountTile(
                           onTap: () => Navigator.of(
                             context,
-                          ).pop(const _AccountSheetResult.add()),
+                          ).pop(const AccountSheetResult.add()),
                         ),
                       ],
                     );
@@ -644,9 +695,9 @@ class _AccountAvatar extends StatelessWidget {
   }
 }
 
-class _AccountSheetResult {
-  const _AccountSheetResult.add() : addAccount = true, userId = null;
-  const _AccountSheetResult.switchTo(this.userId) : addAccount = false;
+class AccountSheetResult {
+  const AccountSheetResult.add() : addAccount = true, userId = null;
+  const AccountSheetResult.switchTo(this.userId) : addAccount = false;
 
   final bool addAccount;
   final String? userId;

@@ -118,6 +118,11 @@ class AppLocalizationsHi extends AppLocalizations {
   }
 
   @override
+  String commonDurationMinutesPerEpisode(int minutes) {
+    return '$minutes मिनट प्रति एपिसोड';
+  }
+
+  @override
   String get settingsLanguage => 'भाषा';
 
   @override
@@ -439,6 +444,84 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get filterResults => 'परिणाम फ़िल्टर करें';
+
+  @override
+  String filterGenreName(String slug, String fallback) {
+    String _temp0 = intl.Intl.selectLogic(slug, {
+      'bi_an': 'रहस्य',
+      'chien_tranh': 'युद्ध',
+      'chinh_kich': 'ड्रामा',
+      'co_trang': 'ऐतिहासिक ड्रामा',
+      'gia_dinh': 'परिवार',
+      'hai_huoc': 'कॉमेडी',
+      'hanh_dong': 'एक्शन',
+      'hinh_su': 'अपराध',
+      'hoc_duong': 'स्कूल',
+      'khoa_hoc': 'विज्ञान',
+      'kinh_di': 'हॉरर',
+      'kinh_dien': 'क्लासिक',
+      'lich_su': 'इतिहास',
+      'mien_tay': 'वेस्टर्न',
+      'phim_18': 'केवल वयस्क',
+      'phim_ngan': 'लघु फिल्में',
+      'phieu_luu': 'रोमांच',
+      'than_thoai': 'पौराणिक',
+      'the_thao': 'खेल',
+      'tre_em': 'बच्चे',
+      'tai_lieu': 'डॉक्यूमेंट्री',
+      'tam_ly': 'मनोवैज्ञानिक',
+      'tinh_cam': 'रोमांस',
+      'vien_tuong': 'विज्ञान कथा',
+      'vo_thuat': 'मार्शल आर्ट',
+      'am_nhac': 'संगीत',
+      'other': '$fallback',
+    });
+    return '$_temp0';
+  }
+
+  @override
+  String filterCountryName(String slug, String fallback) {
+    String _temp0 = intl.Intl.selectLogic(slug, {
+      'anh': 'इंग्लैंड',
+      'ba_lan': 'पोलैंड',
+      'brazil': 'ब्राज़ील',
+      'bo_dao_nha': 'पुर्तगाल',
+      'canada': 'कनाडा',
+      'chau_phi': 'अफ्रीका',
+      'ha_lan': 'नीदरलैंड',
+      'han_quoc': 'दक्षिण कोरिया',
+      'hong_kong': 'हांगकांग',
+      'indonesia': 'इंडोनेशिया',
+      'malaysia': 'मलेशिया',
+      'mexico': 'मेक्सिको',
+      'na_uy': 'नॉर्वे',
+      'nam_phi': 'दक्षिण अफ्रीका',
+      'nga': 'रूस',
+      'nhat_ban': 'जापान',
+      'philippines': 'फिलीपींस',
+      'phap': 'फ्रांस',
+      'quoc_gia_khac': 'अन्य देश',
+      'thai_lan': 'थाईलैंड',
+      'tho_nhi_ky': 'तुर्की',
+      'thuy_si': 'स्विट्जरलैंड',
+      'thuy_dien': 'स्वीडन',
+      'trung_quoc': 'चीन',
+      'tay_ban_nha': 'स्पेन',
+      'uae': 'संयुक्त अरब अमीरात',
+      'ukraina': 'यूक्रेन',
+      'viet_nam': 'वियतनाम',
+      'au_my': 'यूरोप और अमेरिका',
+      'uc': 'ऑस्ट्रेलिया',
+      'y': 'इटली',
+      'dan_mach': 'डेनमार्क',
+      'dai_loan': 'ताइवान',
+      'duc': 'जर्मनी',
+      'a_rap_xe_ut': 'सऊदी अरब',
+      'an_do': 'भारत',
+      'other': '$fallback',
+    });
+    return '$_temp0';
+  }
 
   @override
   String get searchAttentionTitle => 'ध्यान दें';
@@ -1191,6 +1274,32 @@ class AppLocalizationsHi extends AppLocalizations {
   String playerEpisodeNumber(int number) {
     return 'एपिसोड $number';
   }
+
+  @override
+  String commonEpisodeNumberShort(int number) {
+    return 'एपि.$number';
+  }
+
+  @override
+  String commonEpisodeCompleted(int current, int total) {
+    return 'पूर्ण ($current/$total)';
+  }
+
+  @override
+  String get profileChangeCover => 'कवर फ़ोटो बदलें';
+
+  @override
+  String get profileCover => 'कवर फ़ोटो';
+
+  @override
+  String get profileCropCover => 'कवर फ़ोटो क्रॉप करें';
+
+  @override
+  String get profileCoverUpdated => 'कवर फ़ोटो अपडेट हो गई।';
+
+  @override
+  String get profileCoverUpdateFailed =>
+      'कवर फ़ोटो अपडेट नहीं हो सकी। कृपया फिर से कोशिश करें।';
 
   @override
   String libraryMonthLabel(int month) {

@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
 import 'package:movie_app/core/config/themes/app_color.dart';
 import 'package:movie_app/core/extension/build_context_extension.dart';
+import 'package:movie_app/core/widgets/animation/gentle_expand_animation_no_pop_widget.dart';
+import 'package:movie_app/core/widgets/animation/staggered_list_animation_widget.dart';
 
 class AppAlertDialog extends StatelessWidget {
   const AppAlertDialog({
@@ -58,35 +60,45 @@ class AppAlertDialog extends StatelessWidget {
                     mainAxisAlignment: MainAxisAlignment.center,
                     // mainAxisSize: MainAxisSize.min,
                     children: [
-                      Container(
-                        padding: const EdgeInsets.all(24),
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          gradient: LinearGradient(
-                            colors: [Color(0xffE91C2D), Color(0xffF83947)],
+                      GentleExpandAnimationNoPopWidget(
+                        child: Container(
+                          padding: const EdgeInsets.all(24),
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            gradient: LinearGradient(
+                              colors: [Color(0xffE91C2D), Color(0xffF83947)],
+                            ),
                           ),
+                          child: icon ?? const Icon(Iconsax.danger, size: 30),
                         ),
-                        child: icon ?? const Icon(Iconsax.danger, size: 30),
                       ),
                       const SizedBox(height: 15),
-                      Text(
-                        title ?? context.l10n.commonCongratulationsTitle,
-                        style: const TextStyle(
-                          color: AppColor.secondColor,
-                          fontWeight: FontWeight.w600,
-                          fontSize: 13,
+                      GentleExpandAnimationNoPopWidget(
+                      
+                        child: Text(
+                          title ?? context.l10n.commonCongratulationsTitle,
+                          style: const TextStyle(
+                            color: AppColor.secondColor,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 13,
+                          ),
                         ),
                       ),
                       const SizedBox(height: 10),
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 20),
-                        child: Text(
-                          content ?? '',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w400,
-                            fontSize: 12,
+                        child: StaggeredListAnimationWidget(
+                          index: 0,
+                          curve: Easing.emphasizedAccelerate,
+                          staggerDelay: const Duration(milliseconds: 200),
+                          child: Text(
+                            content ?? '',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w400,
+                              fontSize: 12,
+                            ),
                           ),
                         ),
                       ),

@@ -474,7 +474,7 @@ class _GenreBottomSheetState extends State<GenreBottomSheet> {
               backgroundColor: Color(0xff2F3345), // ← Background trong suốt
               selectedColor: Color(0xff2F3345),
               label: Text(
-                state.genreMovie[index].name,
+                context.filterGenreLabel(slug, state.genreMovie[index].name),
                 style: TextStyle(
                   color: isSelected ? Color(0xffF1D775) : Colors.white,
                   fontSize: 10,

@@ -246,8 +246,19 @@ class _HistoryRepository implements UserLibraryRepository {
   }) async => '';
 
   @override
+  Future<String> uploadCover(
+    Uint8List bytes, {
+    required String extension,
+  }) async => '';
+
+  @override
   Future<UserProfile> updateProfile({
     required String displayName,
     String? avatarUrl,
-  }) async => UserProfile(displayName: displayName, avatarUrl: avatarUrl ?? '');
+    String? coverUrl,
+  }) async => UserProfile(
+    displayName: displayName,
+    avatarUrl: avatarUrl ?? '',
+    coverUrl: coverUrl ?? '',
+  );
 }

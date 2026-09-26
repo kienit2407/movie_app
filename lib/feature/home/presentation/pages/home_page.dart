@@ -17,6 +17,7 @@ import 'package:movie_app/common/components/alert_dialog/app_alert_dialog.dart';
 import 'package:movie_app/common/components/app_toast.dart';
 import 'package:movie_app/common/components/lost_network.dart';
 import 'package:movie_app/common/helpers/navigation/app_navigation.dart';
+import 'package:movie_app/core/audio/sound_effect_player.dart';
 import 'package:movie_app/core/config/constants/const_globals.dart';
 import 'package:movie_app/core/config/routes/app_router.dart';
 import 'package:movie_app/core/extension/build_context_extension.dart';
@@ -36,6 +37,7 @@ import 'package:movie_app/core/config/utils/animated_dialog.dart';
 import 'package:movie_app/core/config/utils/format_episode.dart';
 import 'package:movie_app/core/config/utils/sharder_text.dart';
 import 'package:movie_app/core/config/utils/show_detail_movie_dialog.dart';
+import 'package:movie_app/core/widgets/app_refresh_indicator.dart';
 import 'package:movie_app/feature/home/domain/entities/fillterType.dart';
 import 'package:movie_app/feature/home/domain/usecase/get_movies_by_filter_usecase.dart';
 import 'package:movie_app/feature/home/domain/entities/fillter_genre_movie_req.dart';
@@ -627,7 +629,10 @@ class _HomePageState extends State<HomePage>
             ),
           ),
         ),
-        body: RefreshIndicator.adaptive(
+        body: AppRefreshIndicator(
+          edgeOffset: MediaQuery.paddingOf(context).top + 90.h,
+          displacement: 16.h,
+          soundEffectPlayer: sl<SoundEffectPlayer>(),
           onRefresh: () async {
             // Reset carousel state TRƯỚC khi gọi getLatestMovie
             _carouselGen++;
@@ -716,14 +721,6 @@ class _HomePageState extends State<HomePage>
               SizedBox(height: 30.h),
               TopMovieRankings(refreshGeneration: _rankingsRefreshGeneration),
               SizedBox(height: 30.h),
-              BlocBuilder<HomeUiCubit, HomeUiState>(
-                buildWhen: (previous, current) =>
-                    previous.version != current.version ||
-                    previous.buildNumber != current.buildNumber ||
-                    previous.appName != current.appName ||
-                    previous.packageName != current.packageName,
-                builder: (context, _) => _buildVersionInfo(),
-              ),
             ],
           ),
         ),
@@ -1027,9 +1024,10 @@ class _HomePageState extends State<HomePage>
                   ),
                   _buildInforChip(
                     child: Text(
-                      (movie.episodeCurrent == 'Full')
-                          ? movie.time.toFormatEpisode(context.l10n)
-                          : movie.time,
+                      movie.time.toFormatEpisode(
+                        context.l10n,
+                        perEpisode: movie.episodeCurrent != 'Full',
+                      ),
                       style: TextStyle(
                         fontSize: 10.sp,
                         fontWeight: FontWeight.w600,
@@ -1046,7 +1044,9 @@ class _HomePageState extends State<HomePage>
                   _buildInforChip(
                     backgroundColor: Colors.white,
                     child: Text(
-                      movie.episodeCurrent,
+                      movie.episodeCurrent.toLocalizedEpisodeLabel(
+                        context.l10n,
+                      ),
                       style: TextStyle(
                         fontSize: 10.sp,
                         fontWeight: FontWeight.w600,
@@ -1728,30 +1728,7 @@ class _HomePageState extends State<HomePage>
     );
   }
 
-  Widget _buildVersionInfo() {
-    if (_uiState.version.isEmpty) return const SizedBox.shrink();
-    return Padding(
-      padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 10.h),
-      child: Column(
-        children: [
-          Text(
-            'Version: ${_uiState.version} (${_uiState.buildNumber})',
-            style: TextStyle(
-              fontSize: 12.sp,
-              color: Colors.white.withOpacity(0.5),
-            ),
-          ),
-          Text(
-            '${_uiState.appName} - ${_uiState.packageName}',
-            style: TextStyle(
-              fontSize: 10.sp,
-              color: Colors.white.withOpacity(0.3),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+  
 
   Widget _buildBannerShimmer({
     BorderRadius borderRadius = const BorderRadius.all(Radius.zero),
@@ -1829,13 +1806,18 @@ class _CountryMovieSectionState extends State<CountryMovieSection> {
                 children: [
                   Padding(
                     padding: EdgeInsets.only(left: 20.w),
-                    child: SharderText(
-                      gradient: widget.gradient,
-                      child: Text(
-                        widget.title,
-                        style: TextStyle(
-                          fontSize: 20.sp,
-                          fontWeight: FontWeight.bold,
+                    child: SizedBox(
+                      width: 240,
+                      child: SharderText(
+                        gradient: widget.gradient,
+                        child: Text(
+                          widget.title,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 20.sp,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ),
                     ),
@@ -2028,7 +2010,9 @@ class _ItemLatestMovie extends StatelessWidget {
                               currentEp.isNotEmpty &&
                               currentEp != 'Full')
                             _buildBadge(
-                              text: EpisodeFormatter.toShort(currentEp),
+                              text: currentEp.toLocalizedEpisodeShortLabel(
+                                context.l10n,
+                              ),
                               color: Colors.redAccent,
                             ),
                         ],

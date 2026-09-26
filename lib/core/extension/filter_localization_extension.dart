@@ -2,6 +2,12 @@ import 'package:flutter/widgets.dart';
 import 'package:movie_app/core/extension/build_context_extension.dart';
 
 extension FilterLocalizationExtension on BuildContext {
+  String filterGenreLabel(String slug, String fallback) =>
+      l10n.filterGenreName(slug.replaceAll('-', '_'), fallback);
+
+  String filterCountryLabel(String slug, String fallback) =>
+      l10n.filterCountryName(slug.replaceAll('-', '_'), fallback);
+
   String movieTypeLabel(String slug) => switch (slug) {
     'phim-bo' => l10n.filterSeries,
     'phim-le' => l10n.filterSingleMovies,

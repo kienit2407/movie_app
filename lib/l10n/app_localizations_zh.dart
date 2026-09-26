@@ -105,6 +105,11 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String commonDurationMinutesPerEpisode(int minutes) {
+    return '$minutes 分钟/集';
+  }
+
+  @override
   String get settingsLanguage => '语言';
 
   @override
@@ -409,6 +414,84 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get filterResults => '筛选结果';
+
+  @override
+  String filterGenreName(String slug, String fallback) {
+    String _temp0 = intl.Intl.selectLogic(slug, {
+      'bi_an': '悬疑',
+      'chien_tranh': '战争',
+      'chinh_kich': '剧情',
+      'co_trang': '古装',
+      'gia_dinh': '家庭',
+      'hai_huoc': '喜剧',
+      'hanh_dong': '动作',
+      'hinh_su': '犯罪',
+      'hoc_duong': '校园',
+      'khoa_hoc': '科学',
+      'kinh_di': '恐怖',
+      'kinh_dien': '经典',
+      'lich_su': '历史',
+      'mien_tay': '西部',
+      'phim_18': '成人',
+      'phim_ngan': '短片',
+      'phieu_luu': '冒险',
+      'than_thoai': '神话',
+      'the_thao': '体育',
+      'tre_em': '儿童',
+      'tai_lieu': '纪录片',
+      'tam_ly': '心理',
+      'tinh_cam': '爱情',
+      'vien_tuong': '科幻',
+      'vo_thuat': '武术',
+      'am_nhac': '音乐',
+      'other': '$fallback',
+    });
+    return '$_temp0';
+  }
+
+  @override
+  String filterCountryName(String slug, String fallback) {
+    String _temp0 = intl.Intl.selectLogic(slug, {
+      'anh': '英格兰',
+      'ba_lan': '波兰',
+      'brazil': '巴西',
+      'bo_dao_nha': '葡萄牙',
+      'canada': '加拿大',
+      'chau_phi': '非洲',
+      'ha_lan': '荷兰',
+      'han_quoc': '韩国',
+      'hong_kong': '中国香港',
+      'indonesia': '印度尼西亚',
+      'malaysia': '马来西亚',
+      'mexico': '墨西哥',
+      'na_uy': '挪威',
+      'nam_phi': '南非',
+      'nga': '俄罗斯',
+      'nhat_ban': '日本',
+      'philippines': '菲律宾',
+      'phap': '法国',
+      'quoc_gia_khac': '其他国家',
+      'thai_lan': '泰国',
+      'tho_nhi_ky': '土耳其',
+      'thuy_si': '瑞士',
+      'thuy_dien': '瑞典',
+      'trung_quoc': '中国',
+      'tay_ban_nha': '西班牙',
+      'uae': '阿联酋',
+      'ukraina': '乌克兰',
+      'viet_nam': '越南',
+      'au_my': '欧美',
+      'uc': '澳大利亚',
+      'y': '意大利',
+      'dan_mach': '丹麦',
+      'dai_loan': '中国台湾',
+      'duc': '德国',
+      'a_rap_xe_ut': '沙特阿拉伯',
+      'an_do': '印度',
+      'other': '$fallback',
+    });
+    return '$_temp0';
+  }
 
   @override
   String get searchAttentionTitle => '注意';
@@ -1073,6 +1156,31 @@ class AppLocalizationsZh extends AppLocalizations {
   String playerEpisodeNumber(int number) {
     return '第 $number 集';
   }
+
+  @override
+  String commonEpisodeNumberShort(int number) {
+    return '第$number集';
+  }
+
+  @override
+  String commonEpisodeCompleted(int current, int total) {
+    return '已完结（$current/$total）';
+  }
+
+  @override
+  String get profileChangeCover => '更换封面图片';
+
+  @override
+  String get profileCover => '封面图片';
+
+  @override
+  String get profileCropCover => '裁剪封面图片';
+
+  @override
+  String get profileCoverUpdated => '封面图片已更新。';
+
+  @override
+  String get profileCoverUpdateFailed => '无法更新封面图片，请重试。';
 
   @override
   String libraryMonthLabel(int month) {
@@ -1181,6 +1289,11 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   }
 
   @override
+  String commonDurationMinutesPerEpisode(int minutes) {
+    return '$minutes 分钟/集';
+  }
+
+  @override
   String get settingsLanguage => '语言';
 
   @override
@@ -1485,6 +1598,84 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
 
   @override
   String get filterResults => '筛选结果';
+
+  @override
+  String filterGenreName(String slug, String fallback) {
+    String _temp0 = intl.Intl.selectLogic(slug, {
+      'bi_an': '悬疑',
+      'chien_tranh': '战争',
+      'chinh_kich': '剧情',
+      'co_trang': '古装',
+      'gia_dinh': '家庭',
+      'hai_huoc': '喜剧',
+      'hanh_dong': '动作',
+      'hinh_su': '犯罪',
+      'hoc_duong': '校园',
+      'khoa_hoc': '科学',
+      'kinh_di': '恐怖',
+      'kinh_dien': '经典',
+      'lich_su': '历史',
+      'mien_tay': '西部',
+      'phim_18': '成人',
+      'phim_ngan': '短片',
+      'phieu_luu': '冒险',
+      'than_thoai': '神话',
+      'the_thao': '体育',
+      'tre_em': '儿童',
+      'tai_lieu': '纪录片',
+      'tam_ly': '心理',
+      'tinh_cam': '爱情',
+      'vien_tuong': '科幻',
+      'vo_thuat': '武术',
+      'am_nhac': '音乐',
+      'other': '$fallback',
+    });
+    return '$_temp0';
+  }
+
+  @override
+  String filterCountryName(String slug, String fallback) {
+    String _temp0 = intl.Intl.selectLogic(slug, {
+      'anh': '英格兰',
+      'ba_lan': '波兰',
+      'brazil': '巴西',
+      'bo_dao_nha': '葡萄牙',
+      'canada': '加拿大',
+      'chau_phi': '非洲',
+      'ha_lan': '荷兰',
+      'han_quoc': '韩国',
+      'hong_kong': '中国香港',
+      'indonesia': '印度尼西亚',
+      'malaysia': '马来西亚',
+      'mexico': '墨西哥',
+      'na_uy': '挪威',
+      'nam_phi': '南非',
+      'nga': '俄罗斯',
+      'nhat_ban': '日本',
+      'philippines': '菲律宾',
+      'phap': '法国',
+      'quoc_gia_khac': '其他国家',
+      'thai_lan': '泰国',
+      'tho_nhi_ky': '土耳其',
+      'thuy_si': '瑞士',
+      'thuy_dien': '瑞典',
+      'trung_quoc': '中国',
+      'tay_ban_nha': '西班牙',
+      'uae': '阿联酋',
+      'ukraina': '乌克兰',
+      'viet_nam': '越南',
+      'au_my': '欧美',
+      'uc': '澳大利亚',
+      'y': '意大利',
+      'dan_mach': '丹麦',
+      'dai_loan': '中国台湾',
+      'duc': '德国',
+      'a_rap_xe_ut': '沙特阿拉伯',
+      'an_do': '印度',
+      'other': '$fallback',
+    });
+    return '$_temp0';
+  }
 
   @override
   String get searchAttentionTitle => '注意';
@@ -2151,6 +2342,31 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   }
 
   @override
+  String commonEpisodeNumberShort(int number) {
+    return '第$number集';
+  }
+
+  @override
+  String commonEpisodeCompleted(int current, int total) {
+    return '已完结（$current/$total）';
+  }
+
+  @override
+  String get profileChangeCover => '更换封面图片';
+
+  @override
+  String get profileCover => '封面图片';
+
+  @override
+  String get profileCropCover => '裁剪封面图片';
+
+  @override
+  String get profileCoverUpdated => '封面图片已更新。';
+
+  @override
+  String get profileCoverUpdateFailed => '无法更新封面图片，请重试。';
+
+  @override
   String libraryMonthLabel(int month) {
     return '$month 月';
   }
@@ -2254,6 +2470,11 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   @override
   String commonDurationHoursMinutes(int hours, int minutes) {
     return '$hours 小時 $minutes 分鐘';
+  }
+
+  @override
+  String commonDurationMinutesPerEpisode(int minutes) {
+    return '$minutes 分鐘/集';
   }
 
   @override
@@ -2561,6 +2782,84 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get filterResults => '篩選結果';
+
+  @override
+  String filterGenreName(String slug, String fallback) {
+    String _temp0 = intl.Intl.selectLogic(slug, {
+      'bi_an': '懸疑',
+      'chien_tranh': '戰爭',
+      'chinh_kich': '劇情',
+      'co_trang': '古裝',
+      'gia_dinh': '家庭',
+      'hai_huoc': '喜劇',
+      'hanh_dong': '動作',
+      'hinh_su': '犯罪',
+      'hoc_duong': '校園',
+      'khoa_hoc': '科學',
+      'kinh_di': '恐怖',
+      'kinh_dien': '經典',
+      'lich_su': '歷史',
+      'mien_tay': '西部',
+      'phim_18': '成人',
+      'phim_ngan': '短片',
+      'phieu_luu': '冒險',
+      'than_thoai': '神話',
+      'the_thao': '體育',
+      'tre_em': '兒童',
+      'tai_lieu': '紀錄片',
+      'tam_ly': '心理',
+      'tinh_cam': '愛情',
+      'vien_tuong': '科幻',
+      'vo_thuat': '武術',
+      'am_nhac': '音樂',
+      'other': '$fallback',
+    });
+    return '$_temp0';
+  }
+
+  @override
+  String filterCountryName(String slug, String fallback) {
+    String _temp0 = intl.Intl.selectLogic(slug, {
+      'anh': '英格蘭',
+      'ba_lan': '波蘭',
+      'brazil': '巴西',
+      'bo_dao_nha': '葡萄牙',
+      'canada': '加拿大',
+      'chau_phi': '非洲',
+      'ha_lan': '荷蘭',
+      'han_quoc': '韓國',
+      'hong_kong': '中國香港',
+      'indonesia': '印度尼西亞',
+      'malaysia': '馬來西亞',
+      'mexico': '墨西哥',
+      'na_uy': '挪威',
+      'nam_phi': '南非',
+      'nga': '俄羅斯',
+      'nhat_ban': '日本',
+      'philippines': '菲律賓',
+      'phap': '法國',
+      'quoc_gia_khac': '其他國家',
+      'thai_lan': '泰國',
+      'tho_nhi_ky': '土耳其',
+      'thuy_si': '瑞士',
+      'thuy_dien': '瑞典',
+      'trung_quoc': '中國',
+      'tay_ban_nha': '西班牙',
+      'uae': '阿聯酋',
+      'ukraina': '烏克蘭',
+      'viet_nam': '越南',
+      'au_my': '歐美',
+      'uc': '澳洲',
+      'y': '義大利',
+      'dan_mach': '丹麥',
+      'dai_loan': '臺灣',
+      'duc': '德國',
+      'a_rap_xe_ut': '沙烏地阿拉伯',
+      'an_do': '印度',
+      'other': '$fallback',
+    });
+    return '$_temp0';
+  }
 
   @override
   String get searchAttentionTitle => '注意';
@@ -3225,6 +3524,31 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String playerEpisodeNumber(int number) {
     return '第 $number 集';
   }
+
+  @override
+  String commonEpisodeNumberShort(int number) {
+    return '第$number集';
+  }
+
+  @override
+  String commonEpisodeCompleted(int current, int total) {
+    return '已完結（$current/$total）';
+  }
+
+  @override
+  String get profileChangeCover => '更換封面圖片';
+
+  @override
+  String get profileCover => '封面圖片';
+
+  @override
+  String get profileCropCover => '裁切封面圖片';
+
+  @override
+  String get profileCoverUpdated => '封面圖片已更新。';
+
+  @override
+  String get profileCoverUpdateFailed => '無法更新封面圖片，請再試一次。';
 
   @override
   String libraryMonthLabel(int month) {

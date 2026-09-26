@@ -5,6 +5,7 @@ import flutter_local_notifications
 import path_provider_foundation
 import workmanager_apple
 import AVKit
+import AudioToolbox
 
 @main
 @objc class AppDelegate: FlutterAppDelegate {
@@ -13,6 +14,8 @@ import AVKit
     private var airPlayRoutePicker: AVRoutePickerView?
     private var castingChannel: FlutterMethodChannel?
     private var appBadgeChannel: FlutterMethodChannel?
+    private var uiSoundChannel: FlutterMethodChannel?
+    private var uiSoundIDs: [String: SystemSoundID] = [:]
     private var deviceOrientationChannel: FlutterEventChannel?
     private var deviceOrientationStreamHandler: DeviceOrientationStreamHandler?
     private var lastAirPlayActive: Bool?
@@ -54,6 +57,8 @@ import AVKit
             print("[Storyboard iOS] rootViewController is not FlutterViewController")
             return super.application(application, didFinishLaunchingWithOptions: launchOptions)
         }
+
+        configureUISoundChannel(binaryMessenger: controller.binaryMessenger)
 
         let deviceOrientationStreamHandler = DeviceOrientationStreamHandler()
         let deviceOrientationChannel = FlutterEventChannel(
@@ -209,6 +214,130 @@ import AVKit
 
         print("[Storyboard iOS] channel registered successfully")
         return super.application(application, didFinishLaunchingWithOptions: launchOptions)
+    }
+
+    private func configureUISoundChannel(binaryMessenger: FlutterBinaryMessenger) {
+        let channel = FlutterMethodChannel(
+            name: "com.kinit.movieapp/ui_sfx",
+            binaryMessenger: binaryMessenger
+        )
+        uiSoundChannel = channel
+
+        channel.setMethodCallHandler { [weak self] call, result in
+            guard let self else {
+                result(FlutterError(
+                    code: "ui_sfx_unavailable",
+                    message: "UI sound service is unavailable.",
+                    details: nil
+                ))
+                return
+            }
+
+            switch call.method {
+            case "initialize":
+                guard
+                    let arguments = call.arguments as? [String: Any],
+                    let sounds = arguments["sounds"] as? [String: Any]
+                else {
+                    result(FlutterError(
+                        code: "ui_sfx_bad_args",
+                        message: "Sound asset map is missing.",
+                        details: nil
+                    ))
+                    return
+                }
+
+                self.initializeUISounds(sounds, result: result)
+
+            case "play":
+                guard
+                    let arguments = call.arguments as? [String: Any],
+                    let soundName = arguments["sound"] as? String,
+                    let soundID = self.uiSoundIDs[soundName]
+                else {
+                    result(FlutterError(
+                        code: "ui_sfx_not_loaded",
+                        message: "Requested UI sound has not been loaded.",
+                        details: nil
+                    ))
+                    return
+                }
+
+                AudioServicesPlaySystemSound(soundID)
+                result(nil)
+
+            case "dispose":
+                self.disposeUISounds()
+                result(nil)
+
+            default:
+                result(FlutterMethodNotImplemented)
+            }
+        }
+    }
+
+    private func initializeUISounds(
+        _ sounds: [String: Any],
+        result: @escaping FlutterResult
+    ) {
+        disposeUISounds()
+        var loadedSoundIDs: [String: SystemSoundID] = [:]
+
+        for (soundName, rawAssetPath) in sounds {
+            guard let assetPath = rawAssetPath as? String else {
+                disposeUISounds(loadedSoundIDs)
+                result(FlutterError(
+                    code: "ui_sfx_bad_asset",
+                    message: "Invalid asset path for \(soundName).",
+                    details: nil
+                ))
+                return
+            }
+
+            let assetKey = FlutterDartProject.lookupKey(forAsset: assetPath)
+            guard let assetURL = Bundle.main.url(
+                forResource: assetKey,
+                withExtension: nil
+            ) else {
+                disposeUISounds(loadedSoundIDs)
+                result(FlutterError(
+                    code: "ui_sfx_asset_missing",
+                    message: "UI sound asset was not found: \(assetPath)",
+                    details: nil
+                ))
+                return
+            }
+
+            var soundID: SystemSoundID = 0
+            let status = AudioServicesCreateSystemSoundID(
+                assetURL as CFURL,
+                &soundID
+            )
+            guard status == kAudioServicesNoError else {
+                disposeUISounds(loadedSoundIDs)
+                result(FlutterError(
+                    code: "ui_sfx_load_failed",
+                    message: "Failed to load UI sound: \(assetPath)",
+                    details: status
+                ))
+                return
+            }
+
+            loadedSoundIDs[soundName] = soundID
+        }
+
+        uiSoundIDs = loadedSoundIDs
+        result(nil)
+    }
+
+    private func disposeUISounds(_ soundIDs: [String: SystemSoundID]? = nil) {
+        let soundIDsToDispose = soundIDs ?? uiSoundIDs
+        soundIDsToDispose.values.forEach {
+            AudioServicesDisposeSystemSoundID($0)
+        }
+        if soundIDs == nil {
+            uiSoundIDs.removeAll()
+        }
     }
 
     private var isAirPlayActive: Bool {

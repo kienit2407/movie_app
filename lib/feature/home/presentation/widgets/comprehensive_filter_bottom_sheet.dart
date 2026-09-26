@@ -175,13 +175,17 @@ class _ComprehensiveFilterBottomSheetState
                                 displayName:
                                     selectedCountry != null &&
                                         countryState is CountryMovieSuccess
-                                    ? countryState.countryMovie
-                                          .firstWhere(
-                                            (c) => c.slug == selectedCountry,
-                                            orElse: () =>
-                                                countryState.countryMovie.first,
-                                          )
-                                          .name
+                                    ? context.filterCountryLabel(
+                                        selectedCountry!,
+                                        countryState.countryMovie
+                                            .firstWhere(
+                                              (c) => c.slug == selectedCountry,
+                                              orElse: () => countryState
+                                                  .countryMovie
+                                                  .first,
+                                            )
+                                            .name,
+                                      )
                                     : null,
                                 onTap: () {
                                   setState(() {
@@ -253,12 +257,15 @@ class _ComprehensiveFilterBottomSheetState
                                 selectedGenre != null &&
                                     state is GenreMovieSuccess &&
                                     state.genreMovie.isNotEmpty
-                                ? state.genreMovie
-                                      .firstWhere(
-                                        (g) => g.slug == selectedGenre,
-                                        orElse: () => state.genreMovie.first,
-                                      )
-                                      .name
+                                ? context.filterGenreLabel(
+                                    selectedGenre!,
+                                    state.genreMovie
+                                        .firstWhere(
+                                          (g) => g.slug == selectedGenre,
+                                          orElse: () => state.genreMovie.first,
+                                        )
+                                        .name,
+                                  )
                                 : null,
                             onTap: () {
                               setState(() {
@@ -681,7 +688,7 @@ class _ComprehensiveFilterBottomSheetState
                 backgroundColor: const Color(0xff2F3345),
                 selectedColor: const Color(0xff2F3345),
                 label: Text(
-                  state.genreMovie[index].name,
+                  context.filterGenreLabel(slug, state.genreMovie[index].name),
                   style: TextStyle(
                     color: isSelected ? const Color(0xffF1D775) : Colors.white,
                     fontSize: 10,
@@ -772,7 +779,10 @@ class _ComprehensiveFilterBottomSheetState
                 backgroundColor: const Color(0xff2F3345),
                 selectedColor: const Color(0xff2F3345),
                 label: Text(
-                  state.countryMovie[index].name,
+                  context.filterCountryLabel(
+                    slug,
+                    state.countryMovie[index].name,
+                  ),
                   style: TextStyle(
                     color: isSelected ? const Color(0xffF1D775) : Colors.white,
                     fontSize: 10,

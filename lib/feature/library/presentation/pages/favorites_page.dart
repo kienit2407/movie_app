@@ -8,10 +8,15 @@ import 'package:iconsax_flutter/iconsax_flutter.dart';
 import 'package:movie_app/common/components/alert_dialog/app_alert_dialog.dart';
 import 'package:movie_app/common/components/app_toast.dart';
 import 'package:movie_app/common/helpers/static_data.dart';
+import 'package:movie_app/core/audio/sound_effect_player.dart';
+import 'package:movie_app/core/config/di/service_locator.dart';
 import 'package:movie_app/core/config/themes/app_color.dart';
 import 'package:movie_app/core/config/utils/animated_dialog.dart';
 import 'package:movie_app/core/config/utils/sharder_text.dart';
 import 'package:movie_app/core/extension/build_context_extension.dart';
+import 'package:movie_app/core/widgets/animation/staggered_list_animation_no_pop_widget.dart';
+import 'package:movie_app/core/widgets/animation/staggered_list_animation_widget.dart';
+import 'package:movie_app/core/widgets/app_refresh_indicator.dart';
 import 'package:movie_app/feature/hub/presentation/pages/hub_page.dart';
 import 'package:movie_app/feature/library/presentation/cubit/user_library_cubit.dart';
 import 'package:movie_app/feature/library/presentation/widgets/auth_required_view.dart';
@@ -154,7 +159,8 @@ class _FavoritesPageState extends State<FavoritesPage>
               listener: (context, state) {
                 AppToast.show(context, context.l10n.libraryLoadFailed);
               },
-              builder: (context, state) => RefreshIndicator.adaptive(
+              builder: (context, state) => AppRefreshIndicator(
+                soundEffectPlayer: sl<SoundEffectPlayer>(),
                 color: Colors.white,
                 onRefresh: context.read<UserLibraryCubit>().refresh,
                 child: Scrollbar(
@@ -255,26 +261,31 @@ class _FavoritesPageState extends State<FavoritesPage>
 
   Widget _buildLargeTitle() {
     return SliverToBoxAdapter(
-      child: Padding(
-        key: _largeTitleKey,
-        padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-        child: SharderText(
-          gradient: const LinearGradient(
-            colors: [
-              Colors.black,
-              Colors.black,
-              Color(0xff717285),
-              Colors.black,
-            ],
-            begin: Alignment.centerRight,
-            end: Alignment.centerLeft,
-          ),
-          child: Text(
-            context.l10n.libraryFavorites,
-            style: const TextStyle(
-              fontSize: 34,
-              fontWeight: FontWeight.bold,
-              fontFamily: 'Inter',
+      child: StaggeredListAnimationWidget(
+        index: 1,
+        staggerDelay: const Duration(milliseconds: 150),
+        direction: AxisDirection.down,
+        child: Padding(
+          key: _largeTitleKey,
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+          child: SharderText(
+            gradient: const LinearGradient(
+              colors: [
+                Colors.black,
+                Colors.black,
+                Color(0xff717285),
+                Colors.black,
+              ],
+              begin: Alignment.centerRight,
+              end: Alignment.centerLeft,
+            ),
+            child: Text(
+              context.l10n.libraryFavorites,
+              style: const TextStyle(
+                fontSize: 34,
+                fontWeight: FontWeight.bold,
+                fontFamily: 'Inter',
+              ),
             ),
           ),
         ),
@@ -370,30 +381,34 @@ class _FavoritesPageState extends State<FavoritesPage>
             final previousDate = index == 0
                 ? null
                 : state.favorites[index - 1].addedAt;
-            return LibraryMovieCard(
-              key: ValueKey(movie.slug),
-              slug: movie.slug,
-              name: movie.name,
-              originName: movie.originName,
-              posterUrl: movie.posterUrl,
-              episodeCurrent: movie.episodeCurrent,
-              quality: movie.quality,
-              lang: movie.lang,
-              year: movie.year,
-              activityDate: movie.addedAt,
-              showDateBadge: startsNewLibraryDateGroup(
-                movie.addedAt,
-                previousDate,
+            return StaggeredListAnimationWidget(
+              baseDelay: const Duration(milliseconds: 200),
+              index: 2,
+              child: LibraryMovieCard(
+                key: ValueKey(movie.slug),
+                slug: movie.slug,
+                name: movie.name,
+                originName: movie.originName,
+                posterUrl: movie.posterUrl,
+                episodeCurrent: movie.episodeCurrent,
+                quality: movie.quality,
+                lang: movie.lang,
+                year: movie.year,
+                activityDate: movie.addedAt,
+                showDateBadge: startsNewLibraryDateGroup(
+                  movie.addedAt,
+                  previousDate,
+                ),
+                rating: movie.rating,
+                isSelectionMode: _isSelecting,
+                isSelected: selected,
+                onSelectionTap: () => _toggleSelection(movie.slug),
+                onLongPress: () {
+                  HapticFeedback.mediumImpact();
+                  _toggleSelection(movie.slug);
+                },
+                onRemove: () => _removeOne(movie.slug),
               ),
-              rating: movie.rating,
-              isSelectionMode: _isSelecting,
-              isSelected: selected,
-              onSelectionTap: () => _toggleSelection(movie.slug),
-              onLongPress: () {
-                HapticFeedback.mediumImpact();
-                _toggleSelection(movie.slug);
-              },
-              onRemove: () => _removeOne(movie.slug),
             );
           },
           childCount: state.favorites.length,

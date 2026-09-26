@@ -754,7 +754,9 @@ class _EpisodesSliverState extends State<_EpisodesSliver> {
 
             final label = isSingle
                 ? (item as EpisodesModel).server_name
-                : (item as ServerData).name;
+                : (item as ServerData).name.toLocalizedEpisodeLabel(
+                    context.l10n,
+                  );
 
             return GestureDetector(
               onTap: () {
@@ -922,7 +924,9 @@ class _RecommendationItem extends StatelessWidget {
                             currentEp.isNotEmpty &&
                             currentEp != 'Full')
                           _buildBadge(
-                            text: EpisodeFormatter.toShort(currentEp),
+                            text: currentEp.toLocalizedEpisodeShortLabel(
+                              context.l10n,
+                            ),
                             color: Colors.redAccent,
                           ),
                       ],
@@ -1460,7 +1464,7 @@ class _MovieDetailPageContentState extends State<_MovieDetailPageContent>
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          ViewCountSection(movie: movie),
+                          Expanded(child: ViewCountSection(movie: movie)),
                           IconButton(
                             style: IconButton.styleFrom(
                               padding: EdgeInsets.zero,
@@ -1763,9 +1767,10 @@ class _MovieDetailPageContentState extends State<_MovieDetailPageContent>
         if (movie.time.isNotEmpty)
           _buildInforChip(
             child: Text(
-              (movie.episode_current == 'Full')
-                  ? movie.time.toFormatEpisode(context.l10n)
-                  : movie.time,
+              movie.time.toFormatEpisode(
+                context.l10n,
+                perEpisode: movie.episode_current != 'Full',
+              ),
               style: const TextStyle(
                 fontSize: 10,
                 fontWeight: FontWeight.w600,
@@ -1801,7 +1806,7 @@ class _MovieDetailPageContentState extends State<_MovieDetailPageContent>
         _buildInforChip(
           backgroundColor: Colors.white,
           child: Text(
-            movie.episode_current,
+            movie.episode_current.toLocalizedEpisodeLabel(context.l10n),
             style: const TextStyle(
               fontSize: 10,
               fontWeight: FontWeight.w600,
@@ -2111,7 +2116,10 @@ class _MovieDetailPageContentState extends State<_MovieDetailPageContent>
                             const SizedBox(height: 8),
                             if (movie.country.isNotEmpty)
                               _buildBullet(
-                                movie.country[0].name,
+                                context.filterCountryLabel(
+                                  movie.country[0].name,
+                                  ''
+                                ), //movie.country[0].name,
                                 context.l10n.detailCountryLabel,
                               ),
                           ],

@@ -26,6 +26,7 @@ class EditProfilePage extends StatefulWidget {
 
 class _EditProfilePageState extends State<EditProfilePage> {
   CroppedFile? _localAvatar;
+  CroppedFile? _localCover;
   bool _isUpdating = false;
 
   Future<void> _showAvatarActions() async {
@@ -125,6 +126,99 @@ class _EditProfilePageState extends State<EditProfilePage> {
     }
   }
 
+  Future<void> _showCoverActions() async {
+    HapticFeedback.lightImpact();
+    final coverUrl = context.read<UserLibraryCubit>().state.coverUrl;
+    final action = await showModalBottomSheet<_AvatarAction>(
+      context: context,
+      useRootNavigator: true,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      barrierColor: Colors.black.withValues(alpha: .68),
+      builder: (sheetContext) => _AvatarActionSheet(
+        canPreview: _localCover != null || coverUrl.isNotEmpty,
+        onCamera: () => Navigator.pop(sheetContext, _AvatarAction.camera),
+        onGallery: () => Navigator.pop(sheetContext, _AvatarAction.gallery),
+        onPreview: () => Navigator.pop(sheetContext, _AvatarAction.preview),
+      ),
+    );
+    if (!mounted || action == null) return;
+    switch (action) {
+      case _AvatarAction.camera:
+        await _pickAndUploadCover(ImageSource.camera);
+      case _AvatarAction.gallery:
+        await _pickAndUploadCover(ImageSource.gallery);
+      case _AvatarAction.preview:
+        _openCoverPreview(coverUrl);
+    }
+  }
+
+  Future<void> _pickAndUploadCover(ImageSource source) async {
+    final l10n = context.l10n;
+    try {
+      final picked = await ImagePicker().pickImage(
+        source: source,
+        imageQuality: 92,
+        maxWidth: 2560,
+        maxHeight: 1440,
+      );
+      if (picked == null || !mounted) return;
+
+      final cropped = await ImageCropper().cropImage(
+        sourcePath: picked.path,
+        aspectRatio: const CropAspectRatio(ratioX: 16, ratioY: 9),
+        uiSettings: [
+          AndroidUiSettings(
+            toolbarTitle: l10n.profileCropCover,
+            toolbarColor: AppColor.bgApp,
+            toolbarWidgetColor: Colors.white,
+            activeControlsWidgetColor: AppColor.firstColor,
+            lockAspectRatio: true,
+            hideBottomControls: false,
+          ),
+          IOSUiSettings(
+            title: l10n.profileCropCover,
+            aspectRatioLockEnabled: true,
+            resetAspectRatioEnabled: false,
+            doneButtonTitle: l10n.commonDone,
+            cancelButtonTitle: l10n.commonCancel,
+          ),
+        ],
+      );
+      if (cropped == null || !mounted) return;
+
+      final previousCover = _localCover;
+      setState(() {
+        _localCover = cropped;
+        _isUpdating = true;
+      });
+
+      try {
+        final cubit = context.read<UserLibraryCubit>();
+        final coverUrl = await cubit.uploadCover(
+          await cropped.readAsBytes(),
+          extension: _fileExtension(cropped.path),
+        );
+        if (!mounted) return;
+        await cubit.updateProfile(
+          displayName: cubit.state.displayName,
+          coverUrl: coverUrl,
+        );
+        if (!mounted) return;
+        context.read<AuthSessionCubit>().refresh();
+        _showMessage(l10n.profileCoverUpdated);
+      } catch (_) {
+        if (!mounted) return;
+        setState(() => _localCover = previousCover);
+        _showMessage(l10n.profileCoverUpdateFailed);
+      } finally {
+        if (mounted) setState(() => _isUpdating = false);
+      }
+    } catch (_) {
+      if (mounted) _showMessage(l10n.profilePhotoOpenFailed);
+    }
+  }
+
   Future<void> _openNameEditor() async {
     final cubit = context.read<UserLibraryCubit>();
     final currentName = cubit.state.displayName;
@@ -161,6 +255,16 @@ class _EditProfilePageState extends State<EditProfilePage> {
     );
   }
 
+  void _openCoverPreview(String coverUrl) {
+    if (_localCover == null && coverUrl.isEmpty) return;
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) =>
+            _CoverPreviewPage(localPath: _localCover?.path, coverUrl: coverUrl),
+      ),
+    );
+  }
+
   void _showMessage(String message) {
     AppToast.show(context, message);
   }
@@ -171,13 +275,29 @@ class _EditProfilePageState extends State<EditProfilePage> {
     final user = state.user;
     final displayName = state.displayName;
     final avatarUrl = state.avatarUrl;
+    final coverUrl = state.coverUrl;
+    final topContentPadding =
+        MediaQuery.paddingOf(context).top + kToolbarHeight + 14;
+    final coverHeight = topContentPadding + 220;
 
     return PopScope(
       canPop: !_isUpdating,
       child: Stack(
         children: [
           const _ProfileBackground(),
+          if (_localCover != null || coverUrl.isNotEmpty)
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              height: coverHeight,
+              child: _EditProfileCover(
+                localPath: _localCover?.path,
+                coverUrl: coverUrl,
+              ),
+            ),
           Scaffold(
+            extendBodyBehindAppBar: true,
             backgroundColor: Colors.transparent,
             appBar: AppBar(
               backgroundColor: Colors.transparent,
@@ -196,28 +316,49 @@ class _EditProfilePageState extends State<EditProfilePage> {
             body: SafeArea(
               top: false,
               child: ListView(
-                padding: const EdgeInsets.fromLTRB(20, 14, 20, 36),
+                padding: EdgeInsets.fromLTRB(20, topContentPadding, 20, 36),
                 children: [
-                  Center(
-                    child: _EditableAvatar(
-                      localPath: _localAvatar?.path,
-                      avatarUrl: avatarUrl,
-                      onTap: _showAvatarActions,
-                    ),
-                  ),
-                  const SizedBox(height: 14),
-                  Center(
-                    child: TextButton(
-                      onPressed: _showAvatarActions,
-                      style: TextButton.styleFrom(
-                        foregroundColor: AppColor.thirdColor,
-                        textStyle: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w700,
+                  Stack(
+                    children: [
+                      Column(
+                        children: [
+                          Center(
+                            child: _EditableAvatar(
+                              localPath: _localAvatar?.path,
+                              avatarUrl: avatarUrl,
+                              onTap: _showAvatarActions,
+                            ),
+                          ),
+                          const SizedBox(height: 14),
+                          Center(
+                            child: TextButton(
+                              onPressed: _showAvatarActions,
+                              style: TextButton.styleFrom(
+                                foregroundColor: AppColor.thirdColor,
+                                textStyle: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                              child: Text(context.l10n.profileChangePhoto),
+                            ),
+                          ),
+                        ],
+                      ),
+                      Positioned(
+                        top: 0,
+                        right: 0,
+                        child: IconButton(
+                          style: IconButton.styleFrom(
+                            backgroundColor: Colors.black26,
+                          ),
+                          tooltip: context.l10n.profileChangeCover,
+                          onPressed: _isUpdating ? null : _showCoverActions,
+                          icon: const Icon(Icons.photo_camera),
+                          color: Colors.white54,
                         ),
                       ),
-                      child: Text(context.l10n.profileChangePhoto),
-                    ),
+                    ],
                   ),
                   const SizedBox(height: 28),
                   _InfoCard(
@@ -300,6 +441,37 @@ class _ProfileBackground extends StatelessWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _EditProfileCover extends StatelessWidget {
+  const _EditProfileCover({required this.localPath, required this.coverUrl});
+
+  final String? localPath;
+  final String coverUrl;
+
+  @override
+  Widget build(BuildContext context) {
+    final image = localPath != null
+        ? Image.file(File(localPath!), fit: BoxFit.cover)
+        : FastCachedImage(
+            key: ValueKey(coverUrl),
+            url: coverUrl,
+            fit: BoxFit.cover,
+          );
+
+    return IgnorePointer(
+      child: ShaderMask(
+        blendMode: BlendMode.dstIn,
+        shaderCallback: (bounds) => const LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [Colors.white, Colors.white, Colors.transparent],
+          stops: [0, .45, 1],
+        ).createShader(bounds),
+        child: image,
       ),
     );
   }
@@ -619,6 +791,48 @@ class _AvatarPreviewPage extends StatelessWidget {
                       url: avatarUrl,
                       fit: BoxFit.contain,
                     ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _CoverPreviewPage extends StatelessWidget {
+  const _CoverPreviewPage({required this.localPath, required this.coverUrl});
+
+  final String? localPath;
+  final String coverUrl;
+
+  @override
+  Widget build(BuildContext context) {
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle.light,
+      child: Scaffold(
+        backgroundColor: Colors.black,
+        appBar: AppBar(
+          backgroundColor: Colors.black,
+          surfaceTintColor: Colors.transparent,
+          foregroundColor: Colors.white,
+          title: Text(context.l10n.profileCover),
+        ),
+        body: Center(
+          child: InteractiveViewer(
+            minScale: .8,
+            maxScale: 4,
+            child: SizedBox(
+              width: MediaQuery.sizeOf(context).width,
+              child: AspectRatio(
+                aspectRatio: 16 / 9,
+                child: localPath != null
+                    ? Image.file(File(localPath!), fit: BoxFit.contain)
+                    : FastCachedImage(
+                        key: ValueKey(coverUrl),
+                        url: coverUrl,
+                        fit: BoxFit.contain,
+                      ),
+              ),
             ),
           ),
         ),

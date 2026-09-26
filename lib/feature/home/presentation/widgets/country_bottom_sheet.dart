@@ -7,6 +7,7 @@ import 'package:movie_app/common/components/alert_dialog/app_alert_dialog.dart';
 import 'package:movie_app/common/helpers/navigation/app_navigation.dart';
 import 'package:movie_app/core/config/themes/app_color.dart';
 import 'package:movie_app/core/extension/build_context_extension.dart';
+import 'package:movie_app/core/extension/filter_localization_extension.dart';
 import 'package:movie_app/core/config/utils/animated_dialog.dart';
 import 'package:movie_app/feature/home/domain/entities/fillterType.dart';
 import 'package:movie_app/feature/home/domain/entities/fillter_genre_movie_req.dart';
@@ -255,7 +256,7 @@ class _CountryBottomSheetState extends State<CountryBottomSheet> {
               backgroundColor: const Color(0xff2F3345),
               selectedColor: const Color(0xff2F3345),
               label: Text(
-                country.name,
+                context.filterCountryLabel(slug, country.name),
                 style: TextStyle(
                   color: isSelected ? const Color(0xffF1D775) : Colors.white,
                   fontSize: 10,

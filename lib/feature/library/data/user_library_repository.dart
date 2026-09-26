@@ -183,10 +183,15 @@ class UserWatchHistory {
 }
 
 class UserProfile {
-  const UserProfile({required this.displayName, required this.avatarUrl});
+  const UserProfile({
+    required this.displayName,
+    required this.avatarUrl,
+    this.coverUrl = '',
+  });
 
   final String displayName;
   final String avatarUrl;
+  final String coverUrl;
 
   factory UserProfile.fromMap(
     Map<String, dynamic> map, {
@@ -210,6 +215,7 @@ class UserProfile {
         authProfile.displayName,
       ], fallback: 'Người dùng'),
       avatarUrl: _firstNonEmpty([map['avatar_url'], authProfile.avatarUrl]),
+      coverUrl: _firstNonEmpty([map['cover_url'], authProfile.coverUrl]),
     );
   }
 
@@ -223,6 +229,7 @@ class UserProfile {
         user?.email?.split('@').first,
       ], fallback: 'Người dùng'),
       avatarUrl: _firstNonEmpty([metadata['avatar_url'], metadata['picture']]),
+      coverUrl: _firstNonEmpty([metadata['cover_url']]),
     );
   }
 }
@@ -240,9 +247,11 @@ abstract interface class UserLibraryRepository {
   Future<void> removeWatchHistory(String slug);
   Future<void> removeWatchHistoryItems(Iterable<String> slugs);
   Future<String> uploadAvatar(Uint8List bytes, {required String extension});
+  Future<String> uploadCover(Uint8List bytes, {required String extension});
   Future<UserProfile> updateProfile({
     required String displayName,
     String? avatarUrl,
+    String? coverUrl,
   });
 }
 
@@ -267,7 +276,7 @@ class SupabaseUserLibraryRepository implements UserLibraryRepository {
     if (user == null) throw const AuthException('Bạn cần đăng nhập.');
     final response = await _client
         .from('profiles')
-        .select('display_name, avatar_url, updated_at')
+        .select('display_name, avatar_url, cover_url, updated_at')
         .eq('id', user.id)
         .maybeSingle();
     if (response == null) return UserProfile.fromUser(user);
@@ -372,9 +381,32 @@ class SupabaseUserLibraryRepository implements UserLibraryRepository {
   }
 
   @override
+  Future<String> uploadCover(
+    Uint8List bytes, {
+    required String extension,
+  }) async {
+    final safeExtension = _safeImageExtension(extension);
+    final path =
+        '$_userId/cover_${DateTime.now().millisecondsSinceEpoch}.$safeExtension';
+    await _client.storage
+        .from('profile-covers')
+        .uploadBinary(
+          path,
+          bytes,
+          fileOptions: FileOptions(
+            upsert: false,
+            contentType: _imageContentType(safeExtension),
+          ),
+        );
+    final publicUrl = _client.storage.from('profile-covers').getPublicUrl(path);
+    return '$publicUrl?v=${DateTime.now().millisecondsSinceEpoch}';
+  }
+
+  @override
   Future<UserProfile> updateProfile({
     required String displayName,
     String? avatarUrl,
+    String? coverUrl,
   }) async {
     final name = displayName.trim();
     if (name.isEmpty) throw const FormatException('Tên không được để trống.');
@@ -382,10 +414,14 @@ class SupabaseUserLibraryRepository implements UserLibraryRepository {
     final nextAvatarUrl = avatarUrl?.trim().isNotEmpty == true
         ? avatarUrl!.trim()
         : existingProfile.avatarUrl;
+    final nextCoverUrl = coverUrl?.trim().isNotEmpty == true
+        ? coverUrl!.trim()
+        : existingProfile.coverUrl;
     final currentMetadata = Map<String, dynamic>.from(
       currentUser?.userMetadata ?? const <String, dynamic>{},
     );
     final previousAvatarPath = _avatarObjectPath(existingProfile.avatarUrl);
+    final previousCoverPath = _coverObjectPath(existingProfile.coverUrl);
     currentMetadata['full_name'] = name;
     currentMetadata['name'] = name;
     final profileUpdatedAt = DateTime.now().toUtc();
@@ -393,6 +429,9 @@ class SupabaseUserLibraryRepository implements UserLibraryRepository {
     if (nextAvatarUrl.isNotEmpty) {
       currentMetadata['avatar_url'] = nextAvatarUrl;
       currentMetadata['picture'] = nextAvatarUrl;
+    }
+    if (nextCoverUrl.isNotEmpty) {
+      currentMetadata['cover_url'] = nextCoverUrl;
     }
     final response = await _client.auth.updateUser(
       UserAttributes(data: currentMetadata),
@@ -405,6 +444,7 @@ class SupabaseUserLibraryRepository implements UserLibraryRepository {
       final values = {
         'display_name': name,
         'avatar_url': nextAvatarUrl.isEmpty ? null : nextAvatarUrl,
+        'cover_url': nextCoverUrl.isEmpty ? null : nextCoverUrl,
         'updated_at': profileUpdatedAt.toIso8601String(),
       };
       final updatedRows = await _client
@@ -423,7 +463,7 @@ class SupabaseUserLibraryRepository implements UserLibraryRepository {
       try {
         reflected = await _client
             .from('profiles')
-            .select('display_name, avatar_url, updated_at')
+            .select('display_name, avatar_url, cover_url, updated_at')
             .eq('id', _userId)
             .maybeSingle();
       } catch (reflectionError, reflectionStackTrace) {
@@ -437,7 +477,10 @@ class SupabaseUserLibraryRepository implements UserLibraryRepository {
       }
       final reflectedName = reflected?['display_name']?.toString().trim() ?? '';
       final reflectedAvatar = reflected?['avatar_url']?.toString().trim() ?? '';
-      if (reflectedName != name || reflectedAvatar != nextAvatarUrl) {
+      final reflectedCover = reflected?['cover_url']?.toString().trim() ?? '';
+      if (reflectedName != name ||
+          reflectedAvatar != nextAvatarUrl ||
+          reflectedCover != nextCoverUrl) {
         unawaited(
           AppObservability.recordError(
             error,
@@ -457,7 +500,23 @@ class SupabaseUserLibraryRepository implements UserLibraryRepository {
         // Profile was already updated; stale avatar cleanup can be retried later.
       }
     }
-    return UserProfile(displayName: name, avatarUrl: nextAvatarUrl);
+    final nextCoverPath = _coverObjectPath(nextCoverUrl);
+    if (previousCoverPath != null &&
+        nextCoverPath != null &&
+        previousCoverPath != nextCoverPath) {
+      try {
+        await _client.storage.from('profile-covers').remove([
+          previousCoverPath,
+        ]);
+      } catch (_) {
+        // Profile was already updated; stale cover cleanup can be retried later.
+      }
+    }
+    return UserProfile(
+      displayName: name,
+      avatarUrl: nextAvatarUrl,
+      coverUrl: nextCoverUrl,
+    );
   }
 
   String? _avatarObjectPath(String? url) {
@@ -469,7 +528,30 @@ class SupabaseUserLibraryRepository implements UserLibraryRepository {
     if (markerIndex < 0) return null;
     return Uri.decodeComponent(uri.path.substring(markerIndex + marker.length));
   }
+
+  String? _coverObjectPath(String? url) {
+    if (url == null || url.trim().isEmpty) return null;
+    final uri = Uri.tryParse(url.trim());
+    if (uri == null) return null;
+    const marker = '/storage/v1/object/public/profile-covers/';
+    final markerIndex = uri.path.indexOf(marker);
+    if (markerIndex < 0) return null;
+    return Uri.decodeComponent(uri.path.substring(markerIndex + marker.length));
+  }
 }
+
+String _safeImageExtension(String extension) {
+  final normalized = extension.toLowerCase().replaceAll('.', '');
+  return {'jpg', 'jpeg', 'png', 'webp'}.contains(normalized)
+      ? normalized
+      : 'jpg';
+}
+
+String _imageContentType(String extension) => switch (extension) {
+  'png' => 'image/png',
+  'webp' => 'image/webp',
+  _ => 'image/jpeg',
+};
 
 String _firstNonEmpty(List<Object?> values, {String fallback = ''}) {
   for (final value in values) {

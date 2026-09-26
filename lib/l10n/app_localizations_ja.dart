@@ -105,6 +105,11 @@ class AppLocalizationsJa extends AppLocalizations {
   }
 
   @override
+  String commonDurationMinutesPerEpisode(int minutes) {
+    return '$minutes分/話';
+  }
+
+  @override
   String get settingsLanguage => '言語';
 
   @override
@@ -413,6 +418,84 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get filterResults => '結果を絞り込む';
+
+  @override
+  String filterGenreName(String slug, String fallback) {
+    String _temp0 = intl.Intl.selectLogic(slug, {
+      'bi_an': 'ミステリー',
+      'chien_tranh': '戦争',
+      'chinh_kich': 'ドラマ',
+      'co_trang': '時代劇',
+      'gia_dinh': 'ファミリー',
+      'hai_huoc': 'コメディ',
+      'hanh_dong': 'アクション',
+      'hinh_su': '犯罪',
+      'hoc_duong': '学園',
+      'khoa_hoc': '科学',
+      'kinh_di': 'ホラー',
+      'kinh_dien': 'クラシック',
+      'lich_su': '歴史',
+      'mien_tay': '西部劇',
+      'phim_18': '成人向け',
+      'phim_ngan': '短編映画',
+      'phieu_luu': 'アドベンチャー',
+      'than_thoai': '神話',
+      'the_thao': 'スポーツ',
+      'tre_em': 'キッズ',
+      'tai_lieu': 'ドキュメンタリー',
+      'tam_ly': '心理',
+      'tinh_cam': 'ロマンス',
+      'vien_tuong': 'SF',
+      'vo_thuat': '武術',
+      'am_nhac': '音楽',
+      'other': '$fallback',
+    });
+    return '$_temp0';
+  }
+
+  @override
+  String filterCountryName(String slug, String fallback) {
+    String _temp0 = intl.Intl.selectLogic(slug, {
+      'anh': 'イングランド',
+      'ba_lan': 'ポーランド',
+      'brazil': 'ブラジル',
+      'bo_dao_nha': 'ポルトガル',
+      'canada': 'カナダ',
+      'chau_phi': 'アフリカ',
+      'ha_lan': 'オランダ',
+      'han_quoc': '韓国',
+      'hong_kong': '香港',
+      'indonesia': 'インドネシア',
+      'malaysia': 'マレーシア',
+      'mexico': 'メキシコ',
+      'na_uy': 'ノルウェー',
+      'nam_phi': '南アフリカ',
+      'nga': 'ロシア',
+      'nhat_ban': '日本',
+      'philippines': 'フィリピン',
+      'phap': 'フランス',
+      'quoc_gia_khac': 'その他の国',
+      'thai_lan': 'タイ',
+      'tho_nhi_ky': 'トルコ',
+      'thuy_si': 'スイス',
+      'thuy_dien': 'スウェーデン',
+      'trung_quoc': '中国',
+      'tay_ban_nha': 'スペイン',
+      'uae': 'アラブ首長国連邦',
+      'ukraina': 'ウクライナ',
+      'viet_nam': 'ベトナム',
+      'au_my': '欧米',
+      'uc': 'オーストラリア',
+      'y': 'イタリア',
+      'dan_mach': 'デンマーク',
+      'dai_loan': '台湾',
+      'duc': 'ドイツ',
+      'a_rap_xe_ut': 'サウジアラビア',
+      'an_do': 'インド',
+      'other': '$fallback',
+    });
+    return '$_temp0';
+  }
 
   @override
   String get searchAttentionTitle => '注意';
@@ -1080,6 +1163,31 @@ class AppLocalizationsJa extends AppLocalizations {
   String playerEpisodeNumber(int number) {
     return '第$number話';
   }
+
+  @override
+  String commonEpisodeNumberShort(int number) {
+    return '第$number話';
+  }
+
+  @override
+  String commonEpisodeCompleted(int current, int total) {
+    return '完結（$current/$total）';
+  }
+
+  @override
+  String get profileChangeCover => 'カバー写真を変更';
+
+  @override
+  String get profileCover => 'カバー写真';
+
+  @override
+  String get profileCropCover => 'カバー写真を切り抜く';
+
+  @override
+  String get profileCoverUpdated => 'カバー写真を更新しました。';
+
+  @override
+  String get profileCoverUpdateFailed => 'カバー写真を更新できませんでした。もう一度お試しください。';
 
   @override
   String libraryMonthLabel(int month) {

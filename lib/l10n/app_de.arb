@@ -119,6 +119,8 @@
     }
   },
   "commonDurationHoursMinutes": "{hours, plural, =1{1 Stunde} other{{hours} Stunden}} {minutes, plural, =1{1 Minute} other{{minutes} Minuten}}",
+  "commonDurationMinutesPerEpisode": "{minutes, plural, =1{1 Minute/Folge} other{{minutes} Minuten/Folge}}",
+  "@commonDurationMinutesPerEpisode": {"description": "Runtime in minutes for each episode of a series", "placeholders": {"minutes": {"type": "int"}}},
   "@commonDurationHoursMinutes": {
     "description": "Movie duration containing hours and minutes",
     "placeholders": {
@@ -542,6 +544,10 @@
   "@filterResults": {
     "description": "Action that applies a simple filter"
   },
+  "filterGenreName": "{slug, select, bi_an{Mystery} chien_tranh{Krieg} chinh_kich{Drama} co_trang{Kostümdrama} gia_dinh{Familie} hai_huoc{Komödie} hanh_dong{Action} hinh_su{Krimi} hoc_duong{Schule} khoa_hoc{Wissenschaft} kinh_di{Horror} kinh_dien{Klassiker} lich_su{Geschichte} mien_tay{Western} phim_18{Nur für Erwachsene} phim_ngan{Kurzfilme} phieu_luu{Abenteuer} than_thoai{Mythologie} the_thao{Sport} tre_em{Kinder} tai_lieu{Dokumentarfilm} tam_ly{Psychologisch} tinh_cam{Romantik} vien_tuong{Science-Fiction} vo_thuat{Kampfkunst} am_nhac{Musik} other{{fallback}}}",
+  "@filterGenreName": {"description": "Localized genre name from the stable API slug, falling back to the API name", "placeholders": {"slug": {"type": "String"}, "fallback": {"type": "String"}}},
+  "filterCountryName": "{slug, select, anh{England} ba_lan{Polen} brazil{Brasilien} bo_dao_nha{Portugal} canada{Kanada} chau_phi{Afrika} ha_lan{Niederlande} han_quoc{Südkorea} hong_kong{Hongkong} indonesia{Indonesien} malaysia{Malaysia} mexico{Mexiko} na_uy{Norwegen} nam_phi{Südafrika} nga{Russland} nhat_ban{Japan} philippines{Philippinen} phap{Frankreich} quoc_gia_khac{Andere Länder} thai_lan{Thailand} tho_nhi_ky{Türkei} thuy_si{Schweiz} thuy_dien{Schweden} trung_quoc{China} tay_ban_nha{Spanien} uae{VAE} ukraina{Ukraine} viet_nam{Vietnam} au_my{Europa und Amerika} uc{Australien} y{Italien} dan_mach{Dänemark} dai_loan{Taiwan} duc{Deutschland} a_rap_xe_ut{Saudi-Arabien} an_do{Indien} other{{fallback}}}",
+  "@filterCountryName": {"description": "Localized country or region name from the stable API slug, falling back to the API name", "placeholders": {"slug": {"type": "String"}, "fallback": {"type": "String"}}},
   "searchAttentionTitle": "Achtung",
   "@searchAttentionTitle": {
     "description": "Search validation dialog title"
@@ -1469,6 +1475,15 @@
       }
     }
   },
+  "commonEpisodeNumberShort": "F.{number}",
+  "@commonEpisodeNumberShort": {"description": "Compact episode number label", "placeholders": {"number": {"type": "int"}}},
+  "commonEpisodeCompleted": "Abgeschlossen ({current}/{total})",
+  "@commonEpisodeCompleted": {"description": "Completed series episode progress", "placeholders": {"current": {"type": "int"}, "total": {"type": "int"}}},
+  "profileChangeCover": "Titelbild ändern",
+  "profileCover": "Titelbild",
+  "profileCropCover": "Titelbild zuschneiden",
+  "profileCoverUpdated": "Titelbild aktualisiert.",
+  "profileCoverUpdateFailed": "Das Titelbild konnte nicht aktualisiert werden. Bitte versuche es erneut.",
   "libraryMonthLabel": "Monat {month}",
   "@libraryMonthLabel": {
     "description": "Month label",

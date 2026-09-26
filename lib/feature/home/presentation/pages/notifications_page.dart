@@ -9,10 +9,15 @@ import 'package:go_router/go_router.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
 import 'package:intl/intl.dart';
 import 'package:movie_app/common/helpers/static_data.dart';
+import 'package:movie_app/core/audio/sound_effect_player.dart';
+import 'package:movie_app/core/config/di/service_locator.dart';
 import 'package:movie_app/core/config/routes/app_router.dart';
 import 'package:movie_app/core/config/themes/app_color.dart';
+import 'package:movie_app/core/config/utils/format_episode.dart';
 import 'package:movie_app/core/config/utils/sharder_text.dart';
 import 'package:movie_app/core/extension/build_context_extension.dart';
+import 'package:movie_app/core/widgets/animation/staggered_list_animation_no_pop_widget.dart';
+import 'package:movie_app/core/widgets/app_refresh_indicator.dart';
 import 'package:movie_app/feature/home/notification/comment_notification.dart';
 import 'package:movie_app/feature/home/notification/new_movie_inbox.dart';
 
@@ -26,6 +31,7 @@ class NotificationsPage extends StatefulWidget {
 class _NotificationsPageState extends State<NotificationsPage> {
   final ScrollController _scrollController = ScrollController();
   final GlobalKey _largeTitleKey = GlobalKey();
+  final Set<Key> _animatedNotificationKeys = <Key>{};
 
   late final Map<LinearGradient, Color> _selectedGradient;
   bool _showSmallTitle = false;
@@ -77,7 +83,8 @@ class _NotificationsPageState extends State<NotificationsPage> {
         fit: StackFit.expand,
         children: [
           DecoratedBox(decoration: BoxDecoration(gradient: backgroundGradient)),
-          RefreshIndicator.adaptive(
+          AppRefreshIndicator(
+            soundEffectPlayer: sl<SoundEffectPlayer>(),
             color: Colors.white,
             onRefresh: context.read<NewMovieInboxCubit>().refresh,
             child: Scrollbar(
@@ -158,23 +165,29 @@ class _NotificationsPageState extends State<NotificationsPage> {
       child: Padding(
         key: _largeTitleKey,
         padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-        child: SharderText(
-          gradient: const LinearGradient(
-            colors: [
-              Colors.black,
-              Colors.black,
-              Color(0xff717285),
-              Colors.black,
-            ],
-            begin: Alignment.centerRight,
-            end: Alignment.centerLeft,
-          ),
-          child: Text(
-            context.l10n.navNotifications,
-            style: const TextStyle(
-              fontSize: 34,
-              fontWeight: FontWeight.bold,
-              fontFamily: 'Inter',
+        child: StaggeredListAnimationNoPopWidget(
+          direction: AxisDirection.left,
+          curve: Easing.emphasizedAccelerate,
+          index: 1,
+          staggerDelay: const Duration(milliseconds: 150),
+          child: SharderText(
+            gradient: const LinearGradient(
+              colors: [
+                Colors.black,
+                Colors.black,
+                Color(0xff717285),
+                Colors.black,
+              ],
+              begin: Alignment.centerRight,
+              end: Alignment.centerLeft,
+            ),
+            child: Text(
+              context.l10n.navNotifications,
+              style: const TextStyle(
+                fontSize: 34,
+                fontWeight: FontWeight.bold,
+                fontFamily: 'Inter',
+              ),
             ),
           ),
         ),
@@ -228,6 +241,11 @@ class _NotificationsPageState extends State<NotificationsPage> {
       for (var index = 0; index < entries.length; index++)
         entries[index].key: index,
     };
+    var animationIndex = 0;
+    final animationIndicesByKey = <Key, int>{
+      for (final entry in entries)
+        if (entry.item != null) entry.key: animationIndex++,
+    };
 
     return SliverPadding(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 28),
@@ -253,12 +271,20 @@ class _NotificationsPageState extends State<NotificationsPage> {
 
             final item = entry.item!;
             final movie = item.movieItem;
-            if (movie != null) {
-              return _NotificationMovieTile(key: entry.key, item: movie);
-            }
-            return _CommentNotificationTile(
+            final itemAnimationIndex = animationIndicesByKey[entry.key]!;
+            final shouldAnimate = _animatedNotificationKeys.add(entry.key);
+
+            return StaggeredListAnimationNoPopWidget(
+              direction: AxisDirection.left,
               key: entry.key,
-              item: item.commentItem!,
+              shouldAnimate: shouldAnimate,
+              curve: Curves.easeOutCubic,
+              index: itemAnimationIndex > 8 ? 8 : itemAnimationIndex,
+              baseDelay: const Duration(milliseconds: 250),
+              staggerDelay: const Duration(milliseconds: 350),
+              child: movie != null
+                  ? _NotificationMovieTile(item: movie)
+                  : _CommentNotificationTile(item: item.commentItem!),
             );
           },
           childCount: entries.length,
@@ -270,7 +296,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
 }
 
 class _CommentNotificationTile extends StatelessWidget {
-  const _CommentNotificationTile({super.key, required this.item});
+  const _CommentNotificationTile({required this.item});
 
   final CommentNotificationItem item;
 
@@ -404,7 +430,7 @@ class _CommentNotificationTile extends StatelessWidget {
 }
 
 class _NotificationMovieTile extends StatelessWidget {
-  const _NotificationMovieTile({super.key, required this.item});
+  const _NotificationMovieTile({required this.item});
 
   final NewMovieInboxItem item;
 
@@ -468,7 +494,9 @@ class _NotificationMovieTile extends StatelessWidget {
                     const SizedBox(height: 5),
                     Text(
                       [
-                        item.episodeCurrent,
+                        item.episodeCurrent.toLocalizedEpisodeLabel(
+                          context.l10n,
+                        ),
                         item.quality,
                         item.lang,
                       ].where((value) => value.trim().isNotEmpty).join(' • '),

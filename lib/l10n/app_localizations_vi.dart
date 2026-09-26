@@ -105,6 +105,11 @@ class AppLocalizationsVi extends AppLocalizations {
   }
 
   @override
+  String commonDurationMinutesPerEpisode(int minutes) {
+    return '$minutes phút/tập';
+  }
+
+  @override
   String get settingsLanguage => 'Ngôn ngữ';
 
   @override
@@ -421,6 +426,84 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get filterResults => 'Lọc kết quả';
+
+  @override
+  String filterGenreName(String slug, String fallback) {
+    String _temp0 = intl.Intl.selectLogic(slug, {
+      'bi_an': 'Bí ẩn',
+      'chien_tranh': 'Chiến tranh',
+      'chinh_kich': 'Chính kịch',
+      'co_trang': 'Cổ trang',
+      'gia_dinh': 'Gia đình',
+      'hai_huoc': 'Hài hước',
+      'hanh_dong': 'Hành động',
+      'hinh_su': 'Hình sự',
+      'hoc_duong': 'Học đường',
+      'khoa_hoc': 'Khoa học',
+      'kinh_di': 'Kinh dị',
+      'kinh_dien': 'Kinh điển',
+      'lich_su': 'Lịch sử',
+      'mien_tay': 'Miền Tây',
+      'phim_18': 'Phim 18+',
+      'phim_ngan': 'Phim ngắn',
+      'phieu_luu': 'Phiêu lưu',
+      'than_thoai': 'Thần thoại',
+      'the_thao': 'Thể thao',
+      'tre_em': 'Trẻ em',
+      'tai_lieu': 'Tài liệu',
+      'tam_ly': 'Tâm lý',
+      'tinh_cam': 'Tình cảm',
+      'vien_tuong': 'Viễn tưởng',
+      'vo_thuat': 'Võ thuật',
+      'am_nhac': 'Âm nhạc',
+      'other': '$fallback',
+    });
+    return '$_temp0';
+  }
+
+  @override
+  String filterCountryName(String slug, String fallback) {
+    String _temp0 = intl.Intl.selectLogic(slug, {
+      'anh': 'Anh',
+      'ba_lan': 'Ba Lan',
+      'brazil': 'Brazil',
+      'bo_dao_nha': 'Bồ Đào Nha',
+      'canada': 'Canada',
+      'chau_phi': 'Châu Phi',
+      'ha_lan': 'Hà Lan',
+      'han_quoc': 'Hàn Quốc',
+      'hong_kong': 'Hồng Kông',
+      'indonesia': 'Indonesia',
+      'malaysia': 'Malaysia',
+      'mexico': 'Mexico',
+      'na_uy': 'Na Uy',
+      'nam_phi': 'Nam Phi',
+      'nga': 'Nga',
+      'nhat_ban': 'Nhật Bản',
+      'philippines': 'Philippines',
+      'phap': 'Pháp',
+      'quoc_gia_khac': 'Quốc gia khác',
+      'thai_lan': 'Thái Lan',
+      'tho_nhi_ky': 'Thổ Nhĩ Kỳ',
+      'thuy_si': 'Thụy Sĩ',
+      'thuy_dien': 'Thụy Điển',
+      'trung_quoc': 'Trung Quốc',
+      'tay_ban_nha': 'Tây Ban Nha',
+      'uae': 'UAE',
+      'ukraina': 'Ukraina',
+      'viet_nam': 'Việt Nam',
+      'au_my': 'Âu Mỹ',
+      'uc': 'Úc',
+      'y': 'Ý',
+      'dan_mach': 'Đan Mạch',
+      'dai_loan': 'Đài Loan',
+      'duc': 'Đức',
+      'a_rap_xe_ut': 'Ả Rập Xê Út',
+      'an_do': 'Ấn Độ',
+      'other': '$fallback',
+    });
+    return '$_temp0';
+  }
 
   @override
   String get searchAttentionTitle => 'Chú ý!';
@@ -1124,6 +1207,32 @@ class AppLocalizationsVi extends AppLocalizations {
   String playerEpisodeNumber(int number) {
     return 'Tập $number';
   }
+
+  @override
+  String commonEpisodeNumberShort(int number) {
+    return 'T.$number';
+  }
+
+  @override
+  String commonEpisodeCompleted(int current, int total) {
+    return 'Hoàn tất ($current/$total)';
+  }
+
+  @override
+  String get profileChangeCover => 'Thay đổi ảnh bìa';
+
+  @override
+  String get profileCover => 'Ảnh bìa';
+
+  @override
+  String get profileCropCover => 'Cắt ảnh bìa';
+
+  @override
+  String get profileCoverUpdated => 'Đã cập nhật ảnh bìa.';
+
+  @override
+  String get profileCoverUpdateFailed =>
+      'Không thể cập nhật ảnh bìa. Hãy thử lại.';
 
   @override
   String libraryMonthLabel(int month) {

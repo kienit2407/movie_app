@@ -13,6 +13,9 @@ PODS:
     - PromisesObjC (~> 2.4)
     - PromisesSwift (~> 2.4)
     - RecaptchaInterop (~> 101.0)
+  - audioplayers_darwin (0.0.1):
+    - Flutter
+    - FlutterMacOS
   - battery_plus (1.0.0):
     - Flutter
   - better_player_plus (1.1.2):
@@ -272,6 +275,7 @@ PODS:
 
 DEPENDENCIES:
   - app_links (from `.symlinks/plugins/app_links/ios`)
+  - audioplayers_darwin (from `.symlinks/plugins/audioplayers_darwin/darwin`)
   - battery_plus (from `.symlinks/plugins/battery_plus/ios`)
   - better_player_plus (from `.symlinks/plugins/better_player_plus/ios`)
   - connectivity_plus (from `.symlinks/plugins/connectivity_plus/ios`)
@@ -343,6 +347,8 @@ SPEC REPOS:
 EXTERNAL SOURCES:
   app_links:
     :path: ".symlinks/plugins/app_links/ios"
+  audioplayers_darwin:
+    :path: ".symlinks/plugins/audioplayers_darwin/darwin"
   battery_plus:
     :path: ".symlinks/plugins/battery_plus/ios"
   better_player_plus:
@@ -404,6 +410,7 @@ SPEC CHECKSUMS:
   app_links: 3dbc685f76b1693c66a6d9dd1e9ab6f73d97dc0a
   AppAuth: ef4da5a3fc2e10b90c09a0a94a9baeaedc0341d5
   AppCheckCore: e215d35177a9cf469927863e69c13e220df32a8b
+  audioplayers_darwin: 835ced6edd4c9fc8ebb0a7cc9e294a91d99917d5
   battery_plus: b42253f6d2dde71712f8c36fef456d99121c5977
   better_player_plus: 3d40145c650bb83dde08f0d593b21a144196769f
   Cache: 4ca7e00363fca5455f26534e5607634c820ffc2d

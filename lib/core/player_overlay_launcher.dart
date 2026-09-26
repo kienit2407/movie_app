@@ -5,6 +5,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
 import 'package:movie_app/common/components/alert_dialog/app_alert_dialog.dart';
 import 'package:movie_app/core/config/utils/movie_player_args.dart';
+import 'package:movie_app/core/config/utils/format_episode.dart';
 import 'package:movie_app/core/player_overlay_controller.dart';
 import 'package:movie_app/core/extension/build_context_extension.dart';
 import 'package:movie_app/feature/library/data/user_library_repository.dart';
@@ -63,7 +64,7 @@ Future<void> _promptForSeriesResume(
       icon: const Icon(Iconsax.video_play, color: Colors.white, size: 30),
       title: context.l10n.playerContinueWatchingTitle,
       content: context.l10n.playerContinueWatchingBody(
-        history.lastEpisodeName ??
+        history.lastEpisodeName?.toLocalizedEpisodeLabel(context.l10n) ??
             context.l10n.playerEpisodeNumber(target.episodeIndex + 1),
       ),
       cancelButtonTitle: context.l10n.playerRestartFromBeginning,

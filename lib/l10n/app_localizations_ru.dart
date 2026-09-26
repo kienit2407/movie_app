@@ -124,6 +124,19 @@ class AppLocalizationsRu extends AppLocalizations {
   }
 
   @override
+  String commonDurationMinutesPerEpisode(int minutes) {
+    String _temp0 = intl.Intl.pluralLogic(
+      minutes,
+      locale: localeName,
+      other: '$minutes минуты на серию',
+      many: '$minutes минут на серию',
+      few: '$minutes минуты на серию',
+      one: '$minutes минута на серию',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get settingsLanguage => 'Язык';
 
   @override
@@ -444,6 +457,84 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get filterResults => 'Фильтровать результаты';
+
+  @override
+  String filterGenreName(String slug, String fallback) {
+    String _temp0 = intl.Intl.selectLogic(slug, {
+      'bi_an': 'Мистика',
+      'chien_tranh': 'Военный',
+      'chinh_kich': 'Драма',
+      'co_trang': 'Костюмная драма',
+      'gia_dinh': 'Семейный',
+      'hai_huoc': 'Комедия',
+      'hanh_dong': 'Боевик',
+      'hinh_su': 'Криминал',
+      'hoc_duong': 'Школа',
+      'khoa_hoc': 'Наука',
+      'kinh_di': 'Ужасы',
+      'kinh_dien': 'Классика',
+      'lich_su': 'История',
+      'mien_tay': 'Вестерн',
+      'phim_18': 'Только для взрослых',
+      'phim_ngan': 'Короткометражные',
+      'phieu_luu': 'Приключения',
+      'than_thoai': 'Мифология',
+      'the_thao': 'Спорт',
+      'tre_em': 'Детский',
+      'tai_lieu': 'Документальный',
+      'tam_ly': 'Психологический',
+      'tinh_cam': 'Романтика',
+      'vien_tuong': 'Фантастика',
+      'vo_thuat': 'Боевые искусства',
+      'am_nhac': 'Музыка',
+      'other': '$fallback',
+    });
+    return '$_temp0';
+  }
+
+  @override
+  String filterCountryName(String slug, String fallback) {
+    String _temp0 = intl.Intl.selectLogic(slug, {
+      'anh': 'Англия',
+      'ba_lan': 'Польша',
+      'brazil': 'Бразилия',
+      'bo_dao_nha': 'Португалия',
+      'canada': 'Канада',
+      'chau_phi': 'Африка',
+      'ha_lan': 'Нидерланды',
+      'han_quoc': 'Южная Корея',
+      'hong_kong': 'Гонконг',
+      'indonesia': 'Индонезия',
+      'malaysia': 'Малайзия',
+      'mexico': 'Мексика',
+      'na_uy': 'Норвегия',
+      'nam_phi': 'ЮАР',
+      'nga': 'Россия',
+      'nhat_ban': 'Япония',
+      'philippines': 'Филиппины',
+      'phap': 'Франция',
+      'quoc_gia_khac': 'Другие страны',
+      'thai_lan': 'Таиланд',
+      'tho_nhi_ky': 'Турция',
+      'thuy_si': 'Швейцария',
+      'thuy_dien': 'Швеция',
+      'trung_quoc': 'Китай',
+      'tay_ban_nha': 'Испания',
+      'uae': 'ОАЭ',
+      'ukraina': 'Украина',
+      'viet_nam': 'Вьетнам',
+      'au_my': 'Европа и Америка',
+      'uc': 'Австралия',
+      'y': 'Италия',
+      'dan_mach': 'Дания',
+      'dai_loan': 'Тайвань',
+      'duc': 'Германия',
+      'a_rap_xe_ut': 'Саудовская Аравия',
+      'an_do': 'Индия',
+      'other': '$fallback',
+    });
+    return '$_temp0';
+  }
 
   @override
   String get searchAttentionTitle => 'Внимание';
@@ -1221,6 +1312,32 @@ class AppLocalizationsRu extends AppLocalizations {
   String playerEpisodeNumber(int number) {
     return 'Эпизод $number';
   }
+
+  @override
+  String commonEpisodeNumberShort(int number) {
+    return 'Эп.$number';
+  }
+
+  @override
+  String commonEpisodeCompleted(int current, int total) {
+    return 'Завершено ($current/$total)';
+  }
+
+  @override
+  String get profileChangeCover => 'Изменить фото обложки';
+
+  @override
+  String get profileCover => 'Фото обложки';
+
+  @override
+  String get profileCropCover => 'Обрезать фото обложки';
+
+  @override
+  String get profileCoverUpdated => 'Фото обложки обновлено.';
+
+  @override
+  String get profileCoverUpdateFailed =>
+      'Не удалось обновить фото обложки. Повторите попытку.';
 
   @override
   String libraryMonthLabel(int month) {

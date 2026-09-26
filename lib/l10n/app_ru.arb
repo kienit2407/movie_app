@@ -119,6 +119,8 @@
     }
   },
   "commonDurationHoursMinutes": "{hours, plural, one{{hours} час} few{{hours} часа} many{{hours} часов} other{{hours} часа}} {minutes, plural, one{{minutes} минута} few{{minutes} минуты} many{{minutes} минут} other{{minutes} минуты}}",
+  "commonDurationMinutesPerEpisode": "{minutes, plural, one{{minutes} минута на серию} few{{minutes} минуты на серию} many{{minutes} минут на серию} other{{minutes} минуты на серию}}",
+  "@commonDurationMinutesPerEpisode": {"description": "Runtime in minutes for each episode of a series", "placeholders": {"minutes": {"type": "int"}}},
   "@commonDurationHoursMinutes": {
     "description": "Movie duration containing hours and minutes",
     "placeholders": {
@@ -542,6 +544,10 @@
   "@filterResults": {
     "description": "Action that applies a simple filter"
   },
+  "filterGenreName": "{slug, select, bi_an{Мистика} chien_tranh{Военный} chinh_kich{Драма} co_trang{Костюмная драма} gia_dinh{Семейный} hai_huoc{Комедия} hanh_dong{Боевик} hinh_su{Криминал} hoc_duong{Школа} khoa_hoc{Наука} kinh_di{Ужасы} kinh_dien{Классика} lich_su{История} mien_tay{Вестерн} phim_18{Только для взрослых} phim_ngan{Короткометражные} phieu_luu{Приключения} than_thoai{Мифология} the_thao{Спорт} tre_em{Детский} tai_lieu{Документальный} tam_ly{Психологический} tinh_cam{Романтика} vien_tuong{Фантастика} vo_thuat{Боевые искусства} am_nhac{Музыка} other{{fallback}}}",
+  "@filterGenreName": {"description": "Localized genre name from the stable API slug, falling back to the API name", "placeholders": {"slug": {"type": "String"}, "fallback": {"type": "String"}}},
+  "filterCountryName": "{slug, select, anh{Англия} ba_lan{Польша} brazil{Бразилия} bo_dao_nha{Португалия} canada{Канада} chau_phi{Африка} ha_lan{Нидерланды} han_quoc{Южная Корея} hong_kong{Гонконг} indonesia{Индонезия} malaysia{Малайзия} mexico{Мексика} na_uy{Норвегия} nam_phi{ЮАР} nga{Россия} nhat_ban{Япония} philippines{Филиппины} phap{Франция} quoc_gia_khac{Другие страны} thai_lan{Таиланд} tho_nhi_ky{Турция} thuy_si{Швейцария} thuy_dien{Швеция} trung_quoc{Китай} tay_ban_nha{Испания} uae{ОАЭ} ukraina{Украина} viet_nam{Вьетнам} au_my{Европа и Америка} uc{Австралия} y{Италия} dan_mach{Дания} dai_loan{Тайвань} duc{Германия} a_rap_xe_ut{Саудовская Аравия} an_do{Индия} other{{fallback}}}",
+  "@filterCountryName": {"description": "Localized country or region name from the stable API slug, falling back to the API name", "placeholders": {"slug": {"type": "String"}, "fallback": {"type": "String"}}},
   "searchAttentionTitle": "Внимание",
   "@searchAttentionTitle": {
     "description": "Search validation dialog title"
@@ -1469,6 +1475,15 @@
       }
     }
   },
+  "commonEpisodeNumberShort": "Эп.{number}",
+  "@commonEpisodeNumberShort": {"description": "Compact episode number label", "placeholders": {"number": {"type": "int"}}},
+  "commonEpisodeCompleted": "Завершено ({current}/{total})",
+  "@commonEpisodeCompleted": {"description": "Completed series episode progress", "placeholders": {"current": {"type": "int"}, "total": {"type": "int"}}},
+  "profileChangeCover": "Изменить фото обложки",
+  "profileCover": "Фото обложки",
+  "profileCropCover": "Обрезать фото обложки",
+  "profileCoverUpdated": "Фото обложки обновлено.",
+  "profileCoverUpdateFailed": "Не удалось обновить фото обложки. Повторите попытку.",
   "libraryMonthLabel": "Месяц {month}",
   "@libraryMonthLabel": {
     "description": "Month label",

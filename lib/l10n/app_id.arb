@@ -119,6 +119,8 @@
     }
   },
   "commonDurationHoursMinutes": "{hours, plural, =1{1 jam} other{{hours} jam}} {minutes, plural, =1{1 menit} other{{minutes} menit}}",
+  "commonDurationMinutesPerEpisode": "{minutes} menit/episode",
+  "@commonDurationMinutesPerEpisode": {"description": "Runtime in minutes for each episode of a series", "placeholders": {"minutes": {"type": "int"}}},
   "@commonDurationHoursMinutes": {
     "description": "Movie duration containing hours and minutes",
     "placeholders": {
@@ -542,6 +544,10 @@
   "@filterResults": {
     "description": "Action that applies a simple filter"
   },
+  "filterGenreName": "{slug, select, bi_an{Misteri} chien_tranh{Perang} chinh_kich{Drama} co_trang{Drama sejarah} gia_dinh{Keluarga} hai_huoc{Komedi} hanh_dong{Aksi} hinh_su{Kriminal} hoc_duong{Sekolah} khoa_hoc{Sains} kinh_di{Horor} kinh_dien{Klasik} lich_su{Sejarah} mien_tay{Western} phim_18{Khusus dewasa} phim_ngan{Film pendek} phieu_luu{Petualangan} than_thoai{Mitologi} the_thao{Olahraga} tre_em{Anak-anak} tai_lieu{Dokumenter} tam_ly{Psikologis} tinh_cam{Romantis} vien_tuong{Fiksi ilmiah} vo_thuat{Seni bela diri} am_nhac{Musik} other{{fallback}}}",
+  "@filterGenreName": {"description": "Localized genre name from the stable API slug, falling back to the API name", "placeholders": {"slug": {"type": "String"}, "fallback": {"type": "String"}}},
+  "filterCountryName": "{slug, select, anh{Inggris} ba_lan{Polandia} brazil{Brasil} bo_dao_nha{Portugal} canada{Kanada} chau_phi{Afrika} ha_lan{Belanda} han_quoc{Korea Selatan} hong_kong{Hong Kong} indonesia{Indonesia} malaysia{Malaysia} mexico{Meksiko} na_uy{Norwegia} nam_phi{Afrika Selatan} nga{Rusia} nhat_ban{Jepang} philippines{Filipina} phap{Prancis} quoc_gia_khac{Negara lain} thai_lan{Thailand} tho_nhi_ky{Turki} thuy_si{Swiss} thuy_dien{Swedia} trung_quoc{Tiongkok} tay_ban_nha{Spanyol} uae{Uni Emirat Arab} ukraina{Ukraina} viet_nam{Vietnam} au_my{Eropa dan Amerika} uc{Australia} y{Italia} dan_mach{Denmark} dai_loan{Taiwan} duc{Jerman} a_rap_xe_ut{Arab Saudi} an_do{India} other{{fallback}}}",
+  "@filterCountryName": {"description": "Localized country or region name from the stable API slug, falling back to the API name", "placeholders": {"slug": {"type": "String"}, "fallback": {"type": "String"}}},
   "searchAttentionTitle": "Perhatian",
   "@searchAttentionTitle": {
     "description": "Search validation dialog title"
@@ -1469,6 +1475,15 @@
       }
     }
   },
+  "commonEpisodeNumberShort": "Ep.{number}",
+  "@commonEpisodeNumberShort": {"description": "Compact episode number label", "placeholders": {"number": {"type": "int"}}},
+  "commonEpisodeCompleted": "Selesai ({current}/{total})",
+  "@commonEpisodeCompleted": {"description": "Completed series episode progress", "placeholders": {"current": {"type": "int"}, "total": {"type": "int"}}},
+  "profileChangeCover": "Ganti foto sampul",
+  "profileCover": "Foto sampul",
+  "profileCropCover": "Pangkas foto sampul",
+  "profileCoverUpdated": "Foto sampul diperbarui.",
+  "profileCoverUpdateFailed": "Tidak dapat memperbarui foto sampul. Silakan coba lagi.",
   "libraryMonthLabel": "Bulan {month}",
   "@libraryMonthLabel": {
     "description": "Month label",

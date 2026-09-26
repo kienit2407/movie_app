@@ -118,6 +118,11 @@ class AppLocalizationsId extends AppLocalizations {
   }
 
   @override
+  String commonDurationMinutesPerEpisode(int minutes) {
+    return '$minutes menit/episode';
+  }
+
+  @override
   String get settingsLanguage => 'Bahasa';
 
   @override
@@ -439,6 +444,84 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get filterResults => 'Filter hasil';
+
+  @override
+  String filterGenreName(String slug, String fallback) {
+    String _temp0 = intl.Intl.selectLogic(slug, {
+      'bi_an': 'Misteri',
+      'chien_tranh': 'Perang',
+      'chinh_kich': 'Drama',
+      'co_trang': 'Drama sejarah',
+      'gia_dinh': 'Keluarga',
+      'hai_huoc': 'Komedi',
+      'hanh_dong': 'Aksi',
+      'hinh_su': 'Kriminal',
+      'hoc_duong': 'Sekolah',
+      'khoa_hoc': 'Sains',
+      'kinh_di': 'Horor',
+      'kinh_dien': 'Klasik',
+      'lich_su': 'Sejarah',
+      'mien_tay': 'Western',
+      'phim_18': 'Khusus dewasa',
+      'phim_ngan': 'Film pendek',
+      'phieu_luu': 'Petualangan',
+      'than_thoai': 'Mitologi',
+      'the_thao': 'Olahraga',
+      'tre_em': 'Anak-anak',
+      'tai_lieu': 'Dokumenter',
+      'tam_ly': 'Psikologis',
+      'tinh_cam': 'Romantis',
+      'vien_tuong': 'Fiksi ilmiah',
+      'vo_thuat': 'Seni bela diri',
+      'am_nhac': 'Musik',
+      'other': '$fallback',
+    });
+    return '$_temp0';
+  }
+
+  @override
+  String filterCountryName(String slug, String fallback) {
+    String _temp0 = intl.Intl.selectLogic(slug, {
+      'anh': 'Inggris',
+      'ba_lan': 'Polandia',
+      'brazil': 'Brasil',
+      'bo_dao_nha': 'Portugal',
+      'canada': 'Kanada',
+      'chau_phi': 'Afrika',
+      'ha_lan': 'Belanda',
+      'han_quoc': 'Korea Selatan',
+      'hong_kong': 'Hong Kong',
+      'indonesia': 'Indonesia',
+      'malaysia': 'Malaysia',
+      'mexico': 'Meksiko',
+      'na_uy': 'Norwegia',
+      'nam_phi': 'Afrika Selatan',
+      'nga': 'Rusia',
+      'nhat_ban': 'Jepang',
+      'philippines': 'Filipina',
+      'phap': 'Prancis',
+      'quoc_gia_khac': 'Negara lain',
+      'thai_lan': 'Thailand',
+      'tho_nhi_ky': 'Turki',
+      'thuy_si': 'Swiss',
+      'thuy_dien': 'Swedia',
+      'trung_quoc': 'Tiongkok',
+      'tay_ban_nha': 'Spanyol',
+      'uae': 'Uni Emirat Arab',
+      'ukraina': 'Ukraina',
+      'viet_nam': 'Vietnam',
+      'au_my': 'Eropa dan Amerika',
+      'uc': 'Australia',
+      'y': 'Italia',
+      'dan_mach': 'Denmark',
+      'dai_loan': 'Taiwan',
+      'duc': 'Jerman',
+      'a_rap_xe_ut': 'Arab Saudi',
+      'an_do': 'India',
+      'other': '$fallback',
+    });
+    return '$_temp0';
+  }
 
   @override
   String get searchAttentionTitle => 'Perhatian';
@@ -1192,6 +1275,32 @@ class AppLocalizationsId extends AppLocalizations {
   String playerEpisodeNumber(int number) {
     return 'Episode $number';
   }
+
+  @override
+  String commonEpisodeNumberShort(int number) {
+    return 'Ep.$number';
+  }
+
+  @override
+  String commonEpisodeCompleted(int current, int total) {
+    return 'Selesai ($current/$total)';
+  }
+
+  @override
+  String get profileChangeCover => 'Ganti foto sampul';
+
+  @override
+  String get profileCover => 'Foto sampul';
+
+  @override
+  String get profileCropCover => 'Pangkas foto sampul';
+
+  @override
+  String get profileCoverUpdated => 'Foto sampul diperbarui.';
+
+  @override
+  String get profileCoverUpdateFailed =>
+      'Tidak dapat memperbarui foto sampul. Silakan coba lagi.';
 
   @override
   String libraryMonthLabel(int month) {

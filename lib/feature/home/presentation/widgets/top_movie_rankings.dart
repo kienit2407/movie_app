@@ -6,6 +6,7 @@ import 'package:movie_app/common/components/app_auto_scroll_text.dart';
 import 'package:movie_app/core/config/routes/app_router.dart';
 import 'package:movie_app/core/config/utils/animated_dialog.dart';
 import 'package:movie_app/core/config/utils/episode_map.dart';
+import 'package:movie_app/core/config/utils/format_episode.dart';
 import 'package:movie_app/core/config/utils/sharder_text.dart';
 import 'package:movie_app/core/config/utils/show_detail_movie_dialog.dart';
 import 'package:movie_app/core/extension/build_context_extension.dart';
@@ -315,7 +316,9 @@ class _RankingMovieCard extends StatelessWidget {
                         if (episode.isNotEmpty &&
                             episode.toLowerCase() != 'full')
                           _RankingChip(
-                            text: EpisodeFormatter.toShort(episode),
+                            text: episode.toLocalizedEpisodeShortLabel(
+                              context.l10n,
+                            ),
                             color: Colors.redAccent,
                           ),
                       ],
@@ -394,7 +397,9 @@ class _RankingMovieCard extends StatelessWidget {
                           // Thêm điều kiện khác 'full' (không phân biệt hoa/thường)
                           if (movie.episodeCurrent.isNotEmpty &&
                               movie.episodeCurrent.toLowerCase() != 'full')
-                            movie.episodeCurrent,
+                            movie.episodeCurrent.toLocalizedEpisodeLabel(
+                              context.l10n,
+                            ),
                           context.l10n.detailViews(
                             formatCompactCount(movie.viewCount),
                           ),
@@ -438,7 +443,8 @@ class _LikedMovieCard extends StatelessWidget {
     final episode = movie.episodeCurrent.trim();
     final posterBadge = [
       if (langLabel.isNotEmpty) langLabel,
-      if (episode.isNotEmpty) EpisodeFormatter.toShort(episode),
+      if (episode.isNotEmpty)
+        episode.toLocalizedEpisodeShortLabel(context.l10n),
     ].join('. ');
 
     return SizedBox(

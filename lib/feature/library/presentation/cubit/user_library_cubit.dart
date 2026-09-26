@@ -28,6 +28,7 @@ class UserLibraryState {
   bool get isAuthenticated => user != null;
   String get displayName => (profile ?? UserProfile.fromUser(user)).displayName;
   String get avatarUrl => (profile ?? UserProfile.fromUser(user)).avatarUrl;
+  String get coverUrl => (profile ?? UserProfile.fromUser(user)).coverUrl;
   bool isFavorite(String slug) => favorites.any((item) => item.slug == slug);
 
   UserLibraryState copyWith({
@@ -278,10 +279,12 @@ class UserLibraryCubit extends Cubit<UserLibraryState> {
   Future<void> updateProfile({
     required String displayName,
     String? avatarUrl,
+    String? coverUrl,
   }) async {
     final updatedProfile = await _repository.updateProfile(
       displayName: displayName,
       avatarUrl: avatarUrl,
+      coverUrl: coverUrl,
     );
     emit(
       state.copyWith(
@@ -294,6 +297,13 @@ class UserLibraryCubit extends Cubit<UserLibraryState> {
 
   Future<String> uploadAvatar(List<int> bytes, {required String extension}) {
     return _repository.uploadAvatar(
+      Uint8List.fromList(bytes),
+      extension: extension,
+    );
+  }
+
+  Future<String> uploadCover(List<int> bytes, {required String extension}) {
+    return _repository.uploadCover(
       Uint8List.fromList(bytes),
       extension: extension,
     );

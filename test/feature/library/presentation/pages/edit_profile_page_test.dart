@@ -159,13 +159,24 @@ class _EditProfileRepository implements UserLibraryRepository {
   Future<UserProfile> updateProfile({
     required String displayName,
     String? avatarUrl,
-  }) async => UserProfile(displayName: displayName, avatarUrl: avatarUrl ?? '');
+    String? coverUrl,
+  }) async => UserProfile(
+    displayName: displayName,
+    avatarUrl: avatarUrl ?? '',
+    coverUrl: coverUrl ?? '',
+  );
 
   @override
   Future<String> uploadAvatar(
     Uint8List bytes, {
     required String extension,
   }) async => 'https://example.com/avatar.$extension';
+
+  @override
+  Future<String> uploadCover(
+    Uint8List bytes, {
+    required String extension,
+  }) async => 'https://example.com/cover.$extension';
 
   @override
   Future<void> upsertWatchHistory(UserWatchHistory history) async {}

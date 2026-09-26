@@ -4,6 +4,7 @@ import 'package:sliver_tools/sliver_tools.dart';
 import 'package:movie_app/common/components/alert_dialog/app_alert_dialog.dart';
 import 'package:movie_app/core/config/utils/animated_dialog.dart';
 import 'package:movie_app/core/config/utils/cover_map.dart';
+import 'package:movie_app/core/config/utils/format_episode.dart';
 import 'package:movie_app/core/config/utils/movie_player_args.dart';
 import 'package:movie_app/core/player_overlay_launcher.dart';
 import 'package:movie_app/core/extension/build_context_extension.dart';
@@ -418,7 +419,9 @@ class _EpisodesSliverState extends State<EpisodesSliver> {
 
             final label = isSingle
                 ? (item as EpisodesModel).server_name
-                : (item as ServerData).name;
+                : (item as ServerData).name.toLocalizedEpisodeLabel(
+                    context.l10n,
+                  );
 
             return GestureDetector(
               onTap: () {

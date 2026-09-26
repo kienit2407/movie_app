@@ -25,7 +25,7 @@ class QualityChoosingBottomSheet extends StatefulWidget {
         curve: Curves.easeInOut,
         duration: const Duration(milliseconds: 300),
       ),
-      backgroundColor: Colors.transparent,
+    backgroundColor: Colors.transparent,
       context: context,
       builder: (context) => QualityChoosingBottomSheet(
         currentQuality: currentQuality,

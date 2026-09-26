@@ -66,9 +66,10 @@ class MovieInfoChips extends StatelessWidget {
         if (movie.time.isNotEmpty)
           MovieInfoChip(
             child: Text(
-              (movie.episode_current == 'Full')
-                  ? movie.time.toFormatEpisode(context.l10n)
-                  : movie.time,
+              movie.time.toFormatEpisode(
+                context.l10n,
+                perEpisode: movie.episode_current != 'Full',
+              ),
               style: const TextStyle(
                 fontSize: 10,
                 fontWeight: FontWeight.w600,
@@ -104,7 +105,7 @@ class MovieInfoChips extends StatelessWidget {
         MovieInfoChip(
           backgroundColor: Colors.white,
           child: Text(
-            movie.episode_current,
+            movie.episode_current.toLocalizedEpisodeLabel(context.l10n),
             style: const TextStyle(
               fontSize: 10,
               fontWeight: FontWeight.w600,

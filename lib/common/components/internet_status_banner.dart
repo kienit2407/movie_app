@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:ui';
 
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
@@ -85,7 +86,7 @@ class _InternetStatusBannerState extends State<InternetStatusBanner> {
     return Positioned(
       left: 12,
       right: 12,
-      bottom: MediaQuery.viewPaddingOf(context).bottom + 10,
+      bottom: MediaQuery.viewPaddingOf(context).bottom + 30,
       child: IgnorePointer(
         child: AnimatedSlide(
           offset: _visible ? Offset.zero : const Offset(0, 1.4),
@@ -97,44 +98,47 @@ class _InternetStatusBannerState extends State<InternetStatusBanner> {
             child: Semantics(
               liveRegion: true,
               label: statusText,
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  color: _online
-                      ? const Color(0xFF176B45)
-                      : const Color(0xFF2B2B31),
-                  borderRadius: BorderRadius.circular(14),
-                  boxShadow: const [
-                    BoxShadow(
-                      color: Color(0x55000000),
-                      blurRadius: 16,
-                      offset: Offset(0, 6),
-                    ),
-                  ],
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 12,
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        _online ? Icons.wifi_rounded : Icons.wifi_off_rounded,
-                        color: Colors.white,
-                        size: 19,
-                      ),
-                      const SizedBox(width: 9),
-                      Text(
-                        statusText,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 14,
-                          fontWeight: FontWeight.w700,
-                          decoration: TextDecoration.none,
-                        ),
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 3, sigmaY: 3),
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: _online
+                        ? const Color(0xFF176B45).withValues(alpha: 0.9)
+                        : const Color(0xFF2B2B31).withValues(alpha: 0.9),
+                    borderRadius: BorderRadius.circular(14),
+                    boxShadow: const [
+                      BoxShadow(
+                        color: Color(0x55000000),
+                        blurRadius: 16,
+                        offset: Offset(0, 6),
                       ),
                     ],
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 12,
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          _online ? Icons.wifi_rounded : Icons.wifi_off_rounded,
+                          color: Colors.white,
+                          size: 19,
+                        ),
+                        const SizedBox(width: 9),
+                        Text(
+                          statusText,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700,
+                            decoration: TextDecoration.none,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),

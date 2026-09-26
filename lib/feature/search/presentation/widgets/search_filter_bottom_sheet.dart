@@ -5,7 +5,6 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
 import 'package:movie_app/common/helpers/list_year.dart';
 import 'package:movie_app/common/helpers/sort_map.dart';
-import 'package:movie_app/core/config/themes/app_color.dart';
 import 'package:movie_app/core/extension/build_context_extension.dart';
 import 'package:movie_app/core/extension/filter_localization_extension.dart';
 import 'package:movie_app/feature/home/presentation/bloc/country_movie_cubit.dart';
@@ -467,7 +466,10 @@ class _SearchFilterBottomSheetState extends State<SearchFilterBottomSheet> {
         if (_filters.category != null && state is GenreMovieSuccess) {
           for (final genre in state.genreMovie) {
             if (genre.slug == _filters.category) {
-              selectedGenreName = genre.name;
+              selectedGenreName = context.filterGenreLabel(
+                genre.slug,
+                genre.name,
+              );
               break;
             }
           }
@@ -512,7 +514,15 @@ class _SearchFilterBottomSheetState extends State<SearchFilterBottomSheet> {
               controller: _genreScrollController,
               child: _buildStringChips(
                 options: state.genreMovie
-                    .map((genre) => {'slug': genre.slug, 'name': genre.name})
+                    .map(
+                      (genre) => {
+                        'slug': genre.slug,
+                        'name': context.filterGenreLabel(
+                          genre.slug,
+                          genre.name,
+                        ),
+                      },
+                    )
                     .toList(),
                 selected: _filters.category,
                 allowClear: true,
@@ -537,7 +547,10 @@ class _SearchFilterBottomSheetState extends State<SearchFilterBottomSheet> {
         if (_filters.country != null && state is CountryMovieSuccess) {
           for (final country in state.countryMovie) {
             if (country.slug == _filters.country) {
-              selectedCountryName = country.name;
+              selectedCountryName = context.filterCountryLabel(
+                country.slug,
+                country.name,
+              );
               break;
             }
           }
@@ -583,7 +596,13 @@ class _SearchFilterBottomSheetState extends State<SearchFilterBottomSheet> {
               child: _buildStringChips(
                 options: state.countryMovie
                     .map(
-                      (country) => {'slug': country.slug, 'name': country.name},
+                      (country) => {
+                        'slug': country.slug,
+                        'name': context.filterCountryLabel(
+                          country.slug,
+                          country.name,
+                        ),
+                      },
                     )
                     .toList(),
                 selected: _filters.country,

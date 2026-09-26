@@ -1,4 +1,5 @@
 import 'package:get_it/get_it.dart';
+import 'package:movie_app/core/audio/sound_effect_player.dart';
 import 'package:movie_app/feature/detail_movie/presentation/bloc/player_cubit.dart';
 import 'package:movie_app/core/config/network/dio_client.dart';
 import 'package:movie_app/feature/auth/data/repositoryImpl/auth_repository_Impl.dart';
@@ -50,7 +51,10 @@ Future<void> initializeGetit() {
 Future<void> _initializeGetit() async {
   sl.registerLazySingletonAsync<DioClient>(() => DioClient.create());
   await sl.isReady<DioClient>();
-
+  sl.registerLazySingleton<SoundEffectPlayer>(
+    () => SoundEffectPlayerImpl(),
+    dispose: (service) => service.dispose(),
+  );
   sl.registerLazySingleton<MovieRemoteDatasource>(
     () => MovieRemoteDatasourceImpl(dioClient: sl<DioClient>()),
   );

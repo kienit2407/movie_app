@@ -7,6 +7,7 @@ import 'package:movie_app/common/components/app_auto_scroll_text.dart';
 import 'package:movie_app/common/helpers/navigation/app_navigation.dart';
 import 'package:movie_app/core/config/utils/animated_dialog.dart';
 import 'package:movie_app/core/config/utils/episode_map.dart';
+import 'package:movie_app/core/config/utils/format_episode.dart';
 import 'package:movie_app/core/config/utils/show_detail_movie_dialog.dart';
 import 'package:movie_app/core/extension/build_context_extension.dart';
 import 'package:movie_app/feature/detail_movie/data/model/detail_movie_model.dart';
@@ -254,7 +255,9 @@ class _SearchResultViewState extends State<SearchResultView> {
                           ),
                           if (currentEp.isNotEmpty && currentEp != 'Full')
                             _buildBadge(
-                              text: EpisodeFormatter.toShort(currentEp),
+                              text: currentEp.toLocalizedEpisodeShortLabel(
+                                context.l10n,
+                              ),
                               color: Colors.redAccent,
                             ),
                         ],

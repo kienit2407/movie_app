@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math';
 import 'dart:ui';
 import 'package:movie_app/common/components/app_auto_scroll_text.dart';
@@ -9,7 +10,13 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
 import 'package:movie_app/common/helpers/navigation/app_navigation.dart';
+import 'package:movie_app/core/audio/sound_effect_player.dart';
+import 'package:movie_app/core/config/di/service_locator.dart';
 import 'package:movie_app/core/config/utils/episode_map.dart';
+import 'package:movie_app/core/config/utils/format_episode.dart';
+import 'package:movie_app/core/extension/filter_localization_extension.dart';
+import 'package:movie_app/core/widgets/animation/staggered_list_animation_no_pop_widget.dart';
+import 'package:movie_app/core/widgets/app_refresh_indicator.dart';
 import 'package:movie_app/feature/detail_movie/presentation/pages/movie_detail_page.dart';
 import 'package:movie_app/common/helpers/static_data.dart';
 import 'package:movie_app/core/config/themes/app_color.dart';
@@ -17,6 +24,7 @@ import 'package:movie_app/core/extension/build_context_extension.dart';
 import 'package:movie_app/core/config/utils/animated_dialog.dart';
 import 'package:movie_app/core/config/utils/sharder_text.dart';
 import 'package:movie_app/core/config/utils/show_detail_movie_dialog.dart';
+import 'package:movie_app/feature/home/domain/entities/fillterType.dart';
 import 'package:movie_app/feature/home/domain/entities/fillter_genre_movie_req.dart';
 import 'package:movie_app/feature/home/domain/entities/new_movie_entity.dart';
 import 'package:movie_app/feature/movie_pagination/presentation/bloc/fetch_fillter_cubit.dart';
@@ -51,7 +59,7 @@ class _AllMoviePageState extends State<AllMoviePage> {
           StaticData.randomeGadientTitlePage.length,
         )];
 
-    _fetchMovies();
+    unawaited(_fetchMovies());
     _scrollController.addListener(_onScroll);
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -65,16 +73,32 @@ class _AllMoviePageState extends State<AllMoviePage> {
     });
   }
 
-  void _fetchMovies({bool isLoadMore = false}) {
-    context.read<FetchFillterCubit>().fetchMovies(
+  Future<void> _fetchMovies({bool isLoadMore = false}) {
+    return context.read<FetchFillterCubit>().fetchMovies(
       widget.fillterReq,
       isLoadMore: isLoadMore,
     );
   }
 
+  String _localizedTitle(BuildContext context, FetchFillterState state) {
+    final request = widget.fillterReq;
+    final apiTitle = state is FetchFillterLoaded ? state.titlePage : '';
+
+    return switch (request.fillterType) {
+      Filltertype.genre => context.filterGenreLabel(request.typeList, apiTitle),
+      Filltertype.country => context.filterCountryLabel(
+        request.typeList,
+        apiTitle,
+      ),
+      Filltertype.list => context.movieTypeLabel(request.typeList),
+      Filltertype.year => request.typeList,
+      Filltertype.chinaMovie => context.l10n.homeChineseMovies,
+    };
+  }
+
   void _onScroll() {
     if (_isBottom) {
-      _fetchMovies(isLoadMore: true);
+      unawaited(_fetchMovies(isLoadMore: true));
     }
 
     _checkLargeTitleVisibility();
@@ -134,13 +158,14 @@ class _AllMoviePageState extends State<AllMoviePage> {
   }
 
   Widget _buildContent(Color gradientColor) {
-    return RefreshIndicator.adaptive(
+    return AppRefreshIndicator(
+      soundEffectPlayer: sl<SoundEffectPlayer>(),
       color: Colors.white,
       onRefresh: () async {
         setState(() {
           _firstBatchCount = 0;
         });
-        _fetchMovies(isLoadMore: false);
+        await _fetchMovies(isLoadMore: false);
       },
       child: Scrollbar(
         controller: _scrollController,
@@ -188,9 +213,8 @@ class _AllMoviePageState extends State<AllMoviePage> {
                 opacity: _showSmallTitle ? 1.0 : 0.0,
                 child: BlocBuilder<FetchFillterCubit, FetchFillterState>(
                   builder: (context, state) {
-                    final title = (state is FetchFillterLoaded)
-                        ? state.titlePage
-                        : '';
+                    final title = _localizedTitle(context, state);
+
                     return Text(
                       title,
                       style: const TextStyle(
@@ -237,26 +261,29 @@ class _AllMoviePageState extends State<AllMoviePage> {
                         ),
                       );
                     }
-                    final title = (state is FetchFillterLoaded)
-                        ? state.titlePage
-                        : '';
-                    return SharderText(
-                      gradient: const LinearGradient(
-                        colors: [
-                          Colors.black,
-                          Colors.black,
-                          Color(0xff717285),
-                          Colors.black,
-                        ],
-                        begin: Alignment.centerRight,
-                        end: Alignment.centerLeft,
-                      ),
-                      child: Text(
-                        title,
-                        style: const TextStyle(
-                          fontSize: 34,
-                          fontWeight: FontWeight.bold,
-                          fontFamily: 'Inter',
+                    final title = _localizedTitle(context, state);
+                    return StaggeredListAnimationNoPopWidget(
+                      index: 0,
+                      curve: Easing.emphasizedAccelerate,
+                      direction: AxisDirection.down,
+                      child: SharderText(
+                        gradient: const LinearGradient(
+                          colors: [
+                            Colors.black,
+                            Colors.black,
+                            Color(0xff717285),
+                            Colors.black,
+                          ],
+                          begin: Alignment.centerRight,
+                          end: Alignment.centerLeft,
+                        ),
+                        child: Text(
+                          title,
+                          style: const TextStyle(
+                            fontSize: 34,
+                            fontWeight: FontWeight.bold,
+                            fontFamily: 'Inter',
+                          ),
                         ),
                       ),
                     );
@@ -487,7 +514,6 @@ class _AllMoviePageState extends State<AllMoviePage> {
                     width: double.infinity,
                     decoration: BoxDecoration(
                       border: Border.all(color: Colors.white, width: 2),
-
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: ClipRRect(
@@ -567,7 +593,9 @@ class _AllMoviePageState extends State<AllMoviePage> {
                             currentEp.isNotEmpty &&
                             currentEp != 'Full')
                           _buildBadge(
-                            text: EpisodeFormatter.toShort(currentEp),
+                            text: currentEp.toLocalizedEpisodeShortLabel(
+                              context.l10n,
+                            ),
                             color: Colors.redAccent,
                           ),
                       ],
