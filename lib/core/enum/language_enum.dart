@@ -1,7 +1,6 @@
 import 'dart:ui';
 
 enum Language {
-  system(languageName: 'System'),
   english(languageName: 'English', languageCode: 'en'),
   chineseSimplified(
     languageName: 'Chinese (Simplified)',
@@ -86,8 +85,6 @@ enum Language {
 extension LanguageExtension on Language {
   String? get flagPath {
     switch (this) {
-      case Language.system:
-        return null;
       case Language.english:
         return 'en';
       case Language.japanese:

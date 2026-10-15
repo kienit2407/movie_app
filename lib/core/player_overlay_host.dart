@@ -369,7 +369,7 @@ class _PlayerOverlayHostState extends State<PlayerOverlayHost>
               final padding = MediaQuery.paddingOf(context);
               final path =
                   widget.router.routerDelegate.currentConfiguration.uri.path;
-              final reservedBottom = _isHubRoute(path) ? 92.0 : 0.0;
+              final reservedBottom = _isHubRoute(path) ? 40.0 : 0.0;
               final normalMiniWidth = size.width * _miniWidthFactor;
               final availableWideWidth =
                   size.width - padding.left - padding.right - (_miniMargin * 2);

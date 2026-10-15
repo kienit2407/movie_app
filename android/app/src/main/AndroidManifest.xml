@@ -1,7 +1,12 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <uses-permission android:name="android.permission.INTERNET"/>
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
-
+    <!-- Cho phép dùng FID -->
+    <meta-data android:name="firebase_messaging_installation_id_enabled"
+           android:value="true" />
+    <meta-data
+    android:name="firebase_messaging_auto_init_enabled"
+    android:value="false" />
     <application
         android:label="Liquid Phim"
         android:name="${applicationName}"

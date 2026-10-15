@@ -16,6 +16,7 @@ import 'package:movie_app/core/config/utils/sharder_text.dart';
 import 'package:movie_app/core/extension/build_context_extension.dart';
 import 'package:movie_app/core/widgets/animation/staggered_list_animation_no_pop_widget.dart';
 import 'package:movie_app/core/widgets/animation/staggered_list_animation_widget.dart';
+import 'package:movie_app/core/widgets/app_loading.dart';
 import 'package:movie_app/core/widgets/app_refresh_indicator.dart';
 import 'package:movie_app/feature/hub/presentation/pages/hub_page.dart';
 import 'package:movie_app/feature/library/presentation/cubit/user_library_cubit.dart';
@@ -306,8 +307,8 @@ class _FavoritesPageState extends State<FavoritesPage>
     }
     if (state.isLoading && state.favorites.isEmpty) {
       return const SliverFillRemaining(
-        hasScrollBody: false,
-        child: Center(child: CircularProgressIndicator.adaptive()),
+        hasScrollBody: true,
+        child: Center(child: AppLoading()),
       );
     }
     if (state.errorMessage != null && state.favorites.isEmpty) {
@@ -364,7 +365,7 @@ class _FavoritesPageState extends State<FavoritesPage>
         ),
       );
     }
-
+  
     return SliverPadding(
       padding: const EdgeInsets.fromLTRB(12, 12, 12, 120),
       sliver: SliverGrid(

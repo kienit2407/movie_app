@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:movie_app/feature/home/presentation/pages/home_page.dart';
 import 'package:movie_app/feature/detail_movie/presentation/pages/movie_detail_page.dart';
+import 'package:movie_app/feature/library/presentation/pages/storage_management_page.dart';
 import 'package:movie_app/feature/search/presentation/pages/search_page.dart';
 import 'package:movie_app/core/config/utils/movie_player_args.dart';
 import 'package:movie_app/core/player_overlay_route_bridge.dart';
@@ -32,6 +33,7 @@ class AppRoutes {
   static const String signIn = '/sign-in';
   static const String settings = '/settings';
   static const String language = '/settings/language';
+  static const String storageManagement = '/settings/storage-management';
 
   static final GlobalKey<NavigatorState> navigatorKey =
       GlobalKey<NavigatorState>();
@@ -122,6 +124,14 @@ final goRouter = GoRouter(
           path: 'language',
           name: 'language',
           builder: (context, state) => const LanguagePage(),
+        ),
+        GoRoute(
+          path: 'storage-management',
+          name: 'storageManagement',
+          builder: (context, state) => StorageManagementPage(
+            promptClearCache:
+                state.uri.queryParameters['clearCache'] == 'true',
+          ),
         ),
       ],
     ),

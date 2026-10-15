@@ -94,6 +94,10 @@ dependencies:
   bounce: ^1.0.2
   audioplayers: ^6.7.1
   package_info_plus: ^9.0.1
+  quick_actions: ^1.1.1
+  storage_space: ^1.2.0
+  firebase_messaging: ^16.7.0
+
 
 dev_dependencies:
   flutter_test:
@@ -117,6 +121,7 @@ flutter:
     - assets/.env
     - assets/images/languages/
     - assets/musics/sfx/
+    - assets/lottie/
   #   - images/a_dot_ham.jpeg
 
 

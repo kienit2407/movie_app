@@ -183,7 +183,7 @@ void main() {
         const ValueKey('mini-player-drag-surface'),
       );
       final initialMiniRect = tester.getRect(dragSurface);
-      expect(find.byType(CircularProgressIndicator), findsNothing);
+      expect(find.byType(AppLoading), findsNothing);
       await tester.drag(dragSurface, const Offset(-100, -160));
       await tester.pump(const Duration(milliseconds: 300));
       expect(tester.getRect(dragSurface), initialMiniRect);

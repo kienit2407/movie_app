@@ -12,8 +12,8 @@ import 'package:movie_app/core/config/routes/app_router.dart';
 import 'package:movie_app/core/config/themes/app_color.dart';
 import 'package:movie_app/core/config/utils/animated_dialog.dart';
 import 'package:movie_app/core/config/utils/package_infor.dart';
-import 'package:movie_app/core/enum/language_enum.dart';
 import 'package:movie_app/core/extension/build_context_extension.dart';
+import 'package:movie_app/core/widgets/app_loading.dart';
 import 'package:movie_app/feature/auth/data/saved_account_store.dart';
 import 'package:movie_app/feature/auth/presentation/session/saved_accounts_cubit.dart';
 import 'package:movie_app/feature/auth/presentation/session/auth_session_cubit.dart';
@@ -96,7 +96,7 @@ class _SettingsPageState extends State<SettingsPage> {
     if (result == null || !mounted) return;
 
     if (result.addAccount) {
-      final signedIn = await SignInPage.showSheet( 
+      final signedIn = await SignInPage.showSheet(
         context,
         forceGoogleAccountPicker: true,
       );
@@ -235,10 +235,14 @@ class _SettingsPageState extends State<SettingsPage> {
                               _SettingsTile(
                                 icon: Iconsax.language_square_copy,
                                 title: l10n.settingsAppLanguage,
-                                subtitle: selectedLanguage == Language.system
-                                    ? l10n.settingsLanguageSystem
-                                    : selectedLanguage.displayName,
+                                subtitle: selectedLanguage.displayName,
                                 onTap: () => context.push(AppRoutes.language),
+                              ),
+                              _SettingsTile(
+                                icon: Iconsax.brush_4_copy,
+                                title: l10n.settingsStorageManagement,
+                                onTap: () =>
+                                    context.push(AppRoutes.storageManagement),
                               ),
                             ],
                           ),
@@ -269,10 +273,7 @@ class _SettingsPageState extends State<SettingsPage> {
                                     ? null
                                     : const SizedBox.square(
                                         dimension: 22,
-                                        child:
-                                            CircularProgressIndicator.adaptive(
-                                              strokeWidth: 2,
-                                            ),
+                                        child: AppLoading(),
                                       ),
                                 onTap: accountsState.busyUserId == null
                                     ? _signOut
@@ -280,6 +281,7 @@ class _SettingsPageState extends State<SettingsPage> {
                               ),
                             ],
                           ),
+                          const SizedBox(height: 10),
                           _buildVersionInfo(),
                         ],
                       ),
@@ -465,7 +467,7 @@ class _SettingsTile extends StatelessWidget {
 }
 
 class AccountSwitcherSheet extends StatelessWidget {
-  const AccountSwitcherSheet();
+  const AccountSwitcherSheet({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -522,7 +524,7 @@ class AccountSwitcherSheet extends StatelessWidget {
                     if (state.isLoading && state.accounts.isEmpty) {
                       return const Padding(
                         padding: EdgeInsets.all(36),
-                        child: CircularProgressIndicator.adaptive(),
+                        child: AppLoading(),
                       );
                     }
                     return ListView(
@@ -613,10 +615,7 @@ class _AccountTile extends StatelessWidget {
               ),
             ),
             if (isBusy)
-              const SizedBox.square(
-                dimension: 22,
-                child: CircularProgressIndicator.adaptive(strokeWidth: 2),
-              )
+              const SizedBox.square(dimension: 22, child: AppLoading())
             else if (isCurrent)
               Container(
                 width: 27,

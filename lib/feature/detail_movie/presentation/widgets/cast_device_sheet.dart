@@ -7,6 +7,7 @@ import 'package:movie_app/common/components/alert_dialog/app_alert_dialog.dart';
 import 'package:movie_app/core/casting/casting_service.dart';
 import 'package:movie_app/core/config/utils/animated_dialog.dart';
 import 'package:movie_app/core/extension/build_context_extension.dart';
+import 'package:movie_app/core/widgets/app_loading.dart';
 
 class CastDeviceSheet extends StatefulWidget {
   const CastDeviceSheet({super.key, required this.service, this.media});
@@ -288,8 +289,8 @@ class _CastDeviceSheetState extends State<CastDeviceSheet> {
                 trailing: connecting
                     ? const SizedBox.square(
                         dimension: 18,
-                        child: CircularProgressIndicator.adaptive(
-                          strokeWidth: 2,
+                        child: AppLoading(
+                          
                         ),
                       )
                     : null,
@@ -309,7 +310,7 @@ class _CastDeviceSheetState extends State<CastDeviceSheet> {
           children: [
             const SizedBox.square(
               dimension: 20,
-              child: CircularProgressIndicator.adaptive(strokeWidth: 2),
+              child: AppLoading(),
             ),
             const SizedBox(width: 16),
             Expanded(

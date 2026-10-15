@@ -1,21 +1,31 @@
 import 'dart:async';
 
+import 'package:dartz/dartz.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:movie_app/feature/detail_movie/data/model/detail_movie_model.dart';
 import 'package:movie_app/feature/search/data/repositories/search_history_repository.dart';
 import 'package:movie_app/feature/search/domain/entities/search_filter_params.dart';
+import 'package:movie_app/feature/search/domain/entities/search_movies_page.dart';
+import 'package:movie_app/feature/search/domain/usecases/browse_movies_usecase.dart';
 import 'package:movie_app/feature/search/domain/usecases/search_movies_usecase.dart';
 import 'package:movie_app/feature/search/presentation/bloc/search_state.dart';
 
 class SearchCubit extends Cubit<SearchState> {
   final SearchMoviesUseCase searchUseCase;
+  final BrowseMoviesUseCase browseUseCase;
   final SearchHistoryRepository historyRepository;
   late final StreamSubscription<String?> _userSubscription;
   List<String> _history = const [];
   int _historyLoadGeneration = 0;
+  int _requestGeneration = 0;
 
-  SearchCubit({required this.searchUseCase, required this.historyRepository})
-    : super(SearchLoading()) {
+  SearchCubit({
+    required this.searchUseCase,
+    required this.browseUseCase,
+    required this.historyRepository,
+  }) : super(SearchLoading()) {
     _userSubscription = historyRepository.userChanges.listen((_) {
+      clearSearch();
       unawaited(_loadHistory());
     });
     unawaited(_loadHistory());
@@ -23,15 +33,22 @@ class SearchCubit extends Cubit<SearchState> {
 
   Future<void> _loadHistory() async {
     final generation = ++_historyLoadGeneration;
+    final requestGeneration = _requestGeneration;
     try {
       final history = await historyRepository.getHistory();
       if (isClosed || generation != _historyLoadGeneration) return;
       _history = history;
-      emit(SearchInitial(_history));
+      if (requestGeneration == _requestGeneration &&
+          (state is SearchInitial || state is SearchLoading)) {
+        emit(SearchInitial(_history));
+      }
     } catch (_) {
       if (isClosed || generation != _historyLoadGeneration) return;
       _history = const [];
-      emit(const SearchInitial([]));
+      if (requestGeneration == _requestGeneration &&
+          (state is SearchInitial || state is SearchLoading)) {
+        emit(const SearchInitial([]));
+      }
     }
   }
 
@@ -54,7 +71,7 @@ class SearchCubit extends Cubit<SearchState> {
     if (index < 0 || index >= _history.length) return;
     final keyword = _history[index];
     _history = [..._history]..removeAt(index);
-    emit(SearchInitial(_history));
+    clearSearch();
     try {
       await historyRepository.deleteKeyword(keyword);
     } catch (_) {
@@ -69,78 +86,121 @@ class SearchCubit extends Cubit<SearchState> {
   }) async {
     final kw = keyword.trim();
     if (kw.isEmpty) {
-      emit(SearchInitial(_history));
+      clearSearch();
       return;
     }
 
+    await _fetchMovies(kw, isLoadMore: isLoadMore, filters: filters);
+  }
+
+  Future<void> browseMovies(
+    String movieType, {
+    bool isLoadMore = false,
+    SearchFilterParams? filters,
+  }) async {
+    final type = movieType.trim();
+    if (type.isEmpty) {
+      clearSearch();
+      return;
+    }
+    await _fetchMovies(
+      '',
+      movieType: type,
+      isLoadMore: isLoadMore,
+      filters: filters,
+    );
+  }
+
+  Future<void> _fetchMovies(
+    String keyword, {
+    String? movieType,
+    required bool isLoadMore,
+    SearchFilterParams? filters,
+  }) async {
+    if (isClosed) return;
+
     int page = 1;
     SearchFilterParams activeFilters = filters ?? SearchFilterParams.defaults;
+    SearchLoaded? previous;
 
-    // ✅ LOAD MORE FLOW
-    if (isLoadMore && state is SearchLoaded) {
+    if (isLoadMore) {
+      if (state is! SearchLoaded) return;
       final current = state as SearchLoaded;
 
-      // chặn gọi trùng / hết trang
-      if (!current.hasMore || current.isLoadingMore) return;
+      if (!current.hasMore ||
+          current.isLoadingMore ||
+          current.currentKeyword != keyword ||
+          current.movieType != movieType ||
+          (filters != null && filters.signature != current.filters.signature)) {
+        return;
+      }
 
+      previous = current;
       page = current.page + 1;
       activeFilters = filters ?? current.filters;
-
-      // ✅ bật indicator load more (giữ list hiện tại)
       emit(current.copyWith(isLoadingMore: true));
     } else {
-      // ✅ SEARCH MỚI
       emit(SearchLoading());
-      unawaited(addToHistory(kw));
+      if (movieType == null) unawaited(addToHistory(keyword));
     }
 
-    final result = await searchUseCase.call(
-      keyword: kw,
-      filters: activeFilters,
-      page: page,
-    );
+    final generation = ++_requestGeneration;
+    final Either<String, SearchMoviesPage> result;
+    if (movieType != null) {
+      result = await browseUseCase(
+        movieType: movieType,
+        filters: activeFilters,
+        page: page,
+      );
+    } else {
+      final searchResult = await searchUseCase(
+        keyword: keyword,
+        filters: activeFilters,
+        page: page,
+      );
+      result = searchResult.map(
+        (movies) => SearchMoviesPage(
+          movies: movies,
+          hasMore: movies.length == activeFilters.limit,
+        ),
+      );
+    }
+
+    // Ignore an earlier chip/search response after the user changes the query.
+    if (isClosed || generation != _requestGeneration) return;
 
     result.fold(
       (error) {
-        if (isLoadMore && state is SearchLoaded) {
-          // ✅ lỗi load more: giữ list, tắt indicator
-          final current = state as SearchLoaded;
-          emit(current.copyWith(isLoadingMore: false));
+        if (previous != null) {
+          emit(previous.copyWith(isLoadingMore: false));
         } else {
           emit(SearchError(error));
         }
       },
-      (movies) {
-        if (isLoadMore && state is SearchLoaded) {
-          final current = state as SearchLoaded;
-
-          emit(
-            current.copyWith(
-              movies: [...current.movies, ...movies],
-              page: page,
-              hasMore: movies.length == activeFilters.limit,
-              filters: activeFilters,
-              isLoadingMore: false, // ✅ tắt indicator
-            ),
-          );
-        } else {
-          emit(
-            SearchLoaded(
-              movies: movies,
-              page: page,
-              hasMore: movies.length == activeFilters.limit,
-              currentKeyword: kw,
-              filters: activeFilters,
-              isLoadingMore: false,
-            ),
-          );
-        }
+      (resultPage) {
+        emit(
+          SearchLoaded(
+            movies: <MovieModel>[...?previous?.movies, ...resultPage.movies],
+            page: page,
+            hasMore: resultPage.hasMore,
+            currentKeyword: keyword,
+            movieType: movieType,
+            filters: activeFilters,
+          ),
+        );
       },
     );
   }
 
   void clearSearch() {
+    ++_requestGeneration;
+    if (isClosed) return;
     emit(SearchInitial(_history));
+  }
+
+  void prepareForSearch() {
+    ++_requestGeneration;
+    if (!isClosed) emit(SearchLoading());
   }
 
   @override

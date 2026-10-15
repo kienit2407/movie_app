@@ -74,7 +74,7 @@ loadingBuilder: (context, progress) {
             width: 120,
             height: 120,
             child:
-            CircularProgressIndicator(color: Colors.red, value: progress.progressPercentage.value)),
+            AppLoading(color: Colors.red, value: progress.progressPercentage.value)),
       ],
     ),
   );
@@ -177,7 +177,7 @@ class _MyAppState extends State<MyApp> {
                                   width: 120,
                                   height: 120,
                                   child:
-                                  CircularProgressIndicator(color: Colors.red, value: progress.progressPercentage.value)),
+                                  AppLoading(color: Colors.red, value: progress.progressPercentage.value)),
                             ],
                           ),
                         );

@@ -1,5 +1,8 @@
 package com.example.movie_app
 
+import android.app.usage.StorageStatsManager
+import android.content.Context
+import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
 import android.view.OrientationEventListener
@@ -14,6 +17,7 @@ class MainActivity : FlutterFragmentActivity() {
     companion object {
         private const val DEVICE_ORIENTATION_CHANNEL =
             "com.kinit.movieapp/device_orientation"
+        private const val APP_STORAGE_CHANNEL = "com.kinit.movieapp/app_storage"
     }
 
     private var googleCastBridge: GoogleCastBridge? = null
@@ -34,6 +38,31 @@ class MainActivity : FlutterFragmentActivity() {
         )
         googleCastBridge = GoogleCastBridge(this, channel)
         channel.setMethodCallHandler(googleCastBridge)
+
+        MethodChannel(
+            flutterEngine.dartExecutor.binaryMessenger,
+            APP_STORAGE_CHANNEL,
+        ).setMethodCallHandler { call, result ->
+            if (call.method != "getAppDataSizeBytes") {
+                result.notImplemented()
+                return@setMethodCallHandler
+            }
+
+            Thread {
+                try {
+                    val bytes = calculateAppDataSizeBytes()
+                    runOnUiThread { result.success(bytes) }
+                } catch (error: Exception) {
+                    runOnUiThread {
+                        result.error(
+                            "app_storage_failed",
+                            error.localizedMessage,
+                            null,
+                        )
+                    }
+                }
+            }.start()
+        }
 
         orientationEventChannel = EventChannel(
             flutterEngine.dartExecutor.binaryMessenger,
@@ -82,6 +111,42 @@ class MainActivity : FlutterFragmentActivity() {
             Settings.System.ACCELEROMETER_ROTATION,
             0,
         ) == 1
+    }
+
+    private fun calculateAppDataSizeBytes(): Long {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            try {
+                val storageStatsManager = getSystemService(
+                    Context.STORAGE_STATS_SERVICE,
+                ) as StorageStatsManager
+                val stats = storageStatsManager.queryStatsForUid(
+                    applicationInfo.storageUuid,
+                    applicationInfo.uid,
+                )
+                // dataBytes already contains cacheBytes. Do not add it again.
+                return stats.dataBytes
+            } catch (_: Exception) {
+                // Fall back to walking the app-owned directories below.
+            }
+        }
+
+        val roots = buildList {
+            add(applicationInfo.dataDir)
+            addAll(getExternalFilesDirs(null).filterNotNull().map { it.path })
+            addAll(externalCacheDirs.filterNotNull().map { it.path })
+            addAll(externalMediaDirs.filterNotNull().map { it.path })
+        }
+
+        return roots
+            .distinct()
+            .sumOf { path -> directorySizeBytes(java.io.File(path)) }
+    }
+
+    private fun directorySizeBytes(root: java.io.File): Long {
+        if (!root.exists()) return 0L
+        return root.walkTopDown().sumOf { file ->
+            if (file.isFile) runCatching { file.length() }.getOrDefault(0L) else 0L
+        }
     }
 
     override fun onDestroy() {

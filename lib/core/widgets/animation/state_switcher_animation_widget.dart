@@ -13,7 +13,7 @@
 // /// ```dart
 // /// StateSwitcherAnimationWidget(
 // ///   child: isLoading
-// ///     ? CircularProgressIndicator(key: ValueKey('loading'))
+// ///     ? AppLoading(key: ValueKey('loading'))
 // ///     : Text('Content', key: ValueKey('content')),
 // /// )
 // /// ```

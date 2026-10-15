@@ -17,6 +17,7 @@ import 'package:movie_app/core/config/utils/format_episode.dart';
 import 'package:movie_app/core/config/utils/sharder_text.dart';
 import 'package:movie_app/core/extension/build_context_extension.dart';
 import 'package:movie_app/core/widgets/animation/staggered_list_animation_no_pop_widget.dart';
+import 'package:movie_app/core/widgets/app_loading.dart';
 import 'package:movie_app/core/widgets/app_refresh_indicator.dart';
 import 'package:movie_app/feature/home/notification/comment_notification.dart';
 import 'package:movie_app/feature/home/notification/new_movie_inbox.dart';
@@ -199,7 +200,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
     if (state.isLoading) {
       return SliverFillRemaining(
         hasScrollBody: false,
-        child: Center(child: CircularProgressIndicator.adaptive()),
+        child: Center(child: AppLoading()),
       );
     }
 

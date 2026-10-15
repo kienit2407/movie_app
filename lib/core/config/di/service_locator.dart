@@ -31,6 +31,7 @@ import 'package:movie_app/feature/home/notification/new_movie_notification_servi
 import 'package:movie_app/feature/home/notification/new_movie_notification_storage.dart';
 import 'package:movie_app/feature/home/notification/new_movie_inbox.dart';
 import 'package:movie_app/feature/search/data/datasources/search_remote_datasource.dart';
+import 'package:movie_app/feature/search/domain/usecases/browse_movies_usecase.dart';
 import 'package:movie_app/feature/search/data/repositories/search_repository_impl.dart';
 import 'package:movie_app/feature/search/data/repositories/search_history_repository.dart';
 import 'package:movie_app/feature/search/domain/repositories/search_repository.dart';
@@ -161,9 +162,13 @@ Future<void> _initializeGetit() async {
   sl.registerFactory<SearchMoviesUseCase>(
     () => SearchMoviesUseCase(sl<SearchRepository>()),
   );
+  sl.registerFactory<BrowseMoviesUseCase>(
+    () => BrowseMoviesUseCase(sl<SearchRepository>()),
+  );
   sl.registerFactory<SearchCubit>(
     () => SearchCubit(
       searchUseCase: sl<SearchMoviesUseCase>(),
+      browseUseCase: sl<BrowseMoviesUseCase>(),
       historyRepository: sl<SearchHistoryRepository>(),
     ),
   );

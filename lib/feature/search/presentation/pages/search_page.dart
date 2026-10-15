@@ -7,10 +7,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
 import 'package:movie_app/common/components/alert_dialog/app_alert_dialog.dart';
+import 'package:movie_app/common/helpers/sort_map.dart';
 import 'package:movie_app/core/config/di/service_locator.dart';
 import 'package:movie_app/core/config/themes/app_color.dart';
 import 'package:movie_app/core/extension/build_context_extension.dart';
 import 'package:movie_app/core/config/utils/animated_dialog.dart';
+import 'package:movie_app/core/extension/filter_localization_extension.dart';
 import 'package:movie_app/feature/search/domain/entities/search_filter_params.dart';
 import 'package:movie_app/feature/search/presentation/bloc/search_cubit.dart';
 import 'package:movie_app/feature/search/presentation/bloc/search_state.dart';
@@ -47,6 +49,7 @@ class _SearchPageViewState extends State<_SearchPageView> {
   final TextEditingController _searchCtrl = TextEditingController();
   final ScrollController _scrollCtrl = ScrollController();
   final FocusNode _focusNode = FocusNode();
+  String? _selectedMovieType;
   Timer? _debounce;
   bool get _useNativeGlass =>
       !kIsWeb &&
@@ -87,7 +90,15 @@ class _SearchPageViewState extends State<_SearchPageView> {
       if (state is SearchLoaded) {
         //  còn trang + không đang load more mới gọi
         if (state.hasMore && !state.isLoadingMore) {
-          cubit.search(state.currentKeyword, isLoadMore: true);
+          if (state.movieType != null) {
+            cubit.browseMovies(
+              state.movieType!,
+              filters: state.filters,
+              isLoadMore: true,
+            );
+          } else {
+            cubit.search(state.currentKeyword, isLoadMore: true);
+          }
         }
       }
     }
@@ -96,16 +107,69 @@ class _SearchPageViewState extends State<_SearchPageView> {
   void _onSearchChanged(String query) {
     _debounce?.cancel();
 
-    _debounce = Timer(const Duration(milliseconds: 600), () {
-      final cubit = context.read<SearchCubit>();
-      final q = query.trim();
+    final keyword = query.trim();
 
-      if (q.isEmpty) {
-        cubit.clearSearch();
-      } else {
-        cubit.search(q, filters: _filters);
-      }
+    // Nhập từ khóa → bỏ chọn chip.
+    setState(() {
+      _selectedMovieType = null;
+      _hideClear = query.isNotEmpty;
     });
+
+    if (keyword.isEmpty) {
+      // Xóa hết từ khóa → trở về lịch sử, có thể chọn chip lại.
+      context.read<SearchCubit>().clearSearch();
+      return;
+    }
+
+    context.read<SearchCubit>().prepareForSearch();
+    _debounce = Timer(const Duration(milliseconds: 600), () {
+      if (!mounted) return;
+
+      context.read<SearchCubit>().search(keyword, filters: _filters);
+    });
+  }
+
+  void _onMovieTypeTap(String slug) {
+    // Có từ khóa → giữ luồng tìm kiếm, không chọn chip.
+    if (_searchCtrl.text.trim().isNotEmpty) return;
+    _debounce?.cancel();
+    _focusNode.unfocus();
+
+    setState(() {
+      // Bấm lại chip đang chọn thì bỏ chọn.
+      _selectedMovieType = _selectedMovieType == slug ? null : slug;
+    });
+
+    final cubit = context.read<SearchCubit>();
+    final selectedType = _selectedMovieType;
+
+    if (selectedType != null) {
+      cubit.browseMovies(selectedType, filters: _filters);
+      return;
+    }
+
+    cubit.clearSearch();
+  }
+
+  void _submitSearch(String value) {
+    _debounce?.cancel();
+    final keyword = value.trim();
+    setState(() => _selectedMovieType = null);
+    if (keyword.isEmpty) {
+      context.read<SearchCubit>().clearSearch();
+    } else {
+      context.read<SearchCubit>().search(keyword, filters: _filters);
+    }
+  }
+
+  void _clearSearchField() {
+    _debounce?.cancel();
+    setState(() {
+      _searchCtrl.clear();
+      _hideClear = false;
+      _selectedMovieType = null;
+    });
+    context.read<SearchCubit>().clearSearch();
   }
 
   void _showKeywordRequiredMessage() {
@@ -132,8 +196,11 @@ class _SearchPageViewState extends State<_SearchPageView> {
       initialFilters: _filters,
     );
 
-    if (result == null || !mounted) return;
+    if (result == null || !mounted || _searchCtrl.text.trim() != keyword) {
+      return;
+    }
 
+    _debounce?.cancel();
     setState(() => _filters = result);
     context.read<SearchCubit>().search(keyword, filters: result);
   }
@@ -195,6 +262,19 @@ class _SearchPageViewState extends State<_SearchPageView> {
                       ],
                     ),
                   ),
+                  SizedBox(
+                    height: 44,
+                    child: ListView.builder(
+                      scrollDirection: Axis.horizontal,
+                      itemCount: SortMap.sortMovie.length,
+                      itemBuilder: (context, index) {
+                        return _useNativeGlass
+                            ? _buildGlassFilterItem(SortMap.sortMovie[index])
+                            : _buildNormalFilterItem(SortMap.sortMovie[index]);
+                      },
+                    ),
+                  ),
+                  const SizedBox(height: 18),
                   Expanded(
                     child: BlocBuilder<SearchCubit, SearchState>(
                       builder: (context, state) {
@@ -206,18 +286,22 @@ class _SearchPageViewState extends State<_SearchPageView> {
                             isLoadingMore: state.isLoadingMore, // ✅ mới
                             scrollController: _scrollCtrl,
                             resultSignature:
-                                '${state.currentKeyword}|${state.filters.signature}',
+                                '${state.currentKeyword}|${state.movieType ?? ''}|${state.filters.signature}',
                           );
                         } else if (state is SearchInitial) {
                           return SearchHistoryView(
                             history: state.history,
                             onSelect: (keyword) {
+                              _debounce?.cancel();
                               _searchCtrl.text = keyword;
                               _searchCtrl.selection =
                                   TextSelection.fromPosition(
                                     TextPosition(offset: keyword.length),
                                   );
-                              setState(() => _hideClear = keyword.isNotEmpty);
+                              setState(() {
+                                _hideClear = keyword.isNotEmpty;
+                                _selectedMovieType = null;
+                              });
                               context.read<SearchCubit>().search(
                                 keyword,
                                 filters: _filters,
@@ -240,6 +324,63 @@ class _SearchPageViewState extends State<_SearchPageView> {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildGlassFilterItem(Map<String, dynamic> filter) {
+    final slug = filter.keys.single;
+    final label = context.movieTypeLabel(slug);
+    final isSelected = _selectedMovieType == slug;
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 8.0),
+      child: GestureDetector(
+        onTap: () => _onMovieTypeTap(slug),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          child: LiquidGlassContainer(
+            config: LiquidGlassConfig(
+              effect: CNGlassEffect.regular,
+              shape: CNGlassEffectShape.rect,
+              tint: isSelected
+                  ? AppColor.secondColor.withValues(alpha: 0.2)
+                  : Colors.transparent,
+              cornerRadius: 30,
+              interactive: true,
+            ),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: Center(
+                child: Text(label, style: const TextStyle(color: Colors.white)),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNormalFilterItem(Map<String, dynamic> filter) {
+    final slug = filter.keys.single;
+    final label = context.movieTypeLabel(slug);
+    final isSelected = _selectedMovieType == slug;
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 8.0),
+      child: GestureDetector(
+        onTap: () => _onMovieTypeTap(slug),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          decoration: BoxDecoration(
+            color: isSelected
+                ? AppColor.secondColor.withValues(alpha: .2) // Màu đỏ của app.
+                : Colors.transparent,
+            borderRadius: BorderRadius.circular(30),
+          ),
+          child: Center(
+            child: Text(label, style: const TextStyle(color: Colors.white)),
+          ),
         ),
       ),
     );
@@ -300,18 +441,8 @@ class _SearchPageViewState extends State<_SearchPageView> {
                     contentPadding: EdgeInsets.zero,
                   ),
 
-                  onChanged: (val) {
-                    setState(() => _hideClear = val.isNotEmpty);
-                    _onSearchChanged(val);
-                  },
-
-                  onSubmitted: (val) {
-                    final q = val.trim();
-
-                    if (q.isNotEmpty) {
-                      context.read<SearchCubit>().search(q, filters: _filters);
-                    }
-                  },
+                  onChanged: _onSearchChanged,
+                  onSubmitted: _submitSearch,
                 ),
               ),
 
@@ -325,14 +456,7 @@ class _SearchPageViewState extends State<_SearchPageView> {
                     ? GestureDetector(
                         key: const ValueKey('clear'),
                         behavior: HitTestBehavior.opaque,
-                        onTap: () {
-                          setState(() {
-                            _searchCtrl.clear();
-                            _hideClear = false;
-                          });
-
-                          context.read<SearchCubit>().clearSearch();
-                        },
+                        onTap: _clearSearchField,
                         child: const Padding(
                           padding: EdgeInsets.all(8),
                           child: Icon(
@@ -384,28 +508,14 @@ class _SearchPageViewState extends State<_SearchPageView> {
               ? IconButton(
                   key: const ValueKey('clear'),
                   color: Colors.white,
-                  onPressed: () {
-                    setState(() {
-                      _searchCtrl.clear();
-                      _hideClear = false;
-                    });
-                    context.read<SearchCubit>().clearSearch();
-                  },
+                  onPressed: _clearSearchField,
                   icon: const Icon(Iconsax.tag_cross_copy),
                 )
               : const SizedBox.shrink(key: ValueKey('empty')),
         ),
       ),
-      onChanged: (val) {
-        setState(() => _hideClear = val.isNotEmpty);
-        _onSearchChanged(val);
-      },
-      onSubmitted: (val) {
-        final q = val.trim();
-        if (q.isNotEmpty) {
-          context.read<SearchCubit>().search(q, filters: _filters);
-        }
-      },
+      onChanged: _onSearchChanged,
+      onSubmitted: _submitSearch,
     );
   }
 

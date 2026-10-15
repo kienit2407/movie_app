@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:movie_app/core/widgets/app_loading.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:sliver_tools/sliver_tools.dart';
 import 'package:movie_app/feature/movie_pagination/presentation/bloc/fetch_fillter_cubit.dart';
@@ -42,7 +43,7 @@ class _RecommendationsSliverState extends State<RecommendationsSliver> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const CircularProgressIndicator.adaptive(),
+          const AppLoading(),
           const SizedBox(width: 8),
           Text(context.l10n.commonLoading),
         ],

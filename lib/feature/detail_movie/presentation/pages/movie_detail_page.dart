@@ -28,6 +28,7 @@ import 'package:movie_app/core/player_overlay_controller.dart';
 import 'package:movie_app/core/movie_sharing/movie_share_service.dart';
 import 'package:movie_app/core/extension/build_context_extension.dart';
 import 'package:movie_app/core/extension/filter_localization_extension.dart';
+import 'package:movie_app/core/widgets/app_loading.dart';
 import 'package:movie_app/feature/detail_movie/data/model/detail_movie_model.dart';
 import 'package:movie_app/feature/detail_movie/domain/usecase/get_detail_movie_usecase.dart';
 import 'package:movie_app/feature/detail_movie/presentation/bloc/detail_movie_cubit.dart';
@@ -192,7 +193,7 @@ class _RecommendationsSliverState extends State<_RecommendationsSliver> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const CircularProgressIndicator.adaptive(),
+          const AppLoading(),
           const SizedBox(width: 8),
           Text(context.l10n.commonLoading),
         ],

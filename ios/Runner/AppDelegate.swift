@@ -15,6 +15,8 @@ import AudioToolbox
     private var castingChannel: FlutterMethodChannel?
     private var appBadgeChannel: FlutterMethodChannel?
     private var uiSoundChannel: FlutterMethodChannel?
+    private var appStorageChannel: FlutterMethodChannel?
+    private var quickActionIconsChannel: FlutterMethodChannel?
     private var uiSoundIDs: [String: SystemSoundID] = [:]
     private var deviceOrientationChannel: FlutterEventChannel?
     private var deviceOrientationStreamHandler: DeviceOrientationStreamHandler?
@@ -59,6 +61,8 @@ import AudioToolbox
         }
 
         configureUISoundChannel(binaryMessenger: controller.binaryMessenger)
+        configureAppStorageChannel(binaryMessenger: controller.binaryMessenger)
+        configureQuickActionIconsChannel(binaryMessenger: controller.binaryMessenger)
 
         let deviceOrientationStreamHandler = DeviceOrientationStreamHandler()
         let deviceOrientationChannel = FlutterEventChannel(
@@ -216,6 +220,48 @@ import AudioToolbox
         return super.application(application, didFinishLaunchingWithOptions: launchOptions)
     }
 
+    private func configureQuickActionIconsChannel(binaryMessenger: FlutterBinaryMessenger) {
+        let channel = FlutterMethodChannel(
+            name: "com.kinit.movieapp/quick_actions_icons",
+            binaryMessenger: binaryMessenger
+        )
+        quickActionIconsChannel = channel
+        channel.setMethodCallHandler { call, result in
+            guard call.method == "applySystemIcons" else {
+                result(FlutterMethodNotImplemented)
+                return
+            }
+            guard let symbols = call.arguments as? [String: String] else {
+                result(FlutterError(
+                    code: "quick_action_icons_bad_args",
+                    message: "Expected shortcut types mapped to SF Symbol names.",
+                    details: nil
+                ))
+                return
+            }
+            guard let items = UIApplication.shared.shortcutItems, !items.isEmpty else {
+                result(FlutterError(
+                    code: "quick_action_icons_not_registered",
+                    message: "Register quick actions before applying system icons.",
+                    details: nil
+                ))
+                return
+            }
+
+            UIApplication.shared.shortcutItems = items.map { item in
+                guard let symbol = symbols[item.type] else { return item }
+                return UIApplicationShortcutItem(
+                    type: item.type,
+                    localizedTitle: item.localizedTitle,
+                    localizedSubtitle: item.localizedSubtitle,
+                    icon: UIApplicationShortcutIcon(systemImageName: symbol),
+                    userInfo: item.userInfo
+                )
+            }
+            result(nil)
+        }
+    }
+
     private func configureUISoundChannel(binaryMessenger: FlutterBinaryMessenger) {
         let channel = FlutterMethodChannel(
             name: "com.kinit.movieapp/ui_sfx",
@@ -274,6 +320,63 @@ import AudioToolbox
                 result(FlutterMethodNotImplemented)
             }
         }
+    }
+
+    private func configureAppStorageChannel(binaryMessenger: FlutterBinaryMessenger) {
+        let channel = FlutterMethodChannel(
+            name: "com.kinit.movieapp/app_storage",
+            binaryMessenger: binaryMessenger
+        )
+        appStorageChannel = channel
+
+        channel.setMethodCallHandler { call, result in
+            guard call.method == "getAppDataSizeBytes" else {
+                result(FlutterMethodNotImplemented)
+                return
+            }
+
+            DispatchQueue.global(qos: .utility).async {
+                let bytes = Self.appDataSizeBytes()
+                DispatchQueue.main.async {
+                    result(bytes)
+                }
+            }
+        }
+    }
+
+    private static func appDataSizeBytes() -> Int64 {
+        let homeURL = URL(fileURLWithPath: NSHomeDirectory(), isDirectory: true)
+        let resourceKeys: Set<URLResourceKey> = [
+            .isRegularFileKey,
+            .totalFileAllocatedSizeKey,
+            .fileAllocatedSizeKey,
+            .fileSizeKey,
+        ]
+        guard let enumerator = FileManager.default.enumerator(
+            at: homeURL,
+            includingPropertiesForKeys: Array(resourceKeys),
+            options: [],
+            errorHandler: { _, _ in true }
+        ) else {
+            return 0
+        }
+
+        var total: Int64 = 0
+        for case let fileURL as URL in enumerator {
+            guard
+                let values = try? fileURL.resourceValues(forKeys: resourceKeys),
+                values.isRegularFile == true
+            else {
+                continue
+            }
+
+            let bytes = values.totalFileAllocatedSize
+                ?? values.fileAllocatedSize
+                ?? values.fileSize
+                ?? 0
+            total += Int64(max(0, bytes))
+        }
+        return total
     }
 
     private func initializeUISounds(

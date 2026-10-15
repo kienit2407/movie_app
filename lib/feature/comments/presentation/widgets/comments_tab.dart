@@ -12,6 +12,7 @@ import 'package:movie_app/core/audio/sound_effect_player.dart';
 import 'package:movie_app/core/config/di/service_locator.dart';
 import 'package:movie_app/core/config/themes/app_color.dart';
 import 'package:movie_app/core/extension/build_context_extension.dart';
+import 'package:movie_app/core/widgets/app_loading.dart';
 import 'package:movie_app/core/widgets/app_refresh_indicator.dart';
 import 'package:movie_app/feature/auth/presentation/session/auth_session_cubit.dart';
 import 'package:movie_app/feature/auth/presentation/sign_in/pages/sign_in.dart';
@@ -595,7 +596,7 @@ class _CommentsTabState extends State<CommentsTab> with WidgetsBindingObserver {
                 return const Padding(
                   padding: EdgeInsets.all(22),
                   child: Center(
-                    child: CircularProgressIndicator.adaptive(strokeWidth: 2),
+                    child: AppLoading(),
                   ),
                 );
               }
@@ -730,7 +731,7 @@ class _CommentsTabState extends State<CommentsTab> with WidgetsBindingObserver {
             return const Padding(
               padding: EdgeInsets.all(22),
               child: Center(
-                child: CircularProgressIndicator.adaptive(strokeWidth: 2),
+                child: AppLoading(),
               ),
             );
           }
@@ -905,9 +906,8 @@ class _CommentsTabState extends State<CommentsTab> with WidgetsBindingObserver {
                                 child: SizedBox(
                                   width: 18,
                                   height: 18,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    color: Colors.white54,
+                                  child: AppLoading(
+                                    
                                   ),
                                 ),
                               ),
@@ -937,9 +937,8 @@ class _CommentsTabState extends State<CommentsTab> with WidgetsBindingObserver {
                             ? const SizedBox(
                                 width: 18,
                                 height: 18,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  color: Colors.white,
+                                child: AppLoading(
+                                  
                                 ),
                               )
                             : Icon(

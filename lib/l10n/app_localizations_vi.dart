@@ -162,6 +162,71 @@ class AppLocalizationsVi extends AppLocalizations {
   String get settingsSignOutFailed => 'Không thể đăng xuất. Vui lòng thử lại.';
 
   @override
+  String get settingsStorageManagement => 'Giải phóng dung lượng';
+
+  @override
+  String storageAppDataTitle(String appName) {
+    return 'Dữ liệu $appName';
+  }
+
+  @override
+  String storageUsageSummary(String percent) {
+    return 'Chiếm $percent dung lượng lưu trữ của thiết bị';
+  }
+
+  @override
+  String get storageOtherData => 'Dữ liệu khác';
+
+  @override
+  String get storageFree => 'Trống';
+
+  @override
+  String storageCacheAmount(String size) {
+    return 'Bộ nhớ đệm: $size';
+  }
+
+  @override
+  String get storageCacheDescription =>
+      'Xóa ảnh được lưu tạm để giải phóng dung lượng. Ảnh sẽ được tải lại khi cần. Lịch sử xem, phim yêu thích và tài khoản của bạn sẽ không bị ảnh hưởng.';
+
+  @override
+  String get storageClearDialogTitle => 'Xóa bộ nhớ đệm?';
+
+  @override
+  String storageClearDialogMessage(String size) {
+    return 'Bạn có muốn xóa $size ảnh được lưu tạm không? Lịch sử xem, phim yêu thích và tài khoản của bạn sẽ không bị ảnh hưởng.';
+  }
+
+  @override
+  String get storageClearSuccess => 'Đã xóa bộ nhớ đệm.';
+
+  @override
+  String get storageClearFailed =>
+      'Không thể xóa bộ nhớ đệm. Vui lòng thử lại.';
+
+  @override
+  String get storageLoadFailed => 'Không thể đọc thông tin dung lượng.';
+
+  @override
+  String storageDeviceFreeSummary(String free, String total) {
+    return 'Còn trống $free trên tổng $total';
+  }
+
+  @override
+  String storageAppDataSemantics(String percent) {
+    return 'Dữ liệu ứng dụng chiếm $percent phần trăm dung lượng thiết bị';
+  }
+
+  @override
+  String get quickActionClearCache => 'Xóa bộ nhớ đệm';
+
+  @override
+  String get quickActionSearch => 'Bạn muốn xem gì?';
+
+  @override
+  String get quickActionNotifications => 'Thông báo';
+
+  @override
   String get navHome => 'Trang chủ';
 
   @override

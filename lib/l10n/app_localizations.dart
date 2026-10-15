@@ -396,6 +396,108 @@ abstract class AppLocalizations {
   /// **'Could not sign out. Please try again.'**
   String get settingsSignOutFailed;
 
+  /// Storage management page and settings row title
+  ///
+  /// In en, this message translates to:
+  /// **'Free up storage'**
+  String get settingsStorageManagement;
+
+  /// Title above the total local data created by the app
+  ///
+  /// In en, this message translates to:
+  /// **'{appName} data'**
+  String storageAppDataTitle(String appName);
+
+  /// Percentage of device storage used by app data
+  ///
+  /// In en, this message translates to:
+  /// **'Uses {percent} of device storage'**
+  String storageUsageSummary(String percent);
+
+  /// Storage chart legend for data not owned by this app
+  ///
+  /// In en, this message translates to:
+  /// **'Other data'**
+  String get storageOtherData;
+
+  /// Storage chart legend for free device space
+  ///
+  /// In en, this message translates to:
+  /// **'Free'**
+  String get storageFree;
+
+  /// Current removable image cache size
+  ///
+  /// In en, this message translates to:
+  /// **'Cache: {size}'**
+  String storageCacheAmount(String size);
+
+  /// Explanation below the clear cache action
+  ///
+  /// In en, this message translates to:
+  /// **'Delete temporarily stored images to free up space. Images will be downloaded again when needed. Your watch history, favorites, and account will not be affected.'**
+  String get storageCacheDescription;
+
+  /// Clear image cache confirmation dialog title
+  ///
+  /// In en, this message translates to:
+  /// **'Clear cache?'**
+  String get storageClearDialogTitle;
+
+  /// Clear image cache confirmation dialog body
+  ///
+  /// In en, this message translates to:
+  /// **'Delete {size} of temporarily stored images? Your watch history, favorites, and account will not be affected.'**
+  String storageClearDialogMessage(String size);
+
+  /// Message shown after clearing the image cache
+  ///
+  /// In en, this message translates to:
+  /// **'Cache cleared.'**
+  String get storageClearSuccess;
+
+  /// Message shown when clearing the image cache fails
+  ///
+  /// In en, this message translates to:
+  /// **'Could not clear the cache. Please try again.'**
+  String get storageClearFailed;
+
+  /// Storage page loading failure message
+  ///
+  /// In en, this message translates to:
+  /// **'Could not read storage information.'**
+  String get storageLoadFailed;
+
+  /// Device free and total storage summary
+  ///
+  /// In en, this message translates to:
+  /// **'{free} free of {total}'**
+  String storageDeviceFreeSummary(String free, String total);
+
+  /// Accessibility label for the app data storage chart
+  ///
+  /// In en, this message translates to:
+  /// **'App data uses {percent} percent of device storage'**
+  String storageAppDataSemantics(String percent);
+
+  /// Home screen quick action that opens cache clearing
+  ///
+  /// In en, this message translates to:
+  /// **'Clear cache'**
+  String get quickActionClearCache;
+
+  /// Home screen quick action that opens movie search
+  ///
+  /// In en, this message translates to:
+  /// **'What do you want to watch?'**
+  String get quickActionSearch;
+
+  /// Home screen quick action that opens notifications
+  ///
+  /// In en, this message translates to:
+  /// **'Notifications'**
+  String get quickActionNotifications;
+
   /// Home tab accessibility label
   ///
   /// In en, this message translates to:

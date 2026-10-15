@@ -23,6 +23,7 @@ import 'package:movie_app/core/player_overlay_host.dart';
 import 'package:movie_app/core/player_overlay_controller.dart';
 import 'package:movie_app/core/movie_sharing/movie_deep_link_service.dart';
 import 'package:movie_app/core/observability/app_observability.dart';
+import 'package:movie_app/core/quick_actions/app_quick_actions_service.dart';
 import 'package:movie_app/feature/auth/domain/usecases/confirm_with_token.dart';
 import 'package:movie_app/feature/auth/domain/usecases/req_reset_password.dart';
 import 'package:movie_app/feature/auth/domain/usecases/sigin_with_facebook.dart';
@@ -84,7 +85,7 @@ Future<void> main() async {
 
   await Hive.initFlutter();
 
-  // Lịch sử tìm kiếm đã chuyển sang Supabase theo tài khoản. Xóa box local
+  // Lịch sử tìm kiếm đã chuyển sang Supabase theo tài khoản. Xóa xbox local
   // cũ một lần để không giữ dữ liệu dùng chung trên thiết bị.
   try {
     await Hive.deleteBoxFromDisk('search_history');
@@ -104,6 +105,9 @@ Future<void> main() async {
   await initializeGetit();
   debugPrint('=== [7/8] GetIt initialized ===');
 
+  final localizationCubit = LocalizationCubit();
+  await AppQuickActionsService.instance.initialize(localizationCubit);
+
   await Workmanager().initialize(newMovieCallbackDispatcher);
   await sl<NewMovieNotificationService>().initialize(
     onPayload: NewMovieNotificationNavigation.handlePayload,
@@ -114,7 +118,10 @@ Future<void> main() async {
   runApp(
     LiquidGlassWidgets.wrap(
       adaptiveQuality: true,
-      child: MovieApp(router: goRouter),
+      child: MovieApp(
+        router: goRouter,
+        localizationCubit: localizationCubit,
+      ),
     ),
   );
 }
@@ -125,7 +132,13 @@ final playerOverlayBackButtonDispatcher = PlayerOverlayBackButtonDispatcher(
 
 class MovieApp extends StatelessWidget {
   final GoRouter router;
-  const MovieApp({super.key, required this.router});
+  final LocalizationCubit localizationCubit;
+
+  const MovieApp({
+    super.key,
+    required this.router,
+    required this.localizationCubit,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -161,7 +174,7 @@ class MovieApp extends StatelessWidget {
             ),
           ),
           BlocProvider(create: (context) => AuthSessionCubit()),
-          BlocProvider(create: (context) => LocalizationCubit()),
+          BlocProvider(create: (context) => localizationCubit),
           BlocProvider(
             create: (context) => SavedAccountsCubit(store: SavedAccountStore()),
           ),
@@ -243,6 +256,7 @@ class MovieApp extends StatelessWidget {
                             const Positioned.fill(
                               child: StartupSplashOverlay(),
                             ),
+                            
                           ],
                         );
                       },

@@ -25,6 +25,7 @@ import 'package:movie_app/core/config/utils/episode_map.dart';
 import 'package:movie_app/core/config/utils/movie_player_args.dart';
 import 'package:movie_app/core/config/utils/package_infor.dart';
 import 'package:movie_app/core/player_overlay_launcher.dart';
+import 'package:movie_app/core/widgets/app_loading.dart';
 import 'package:movie_app/feature/detail_movie/data/model/detail_movie_model.dart';
 import 'package:movie_app/feature/detail_movie/presentation/pages/movie_detail_page.dart';
 import 'package:movie_app/core/config/assets/app_image.dart';
@@ -1266,12 +1267,8 @@ class _HomePageState extends State<HomePage>
       barrierDismissible: false,
       builder: (context) {
         dialogContext = context;
-        return Center(
-          child: LoadingAnimationWidget.staggeredDotsWave(
-            color: AppColor.fourthColor,
-
-            size: 30,
-          ),
+        return AbsorbPointer(
+          child: Center(child: AppLoading()),
         );
       },
     );
@@ -1727,8 +1724,6 @@ class _HomePageState extends State<HomePage>
       ),
     );
   }
-
-  
 
   Widget _buildBannerShimmer({
     BorderRadius borderRadius = const BorderRadius.all(Radius.zero),

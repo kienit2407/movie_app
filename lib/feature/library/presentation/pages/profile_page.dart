@@ -2,6 +2,7 @@ import 'package:fast_cached_network_image/fast_cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
 import 'package:movie_app/common/components/app_toast.dart';
@@ -13,6 +14,7 @@ import 'package:movie_app/core/config/utils/movie_player_args.dart';
 import 'package:movie_app/core/config/utils/animated_dialog.dart';
 import 'package:movie_app/core/extension/build_context_extension.dart';
 import 'package:movie_app/core/player_overlay_launcher.dart';
+import 'package:movie_app/core/widgets/app_loading.dart';
 import 'package:movie_app/core/widgets/app_refresh_indicator.dart';
 import 'package:movie_app/common/components/alert_dialog/app_alert_dialog.dart';
 import 'package:movie_app/feature/auth/presentation/session/auth_session_cubit.dart';
@@ -170,7 +172,7 @@ class _ProfilePageState extends State<ProfilePage>
     showDialog<void>(
       context: context,
       barrierDismissible: false,
-      builder: (_) => const Center(child: CircularProgressIndicator.adaptive()),
+      builder: (_) => const Center(child: AppLoading()),
     );
     try {
       final result = await sl<GetDetailMovieUsecase>()(history.slug);
@@ -332,9 +334,7 @@ class _ProfilePageState extends State<ProfilePage>
                         if (state.isLoading && state.history.isEmpty)
                           const SliverFillRemaining(
                             hasScrollBody: false,
-                            child: Center(
-                              child: CircularProgressIndicator.adaptive(),
-                            ),
+                            child: Center(child: AppLoading()),
                           )
                         else if (state.history.isEmpty)
                           SliverFillRemaining(
@@ -504,7 +504,10 @@ class _ProfileHeader extends StatelessWidget {
                                   WidgetSpan(
                                     alignment: PlaceholderAlignment.middle,
                                     child: InkWell(
-                                      onTap: () => {},
+                                      onTap: () {
+                                        HapticFeedback.mediumImpact();
+                                        onAccountSwitch();
+                                      },
                                       borderRadius: BorderRadius.circular(20),
                                       child: Icon(
                                         Icons.arrow_drop_down,
@@ -554,13 +557,21 @@ class _Avatar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ClipOval(
-      child: url.isEmpty
-          ? const ColoredBox(
-              color: Color(0xff292B38),
-              child: Icon(Icons.person, color: Colors.white70, size: 54),
-            )
-          : FastCachedImage(key: ValueKey(url), url: url, fit: BoxFit.cover),
+    return SizedBox(
+      width: size,
+      height: size,
+      child: ClipOval(
+        child: ColoredBox(
+          color: const Color(0xff292B38),
+          child: url.isEmpty
+              ? const Icon(Icons.person, color: Colors.white70, size: 54)
+              : FastCachedImage(
+                  key: ValueKey(url),
+                  url: url,
+                  fit: BoxFit.cover,
+                ),
+        ),
+      ),
     );
   }
 }

@@ -12,6 +12,7 @@ import 'package:movie_app/common/components/app_toast.dart';
 import 'package:movie_app/core/config/routes/app_router.dart';
 import 'package:movie_app/core/config/themes/app_color.dart';
 import 'package:movie_app/core/extension/build_context_extension.dart';
+import 'package:movie_app/core/widgets/app_loading.dart';
 import 'package:movie_app/feature/auth/presentation/session/auth_session_cubit.dart';
 import 'package:movie_app/feature/library/presentation/cubit/user_library_cubit.dart';
 
@@ -499,14 +500,9 @@ class _EditableAvatar extends StatelessWidget {
         child: Stack(
           clipBehavior: Clip.none,
           children: [
-            Container(
+            SizedBox(
               width: 132,
               height: 132,
-              padding: const EdgeInsets.all(3),
-              decoration: const BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: AppColor.primaryColor,
-              ),
               child: ClipOval(
                 child: ColoredBox(
                   color: const Color(0xff292B38),
@@ -848,15 +844,7 @@ class _UpdatingProfileOverlay extends StatelessWidget {
   Widget build(BuildContext context) {
     return const ColoredBox(
       color: Colors.black54,
-      child: Center(
-        child: SizedBox.square(
-          dimension: 32,
-          child: CircularProgressIndicator.adaptive(
-            strokeWidth: 2.6,
-            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-          ),
-        ),
-      ),
+      child: Center(child: SizedBox.square(dimension: 32, child: AppLoading())),
     );
   }
 }

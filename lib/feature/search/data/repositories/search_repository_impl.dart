@@ -2,12 +2,28 @@ import 'package:dartz/dartz.dart';
 import 'package:movie_app/feature/detail_movie/data/model/detail_movie_model.dart';
 import 'package:movie_app/feature/search/data/datasources/search_remote_datasource.dart';
 import 'package:movie_app/feature/search/domain/entities/search_filter_params.dart';
+import 'package:movie_app/feature/search/domain/entities/search_movies_page.dart';
 import 'package:movie_app/feature/search/domain/repositories/search_repository.dart';
 
 class SearchRepositoryImpl implements SearchRepository {
   final SearchRemoteDataSource remoteDataSource;
 
   SearchRepositoryImpl({required this.remoteDataSource});
+
+  @override
+  Future<Either<String, SearchMoviesPage>> browseMovies(
+    String movieType,
+    SearchFilterParams filters,
+    int page,
+  ) async {
+    try {
+      return Right(
+        await remoteDataSource.browseMovies(movieType, filters, page),
+      );
+    } catch (e) {
+      return Left(e.toString().replaceAll('Exception: ', ''));
+    }
+  }
 
   @override
   Future<Either<String, List<MovieModel>>> searchMovies(

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:movie_app/core/config/assets/app_icon.dart';
 import 'package:movie_app/core/extension/build_context_extension.dart';
+import 'package:movie_app/core/widgets/app_loading.dart';
 
 class AppOption extends StatelessWidget {
   const AppOption({
@@ -43,10 +44,7 @@ class AppOption extends StatelessWidget {
                         key: ValueKey('loading'),
                         width: 24,
                         height: 24,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2.4,
-                          color: Color(0xff7C4DFF),
-                        ),
+                        child: AppLoading(),
                       )
                     : Row(
                         key: const ValueKey('label'),

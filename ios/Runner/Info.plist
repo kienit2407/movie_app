@@ -2,6 +2,10 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 	<dict>
+		<key>BGTaskSchedulerPermittedIdentifiers</key>
+		<array>
+			<string>com.kinit.movieapp.newMovieRefresh</string>
+		</array>
 		<key>CADisableMinimumFrameDurationOnPhone</key>
 		<true/>
 		<key>CFBundleDevelopmentRegion</key>
@@ -44,8 +48,6 @@
 				</array>
 			</dict>
 		</array>
-		<key>FlutterDeepLinkingEnabled</key>
-		<false/>
 		<key>CFBundleVersion</key>
 		<string>$(FLUTTER_BUILD_NUMBER)</string>
 		<key>FacebookAppID</key>
@@ -54,6 +56,8 @@
 		<string>e16245dded5471eb9f2ba8292acba1f0</string>
 		<key>FacebookDisplayName</key>
 		<string>movie_app</string>
+		<key>FlutterDeepLinkingEnabled</key>
+		<false/>
 		<key>GIDClientID</key>
 		<string>971420422696-galiiu2hhdovp4qacnc6oj25u3lblqcg.apps.googleusercontent.com</string>
 		<key>GIDServerClientID</key>
@@ -73,12 +77,14 @@
 			<key>NSAllowsArbitraryLoads</key>
 			<true/>
 		</dict>
-		<key>NSUserTrackingUsageDescription</key>
-		<string>This app uses tracking to personalize your movie recommendations.</string>
-		<key>NSPhotoLibraryUsageDescription</key>
-		<string>Liquid Phim cần quyền truy cập thư viện ảnh để bạn chọn ảnh đại diện.</string>
 		<key>NSCameraUsageDescription</key>
 		<string>Liquid Phim cần quyền sử dụng camera để bạn chụp ảnh đại diện.</string>
+		<key>NSLocalNetworkUsageDescription</key>
+		<string></string>
+		<key>NSPhotoLibraryUsageDescription</key>
+		<string>Liquid Phim cần quyền truy cập thư viện ảnh để bạn chọn ảnh đại diện.</string>
+		<key>NSUserTrackingUsageDescription</key>
+		<string>This app uses tracking to personalize your movie recommendations.</string>
 		<key>UIApplicationSupportsIndirectInputEvents</key>
 		<true/>
 		<key>UIBackgroundModes</key>
@@ -87,27 +93,14 @@
 			<string>fetch</string>
 			<string>processing</string>
 		</array>
-		<key>BGTaskSchedulerPermittedIdentifiers</key>
-		<array>
-			<string>com.kinit.movieapp.newMovieRefresh</string>
-		</array>
+		<key>FirebaseMessagingAutoInitEnabled</key>
+		<false/>
+		<key>FirebaseMessagingInstallationIdEnabled</key>
+		<true/>
 		<key>UILaunchStoryboardName</key>
 		<string>LaunchScreen</string>
 		<key>UIMainStoryboardFile</key>
 		<string>Main</string>
-		<key>UISupportedInterfaceOrientations</key>
-		<array>
-			<string>UIInterfaceOrientationPortrait</string>
-			<string>UIInterfaceOrientationLandscapeLeft</string>
-			<string>UIInterfaceOrientationLandscapeRight</string>
-		</array>
-		<key>UISupportedInterfaceOrientations~ipad</key>
-		<array>
-			<string>UIInterfaceOrientationPortrait</string>
-			<string>UIInterfaceOrientationPortraitUpsideDown</string>
-			<string>UIInterfaceOrientationLandscapeLeft</string>
-			<string>UIInterfaceOrientationLandscapeRight</string>
-		</array>
 		<key>UIStatusBarHidden</key>
 		<false/>
 		<key>UISupportedInterfaceOrientations</key>

@@ -24,6 +24,7 @@ class SearchLoaded extends SearchState {
   final int page;
   final String currentKeyword;
   final SearchFilterParams filters;
+  final String? movieType;
 
   // ✅ NEW
   final bool isLoadingMore;
@@ -34,6 +35,7 @@ class SearchLoaded extends SearchState {
     required this.page,
     required this.currentKeyword,
     this.filters = SearchFilterParams.defaults,
+    this.movieType,
     this.isLoadingMore = false,
   });
 
@@ -51,6 +53,7 @@ class SearchLoaded extends SearchState {
       page: page ?? this.page,
       currentKeyword: currentKeyword ?? this.currentKeyword,
       filters: filters ?? this.filters,
+      movieType: movieType,
       isLoadingMore: isLoadingMore ?? this.isLoadingMore,
     );
   }
@@ -62,6 +65,7 @@ class SearchLoaded extends SearchState {
     page,
     currentKeyword,
     filters.signature,
+    movieType,
     isLoadingMore,
   ];
 }

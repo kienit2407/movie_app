@@ -15,6 +15,7 @@ import 'package:flutter_svg/svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:movie_app/core/config/di/service_locator.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:movie_app/core/widgets/app_loading.dart';
 import 'package:movie_app/feature/comments/domain/repositories/comment_repository.dart';
 import 'package:movie_app/feature/comments/presentation/bloc/comments_cubit.dart';
 import 'package:movie_app/feature/comments/presentation/bloc/comments_state.dart';
@@ -2944,14 +2945,7 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                SizedBox(
-                  width: 18,
-                  height: 18,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2.2,
-                    color: AppColor.secondColor,
-                  ),
-                ),
+                SizedBox(width: 18, height: 18, child: AppLoading()),
                 const SizedBox(width: 10),
                 Text(
                   message,
@@ -5478,10 +5472,7 @@ class _MoviePlayerPageState extends State<MoviePlayerPage>
                                 key: const ValueKey('loading'),
                                 width: 29,
                                 height: 29,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2.6,
-                                  color: AppColor.secondColor,
-                                ),
+                                child: AppLoading(),
                               )
                             : _isPlaybackCompleted
                             ? const Icon(

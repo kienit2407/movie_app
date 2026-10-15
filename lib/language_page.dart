@@ -220,7 +220,6 @@ class _LanguageTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final flagPath = language.flagPath;
-    final isSystem = language == Language.system;
 
     return InkWell(
       onTap: onTap,
@@ -257,9 +256,7 @@ class _LanguageTile extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    isSystem
-                        ? context.l10n.settingsLanguageSystem
-                        : language.displayName,
+                    language.displayName,
                     style: const TextStyle(
                       color: Colors.white,
                       fontSize: 17,

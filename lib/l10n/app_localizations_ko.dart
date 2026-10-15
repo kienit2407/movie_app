@@ -162,6 +162,71 @@ class AppLocalizationsKo extends AppLocalizations {
   String get settingsSignOutFailed => '로그아웃할 수 없습니다. 다시 시도해 주세요.';
 
   @override
+  String get settingsStorageManagement => 'Free up storage';
+
+  @override
+  String storageAppDataTitle(String appName) {
+    return '$appName data';
+  }
+
+  @override
+  String storageUsageSummary(String percent) {
+    return 'Uses $percent of device storage';
+  }
+
+  @override
+  String get storageOtherData => 'Other data';
+
+  @override
+  String get storageFree => 'Free';
+
+  @override
+  String storageCacheAmount(String size) {
+    return 'Cache: $size';
+  }
+
+  @override
+  String get storageCacheDescription =>
+      'Delete temporarily stored images to free up space. Images will be downloaded again when needed. Your watch history, favorites, and account will not be affected.';
+
+  @override
+  String get storageClearDialogTitle => 'Clear cache?';
+
+  @override
+  String storageClearDialogMessage(String size) {
+    return 'Delete $size of temporarily stored images? Your watch history, favorites, and account will not be affected.';
+  }
+
+  @override
+  String get storageClearSuccess => 'Cache cleared.';
+
+  @override
+  String get storageClearFailed =>
+      'Could not clear the cache. Please try again.';
+
+  @override
+  String get storageLoadFailed => 'Could not read storage information.';
+
+  @override
+  String storageDeviceFreeSummary(String free, String total) {
+    return '$free free of $total';
+  }
+
+  @override
+  String storageAppDataSemantics(String percent) {
+    return 'App data uses $percent percent of device storage';
+  }
+
+  @override
+  String get quickActionClearCache => 'Clear cache';
+
+  @override
+  String get quickActionSearch => 'What do you want to watch?';
+
+  @override
+  String get quickActionNotifications => 'Notifications';
+
+  @override
   String get navHome => '홈';
 
   @override

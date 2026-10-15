@@ -67,8 +67,17 @@ class NewMovieNotificationNavigation {
   }
 
   static void _openAboveHome(String route) {
-    if (route == AppRoutes.home) {
-      goRouter.go(AppRoutes.home);
+    final uri = Uri.tryParse(route);
+    final path = uri?.path ?? route;
+    final isHubBranch =
+        path == AppRoutes.home ||
+        path == AppRoutes.search ||
+        path == AppRoutes.favorites ||
+        path == AppRoutes.profile;
+    final isSettingsDestination = path.startsWith('${AppRoutes.settings}/');
+
+    if (isHubBranch || isSettingsDestination) {
+      goRouter.go(route);
       return;
     }
     goRouter.push(route);
